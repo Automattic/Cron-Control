@@ -42,7 +42,6 @@ class Cron_Options_CPT extends Singleton {
 		// Clear caches for any manually-inserted posts, lest stale caches be used
 		if ( ! empty( $this->posts_to_clean ) ) {
 			foreach ( $this->posts_to_clean as $post_to_clean ) {
-				error_log( "Cleaning cron entry # {$post_to_clean}" );
 				clean_post_cache( $post_to_clean );
 			}
 		}
