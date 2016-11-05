@@ -23,6 +23,7 @@ class Internal_Events extends Singleton {
 		add_filter( 'cron_schedules', array( $this, 'register_internal_events_schedules' ) );
 		add_action( 'wpccrij_force_publish_missed_schedules', array( $this, 'force_publish_missed_schedules' ) );
 		add_action( 'wpccrij_confirm_scheduled_posts', array( $this, 'confirm_scheduled_posts' ) );
+		add_action( 'wpccrij_delete_cron_option', array( $this, 'delete_cron_option' ) );
 	}
 
 	/**
@@ -38,6 +39,10 @@ class Internal_Events extends Singleton {
 			array(
 				'schedule' => 'wpccrij_ten_minutes',
 				'action'   => 'wpccrij_confirm_scheduled_posts',
+			),
+			array(
+				'schedule' => 'daily',
+				'action'   => 'wpccrij_delete_cron_option',
 			),
 		);
 
@@ -127,6 +132,13 @@ class Internal_Events extends Singleton {
 				}
 			}
 		}
+	}
+
+	/**
+	 * In case the cron option lingers, purge it
+	 */
+	public function delete_cron_option() {
+		delete_option( 'cron' );
 	}
 }
 
