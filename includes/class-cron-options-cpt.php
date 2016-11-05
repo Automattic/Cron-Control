@@ -15,6 +15,8 @@ class Cron_Options_CPT extends Singleton {
 
 	private $posts_to_clean = array();
 
+	private $option_before_unscheduling = null;
+
 	/**
 	 * Register hooks
 	 */
@@ -41,8 +43,9 @@ class Cron_Options_CPT extends Singleton {
 
 		// Clear caches for any manually-inserted posts, lest stale caches be used
 		if ( ! empty( $this->posts_to_clean ) ) {
-			foreach ( $this->posts_to_clean as $post_to_clean ) {
+			foreach ( $this->posts_to_clean as $index => $post_to_clean ) {
 				clean_post_cache( $post_to_clean );
+				unset( $this->posts_to_clean[ $index ] );
 			}
 		}
 	}
@@ -54,7 +57,7 @@ class Cron_Options_CPT extends Singleton {
 	/**
 	 * Override cron option requests with data from CPT
 	 */
-	public function get_option( $value ) {
+	public function get_option() {
 		$cron_array = array(
 			'version' => 2, // Core versions the cron array; without this, events will continually requeue
 		);
@@ -97,15 +100,46 @@ class Cron_Options_CPT extends Singleton {
 
 		uksort( $cron_array, 'strnatcasecmp' );
 
+		// If we're unscheduling an event, hold onto the previous value so we can identify what's unscheduled
+		if ( $this->is_unscheduling() ) {
+			$this->option_before_unscheduling = $cron_array;
+		} else {
+			$this->option_before_unscheduling = null;
+		}
+
 		return $cron_array;
 	}
 
 	/**
-	 * Save cron events in CPT
+	 * Handle requests to update the cron option
 	 *
 	 * By returning $old_value, `cron` option won't be updated
 	 */
 	public function update_option( $new_value, $old_value ) {
+		if ( $this->is_unscheduling() ) {
+			$this->unschedule_job( $new_value, $this->option_before_unscheduling );
+		} else {
+			$this->convert_option( $new_value );
+		}
+
+		return $old_value;
+	}
+
+	/**
+	 * Delete jobs that are unscheduled using `wp_unschedule_event()`
+	 */
+	private function unschedule_job( $new_value, $old_value ) {
+		$jobs = $this->find_unscheduled_jobs( $new_value, $old_value );
+
+		foreach ( $jobs as $job ) {
+			$this->delete_job( $job['timestamp'], $job['action'], $job['instance'] );
+		}
+	}
+
+	/**
+	 * Save cron events in CPT
+	 */
+	private function convert_option( $new_value ) {
 		if ( is_array( $new_value ) && ! empty( $new_value ) ) {
 			foreach ( $new_value as $timestamp => $timestamp_events ) {
 				// Skip non-event data that Core includes in the option
@@ -115,7 +149,6 @@ class Cron_Options_CPT extends Singleton {
 
 				foreach ( $timestamp_events as $action => $action_instances ) {
 					foreach ( $action_instances as $instance => $instance_args ) {
-						// Check if post exists and bail
 						$job_exists = $this->job_exists( array(
 							'name'             => sprintf( '%s-%s-%s', $timestamp, md5( $action ), $instance ),
 							'post_type'        => $this->post_type,
@@ -124,10 +157,8 @@ class Cron_Options_CPT extends Singleton {
 							'posts_per_page'   => 1,
 						) );
 
-						// Create a post, if needed
 						if ( ! $job_exists ) {
 							// Build minimum information needed to create a post
-							// Sufficient for `wp_insert_post()`, but requires additional massaging for `$wpdb->insert()`
 							$job_post = array(
 								'post_title'            => sprintf( '%s | %s | %s', $timestamp, $action, $instance ),
 								'post_name'             => sprintf( '%s-%s-%s', $timestamp, md5( $action ), $instance ),
@@ -148,8 +179,6 @@ class Cron_Options_CPT extends Singleton {
 				}
 			}
 		}
-
-		return $old_value;
 	}
 
 	/**
@@ -185,7 +214,7 @@ class Cron_Options_CPT extends Singleton {
 			$exists = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_name = %s AND post_type = %s AND post_status = %s LIMIT 1;", $job_post['name'], $this->post_type, $this->post_status ) );
 		}
 
-		return ! empty( $exists );
+		return empty( $exists ) ? false : array_shift( $exists );
 	}
 
 	/**
@@ -243,8 +272,8 @@ class Cron_Options_CPT extends Singleton {
 	 *
 	 * @return bool
 	 */
-	public function delete_job( $timestamp, $action, $instance ) {
-		$job_exists = get_posts( array(
+	private function delete_job( $timestamp, $action, $instance ) {
+		$job = $this->job_exists( array(
 			'name'             => sprintf( '%s-%s-%s', $timestamp, md5( $action ), $instance ),
 			'post_type'        => $this->post_type,
 			'post_status'      => $this->post_status,
@@ -252,12 +281,58 @@ class Cron_Options_CPT extends Singleton {
 			'posts_per_page'   => 1,
 		) );
 
-		if ( empty( $job_exists ) ) {
+		if ( ! $job ) {
 			return false;
 		}
 
-		wp_delete_post( $job_exists[0]->ID, true );
+		// If called before `init`, we need to delete directly because post types aren't registered earlier
+		if ( did_action( 'init' ) ) {
+			wp_delete_post( $job->ID, true );
+		} else {
+			global $wpdb;
+
+			$wpdb->delete( $wpdb->postmeta, array( 'post_id' => $job->ID, ) );
+			$wpdb->delete( $wpdb->posts, array( 'ID' => $job->ID, ) );
+
+			$this->posts_to_clean[] = $job->ID;
+		}
+
 		return true;
+	}
+
+	/**
+	 * Determine if current request is a call to `wp_unschedule_event()`
+	 */
+	private function is_unscheduling() {
+		return false !== array_search( 'wp_unschedule_event', wp_debug_backtrace_summary( __CLASS__, null, false ) );
+	}
+
+	/**
+	 * Identify jobs unscheduled using `wp_unschedule_event()` by comparing current value with previous
+	 */
+	private function find_unscheduled_jobs( $new, $old ) {
+		$differences = array();
+
+		foreach ( $old as $timestamp => $timestamp_events ) {
+			// Skip non-event data that Core includes in the option
+			if ( ! is_numeric( $timestamp ) ) {
+				continue;
+			}
+
+			foreach ( $timestamp_events as $action => $action_instances ) {
+				foreach ( $action_instances as $instance => $instance_args ) {
+					if ( ! isset( $new[ $timestamp ][ $action ][ $instance ] ) ) {
+						$differences[] = array(
+							'timestamp' => $timestamp,
+							'action'    => $action,
+							'instance'  => $instance,
+						);
+					}
+				}
+			}
+		}
+
+		return $differences;
 	}
 }
 

@@ -206,7 +206,6 @@ class Main extends Singleton {
 		}
 
 		wp_unschedule_event( $event['timestamp'], $event['action'], $event['args'] );
-		Cron_Options_CPT::instance()->delete_job( $event['timestamp'], $event['action'], $event['instance'] );
 
 		// Run the event
 		do_action_ref_array( $event['action'], $event['args'] );
