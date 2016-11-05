@@ -21,9 +21,10 @@ class Internal_Events extends Singleton {
 
 		add_action( 'wp_loaded', array( $this, 'schedule_internal_events' ) );
 		add_filter( 'cron_schedules', array( $this, 'register_internal_events_schedules' ) );
-		add_action( 'wpccrij_force_publish_missed_schedules', array( $this, 'force_publish_missed_schedules' ) );
-		add_action( 'wpccrij_confirm_scheduled_posts', array( $this, 'confirm_scheduled_posts' ) );
-		add_action( 'wpccrij_delete_cron_option', array( $this, 'delete_cron_option' ) );
+
+		foreach ( $this->internal_jobs as $internal_job ) {
+			add_action( $internal_job['action'], array( $this, $internal_job['callback'] ) );
+		}
 	}
 
 	/**
@@ -35,14 +36,17 @@ class Internal_Events extends Singleton {
 			array(
 				'schedule' => 'wpccrij_minute',
 				'action'   => 'wpccrij_force_publish_missed_schedules',
+				'callback' => 'force_publish_missed_schedules',
 			),
 			array(
 				'schedule' => 'wpccrij_ten_minutes',
 				'action'   => 'wpccrij_confirm_scheduled_posts',
+				'callback' => 'confirm_scheduled_posts',
 			),
 			array(
 				'schedule' => 'daily',
 				'action'   => 'wpccrij_delete_cron_option',
+				'callback' => 'delete_cron_option',
 			),
 		);
 
