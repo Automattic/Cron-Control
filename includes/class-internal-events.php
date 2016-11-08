@@ -73,7 +73,7 @@ class Internal_Events extends Singleton {
 	 * Schedule internal jobs
 	 */
 	public function schedule_internal_events() {
-		$when = strtotime( sprintf( '+%d seconds', get_plugin_var( 'job_queue_window_in_seconds' ) ) );
+		$when = strtotime( sprintf( '+%d seconds', JOB_QUEUE_WINDOW_IN_SECONDS ) );
 
 		foreach ( $this->internal_jobs as $job_args ) {
 			if ( ! wp_next_scheduled( $job_args['action'] ) ) {

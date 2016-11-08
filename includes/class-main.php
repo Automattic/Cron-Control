@@ -10,12 +10,6 @@ class Main extends Singleton {
 	/**
 	 * Class properties
 	 */
-	public $job_queue_size                  = 10;
-	public $job_queue_window_in_seconds     = 60;
-	public $job_execution_buffer_in_seconds = 15;
-	public $job_timeout_in_minutes          = 10;
-	public $job_concurrency_limit           = 10;
-
 	private $cache_key_lock           = 'wpccr_lock';
 	private $cache_key_lock_timestamp = 'wpccr_lock_ts';
 
@@ -110,7 +104,7 @@ class Main extends Singleton {
 		// Select only those events to run in the next sixty seconds
 		// Will include missed events as well
 		$current_events = $internal_events = array();
-		$current_window = strtotime( sprintf( '+%d seconds', $this->job_queue_window_in_seconds ) );
+		$current_window = strtotime( sprintf( '+%d seconds', JOB_QUEUE_WINDOW_IN_SECONDS ) );
 
 		foreach ( $events as $timestamp => $timestamp_events ) {
 			// Skip non-event data that Core includes in the option
@@ -146,8 +140,8 @@ class Main extends Singleton {
 		}
 
 		// Limit batch size to avoid resource exhaustion
-		if ( count( $current_events ) > $this->job_queue_size ) {
-			$current_events = array_slice( $current_events, 0, $this->job_queue_size );
+		if ( count( $current_events ) > JOB_QUEUE_SIZE ) {
+			$current_events = array_slice( $current_events, 0, JOB_QUEUE_SIZE );
 		}
 
 		return array(
@@ -172,7 +166,7 @@ class Main extends Singleton {
 		}
 
 		// Ensure we don't run jobs too far ahead
-		if ( $timestamp > strtotime( sprintf( '+%d seconds', $this->job_execution_buffer_in_seconds ) ) ) {
+		if ( $timestamp > strtotime( sprintf( '+%d seconds', JOB_EXECUTION_BUFFER_IN_SECONDS ) ) ) {
 			return new \WP_Error( 'premature', __( 'Event is not scheduled to be run yet.', 'wp-cron-control-revisited' ) );
 		}
 
@@ -195,7 +189,7 @@ class Main extends Singleton {
 
 		// Prepare environment to run job
 		ignore_user_abort( true );
-		set_time_limit( $this->job_timeout_in_minutes * MINUTE_IN_SECONDS );
+		set_time_limit( JOB_TIMEOUT_IN_MINUTES * MINUTE_IN_SECONDS );
 		define( 'DOING_CRON', true );
 
 		// Remove the event, and reschedule if desired
@@ -258,7 +252,7 @@ class Main extends Singleton {
 		// Prevent deadlock
 		$lock_timestamp = (int) wp_cache_get( $this->cache_key_lock_timestamp, null, true );
 
-		if ( $lock_timestamp < time() - $this->job_timeout_in_minutes * MINUTE_IN_SECONDS ) {
+		if ( $lock_timestamp < time() - JOB_TIMEOUT_IN_MINUTES * MINUTE_IN_SECONDS ) {
 			wp_cache_set( $this->cache_key_lock, 0 );
 			wp_cache_set( $this->cache_key_lock_timestamp, time() );
 			return true;
@@ -267,7 +261,7 @@ class Main extends Singleton {
 		// Check if process can run
 		$lock = (int) wp_cache_get( $this->cache_key_lock, null, true );
 
-		if ( $lock >= $this->job_concurrency_limit ) {
+		if ( $lock >= JOB_CONCURRENCY_LIMIT ) {
 			return false;
 		} else {
 			wp_cache_incr( $this->cache_key_lock );
