@@ -10,6 +10,8 @@ class Cron_Options_CPT extends Singleton {
 	/**
 	 * Class properties
 	 */
+	const LOCK = 'create-jobs';
+
 	private $post_type   = 'wpccr_events';
 	private $post_status = 'inherit';
 
@@ -23,6 +25,9 @@ class Cron_Options_CPT extends Singleton {
 	protected function class_init() {
 		// Data storage
 		add_action( 'init', array( $this, 'register_post_type' ) );
+
+		// Lock for post insertion, to guard against endless event creation when `wp_next_scheduled()` is misused
+		Lock::prime_lock( self::LOCK );
 
 		// Option interception
 		add_filter( 'pre_option_cron', array( $this, 'get_option' ) );
@@ -221,6 +226,11 @@ class Cron_Options_CPT extends Singleton {
 	 * Create a job post, respecting whether or not Core is ready for CPTs
 	 */
 	private function create_job( $job_post ) {
+		// Limit how many events to insert at once
+		if ( ! Lock::check_lock( self::LOCK, 5 ) ) {
+			return false;
+		}
+
 		// If called before `init`, we need to insert directly because post types aren't registered earlier
 		if ( did_action( 'init' ) ) {
 			wp_insert_post( $job_post );
@@ -261,6 +271,9 @@ class Cron_Options_CPT extends Singleton {
 				$this->posts_to_clean[] = $wpdb->insert_id;
 			}
 		}
+
+		// Allow more events to be created
+		Lock::free_lock( self::LOCK );
 	}
 
 	/**
