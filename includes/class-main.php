@@ -10,8 +10,7 @@ class Main extends Singleton {
 	/**
 	 * Class properties
 	 */
-	private $cache_key_lock           = 'wpccr_lock';
-	private $cache_key_lock_timestamp = 'wpccr_lock_ts';
+	const LOCK = 'run-events';
 
 	/**
 	 * Register hooks
@@ -29,8 +28,7 @@ class Main extends Singleton {
 		}
 
 		// Prime lock cache if not present
-		wp_cache_add( $this->cache_key_lock, 0 );
-		wp_cache_add( $this->cache_key_lock_timestamp, time() );
+		Lock::prime_lock( self::LOCK );
 
 		// Load dependencies
 		require __DIR__ . '/class-internal-events.php';
@@ -183,7 +181,7 @@ class Main extends Singleton {
 		$time_start = microtime( true );
 
 		// Limit how many events are processed concurrently
-		if ( ! is_internal_event( $event['action'] ) && ! $this->check_lock() ) {
+		if ( ! is_internal_event( $event['action'] ) && ! Lock::check_lock( self::LOCK ) ) {
 			return new \WP_Error( 'no-free-threads', __( 'No resources available to run this job.', 'wp-cron-control-revisited' ) );
 		}
 
@@ -206,7 +204,7 @@ class Main extends Singleton {
 
 		// Free process for the next event
 		if ( ! is_internal_event( $event['action'] ) ) {
-			$this->free_lock();
+			Lock::free_lock( self::LOCK );
 		}
 
 		$time_end = microtime( true );
@@ -239,50 +237,5 @@ class Main extends Singleton {
 		}
 
 		return $event;
-	}
-
-	/**
-	 * PLUGIN UTILITY METHODS
-	 */
-
-	/**
-	 * Set a lock and limit how many concurrent jobs are permitted
-	 */
-	private function check_lock() {
-		// Prevent deadlock
-		$lock_timestamp = (int) wp_cache_get( $this->cache_key_lock_timestamp, null, true );
-
-		if ( $lock_timestamp < time() - JOB_TIMEOUT_IN_MINUTES * MINUTE_IN_SECONDS ) {
-			wp_cache_set( $this->cache_key_lock, 0 );
-			wp_cache_set( $this->cache_key_lock_timestamp, time() );
-			return true;
-		}
-
-		// Check if process can run
-		$lock = (int) wp_cache_get( $this->cache_key_lock, null, true );
-
-		if ( $lock >= JOB_CONCURRENCY_LIMIT ) {
-			return false;
-		} else {
-			wp_cache_incr( $this->cache_key_lock );
-			return true;
-		}
-	}
-
-	/**
-	 * When event completes, allow another
-	 */
-	private function free_lock() {
-		$lock = (int) wp_cache_get( $this->cache_key_lock, null, true );
-
-		if ( $lock > 1 ) {
-			wp_cache_decr( $this->cache_key_lock );
-		} else {
-			wp_cache_set( $this->cache_key_lock, 0 );
-		}
-
-		wp_cache_set( $this->cache_key_lock_timestamp, time() );
-
-		return true;
 	}
 }
