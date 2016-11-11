@@ -6,15 +6,20 @@ class Lock {
 	/**
 	 * Set a lock and limit how many concurrent jobs are permitted
 	 */
-	public static function check_lock( $lock ) {
+	public static function check_lock( $lock, $limit = null ) {
 		// Prevent deadlock
 		if ( self::get_lock_timestamp( $lock ) < time() - JOB_TIMEOUT_IN_MINUTES * MINUTE_IN_SECONDS ) {
 			self::reset_lock( $lock );
 			return true;
 		}
 
+		// Default limit for concurrent events
+		if ( ! is_numeric( $limit ) ) {
+			$limit = JOB_CONCURRENCY_LIMIT;
+		}
+
 		// Check if process can run
-		if ( self::get_lock_value( $lock ) >= JOB_CONCURRENCY_LIMIT ) {
+		if ( self::get_lock_value( $lock ) >= $limit ) {
 			return false;
 		} else {
 			wp_cache_incr( self::get_key( $lock ) );
