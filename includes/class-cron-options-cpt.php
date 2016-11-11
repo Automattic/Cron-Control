@@ -12,8 +12,8 @@ class Cron_Options_CPT extends Singleton {
 	 */
 	const LOCK = 'create-jobs';
 
-	private $post_type   = 'wpccr_events';
-	private $post_status = 'inherit';
+	const POST_TYPE   = 'wpccr_events';
+	const POST_STATUS = 'inherit';
 
 	private $posts_to_clean = array();
 
@@ -38,7 +38,7 @@ class Cron_Options_CPT extends Singleton {
 	 * Register a private post type to store cron events
 	 */
 	public function register_post_type() {
-		register_post_type( $this->post_type, array(
+		register_post_type( self::POST_TYPE, array(
 			'label'               => 'Cron Events',
 			'public'              => false,
 			'rewrite'             => false,
@@ -69,8 +69,8 @@ class Cron_Options_CPT extends Singleton {
 
 		// Get events to re-render as the cron option
 		$jobs_posts = $this->get_jobs( array(
-			'post_type'        => $this->post_type,
-			'post_status'      => $this->post_status,
+			'post_type'        => self::POST_TYPE,
+			'post_status'      => self::POST_STATUS,
 			'suppress_filters' => false,
 			'posts_per_page'   => 1000,
 			'orderby'          => 'date',
@@ -156,8 +156,8 @@ class Cron_Options_CPT extends Singleton {
 					foreach ( $action_instances as $instance => $instance_args ) {
 						$job_exists = $this->job_exists( array(
 							'name'             => sprintf( '%s-%s-%s', $timestamp, md5( $action ), $instance ),
-							'post_type'        => $this->post_type,
-							'post_status'      => $this->post_status,
+							'post_type'        => self::POST_TYPE,
+							'post_status'      => self::POST_STATUS,
 							'suppress_filters' => false,
 							'posts_per_page'   => 1,
 						) );
@@ -174,8 +174,8 @@ class Cron_Options_CPT extends Singleton {
 								) ),
 								'post_date'             => date( 'Y-m-d H:i:s', $timestamp ),
 								'post_date_gmt'         => date( 'Y-m-d H:i:s', $timestamp ),
-								'post_type'             => $this->post_type,
-								'post_status'           => $this->post_status,
+								'post_type'             => self::POST_TYPE,
+								'post_status'           => self::POST_STATUS,
 							);
 
 							$this->create_job( $job_post );
@@ -216,7 +216,7 @@ class Cron_Options_CPT extends Singleton {
 		} else {
 			global $wpdb;
 
-			$exists = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_name = %s AND post_type = %s AND post_status = %s LIMIT 1;", $job_post['name'], $this->post_type, $this->post_status ) );
+			$exists = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_name = %s AND post_type = %s AND post_status = %s LIMIT 1;", $job_post['name'], self::POST_TYPE, self::POST_STATUS ) );
 		}
 
 		return empty( $exists ) ? false : array_shift( $exists );
@@ -261,7 +261,7 @@ class Cron_Options_CPT extends Singleton {
 			$job_post = wp_unslash( $job_post );
 
 			// Set this so it isn't empty, even though it serves us no purpose
-			$job_post['guid'] = esc_url( add_query_arg( $this->post_type, $job_post['post_name'], home_url( '/' ) ) );
+			$job_post['guid'] = esc_url( add_query_arg( self::POST_TYPE, $job_post['post_name'], home_url( '/' ) ) );
 
 			// Create the post
 			$inserted = $wpdb->insert( $wpdb->posts, $job_post );
@@ -288,8 +288,8 @@ class Cron_Options_CPT extends Singleton {
 	private function delete_job( $timestamp, $action, $instance ) {
 		$job = $this->job_exists( array(
 			'name'             => sprintf( '%s-%s-%s', $timestamp, md5( $action ), $instance ),
-			'post_type'        => $this->post_type,
-			'post_status'      => $this->post_status,
+			'post_type'        => self::POST_TYPE,
+			'post_status'      => self::POST_STATUS,
 			'suppress_filters' => false,
 			'posts_per_page'   => 1,
 		) );
