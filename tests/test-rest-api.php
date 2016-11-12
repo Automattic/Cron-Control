@@ -33,6 +33,8 @@ class WPCCR_REST_API_Test extends WP_UnitTestCase {
 	 * Test that list endpoint returns expected format
 	 */
 	public function test_get_items() {
+		$ev = $this->create_test_event();
+
 		$request = new WP_REST_Request( 'POST', '/' . WP_Cron_Control_Revisited\REST_API_NAMESPACE . '/' . WP_Cron_Control_Revisited\REST_API_ENDPOINT_LIST );
 		$request->set_body( wp_json_encode( array( 'secret' => WP_CRON_CONTROL_SECRET, ) ) );
 		$request->set_header( 'content-type', 'application/json' );
@@ -43,10 +45,38 @@ class WPCCR_REST_API_Test extends WP_UnitTestCase {
 		$this->assertResponseStatus( 200, $response );
 		$this->assertArrayHasKey( 'events', $data );
 		$this->assertArrayHasKey( 'endpoint', $data );
+
 		$this->assertResponseData( array(
-			'events'   => array(),
+			'events'   => array(
+				array(
+					'timestamp' => $ev['timestamp'],
+					'action'    => md5( $ev['action'] ),
+					'instance'  => md5( serialize( $ev['args'] ) ),
+				),
+			),
 			'endpoint' => get_rest_url( null, WP_Cron_Control_Revisited\REST_API_NAMESPACE . '/' . WP_Cron_Control_Revisited\REST_API_ENDPOINT_RUN ),
 		), $response );
+	}
+
+	/**
+	 * Build a test event
+	 */
+	protected function create_test_event() {
+		$event = array(
+			'timestamp' => time(),
+			'action'    => 'wpccr_test_event',
+			'args'      => array(),
+		);
+
+		$next = wp_next_scheduled( $event['action'], $event['args'] );
+
+		if ( $next ) {
+			$event['timestamp'] = $next;
+		} else {
+			wp_schedule_single_event( $event[ 'timestamp' ], $event[ 'action' ], $event[ 'args' ] );
+		}
+
+		return $event;
 	}
 
 	/**
