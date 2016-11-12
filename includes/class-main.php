@@ -36,14 +36,35 @@ class Main extends Singleton {
 		require __DIR__ . '/functions.php';
 
 		// Block normal cron execution
-		define( 'DISABLE_WP_CRON', true );
-		define( 'ALTERNATE_WP_CRON', false );
+		$this->set_constants();
 
 		$block_action = did_action( 'muplugins_loaded' ) ? 'plugins_loaded' : 'muplugins_loaded';
 		add_action( $block_action, array( $this, 'block_direct_cron' ) );
 		remove_action( 'init', 'wp_cron' );
 
 		add_filter( 'cron_request', array( $this, 'block_spawn_cron' ) );
+	}
+
+	/**
+	 * Define constants that block Core's cron
+	 *
+	 * If a constant is already defined and isn't what we expect, log it
+	 */
+	private function set_constants() {
+		$constants = array(
+			'DISABLE_WP_CRON'   => true,
+			'ALTERNATE_WP_CRON' => false,
+		);
+
+		foreach ( $constants as $constant => $expected_value ) {
+			if ( defined( $constant ) ) {
+				if ( constant( $constant ) !== $expected_value ) {
+					error_log( sprintf( __( '%s: %s set to unexpected value; must be corrected for proper behaviour.', 'wp-cron-control-revisited' ), 'WP-Cron Control Revisited', $constant ) );
+				}
+			} else {
+				define( $constant, $expected_value );
+			}
+		}
 	}
 
 	/**
