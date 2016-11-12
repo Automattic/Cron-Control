@@ -17,21 +17,7 @@ class Internal_Events extends Singleton {
 	 * Register hooks
 	 */
 	protected function class_init() {
-		$this->prepare();
-
-		add_action( 'wp_loaded', array( $this, 'schedule_internal_events' ) );
-		add_filter( 'cron_schedules', array( $this, 'register_internal_events_schedules' ) );
-
-		foreach ( $this->internal_jobs as $internal_job ) {
-			add_action( $internal_job['action'], array( $this, $internal_job['callback'] ) );
-		}
-	}
-
-	/**
-	 * Set additional variables required for plugin functionality
-	 */
-	private function prepare() {
-		// Internal jobs
+		// Internal jobs variables
 		$this->internal_jobs = array(
 			array(
 				'schedule' => 'wpccrij_minute',
@@ -60,6 +46,14 @@ class Internal_Events extends Singleton {
 				'display' => __( 'WP Cron Control Revisited internal job - every 10 minutes', 'wp-cron-control-revisited' ),
 			),
 		);
+
+		// Register hooks
+		add_action( 'wp_loaded', array( $this, 'schedule_internal_events' ) );
+		add_filter( 'cron_schedules', array( $this, 'register_internal_events_schedules' ) );
+
+		foreach ( $this->internal_jobs as $internal_job ) {
+			add_action( $internal_job['action'], array( $this, $internal_job['callback'] ) );
+		}
 	}
 
 	/**
