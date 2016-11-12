@@ -59,6 +59,30 @@ class WPCCR_REST_API_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that list endpoint returns expected format
+	 */
+	public function test_run_event() {
+		$ev = $this->create_test_event();
+		$ev['action'] = md5( $ev['action'] );
+		$ev['instance'] = md5( serialize( $ev['args'] ) );
+		$ev['secret'] = WP_CRON_CONTROL_SECRET;
+		unset( $ev['args'] );
+
+		$request = new WP_REST_Request( 'PUT', '/' . WP_Cron_Control_Revisited\REST_API_NAMESPACE . '/' . WP_Cron_Control_Revisited\REST_API_ENDPOINT_RUN );
+		$request->set_body( wp_json_encode( $ev ) );
+		$request->set_header( 'content-type', 'application/json' );
+
+		$response = $this->server->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertResponseStatus( 200, $response );
+		$this->assertArrayHasKey( 'success', $data );
+		$this->assertArrayHasKey( 'message', $data );
+
+
+	}
+
+	/**
 	 * Build a test event
 	 */
 	protected function create_test_event() {
