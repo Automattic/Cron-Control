@@ -50,14 +50,14 @@ class WPCCR_REST_API_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 *
+	 * Check response code
 	 */
 	protected function assertResponseStatus( $status, $response ) {
 		$this->assertEquals( $status, $response->get_status() );
 	}
 
 	/**
-	 *
+	 * Ensure response includes the expected data
 	 */
 	protected function assertResponseData( $data, $response ) {
 		$response_data = $response->get_data();
@@ -73,7 +73,7 @@ class WPCCR_REST_API_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 *
+	 * Clean up
 	 */
 	public function tearDown() {
 		parent::tearDown();
