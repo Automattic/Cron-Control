@@ -37,4 +37,34 @@ class WPCCR_Cron_Options_CPT_Test extends WP_UnitTestCase {
 		$this->assertEquals( md5( serialize( $event['args'] ) ), $instance['instance'] );
 		WP_Cron_Control_Revisited_Tests\Utils::compare_arrays( $event['args'], $instance['args'], $this );
 	}
+
+	/**
+	 * Check format of filtered array returned from CPT
+	 */
+	function test_filter_cron_option_get() {
+		$event = WP_Cron_Control_Revisited_Tests\Utils::create_test_event();
+
+		$cron = get_option( 'cron' );
+
+		// Core versions the cron option (see `_upgrade_cron_array()`)
+		// Without this in the filtered result, all events continually requeue as Core tries to "upgrade" the option
+		$this->assertArrayHasKey( 'version', $cron );
+		$this->assertEquals( $cron['version'], 2 );
+
+		// Validate the remaining structure
+		foreach ( $cron as $timestamp => $timestamp_events ) {
+			if ( ! is_numeric( $timestamp ) ) {
+				continue;
+			}
+
+			foreach ( $timestamp_events as $action => $action_instances ) {
+				$this->assertEquals( $action, $event['action'] );
+
+				foreach ( $action_instances as $instance => $instance_args ) {
+					$this->assertArrayHasKey( 'schedule', $instance_args );
+					$this->assertArrayHasKey( 'args', $instance_args );
+				}
+			}
+		}
+	}
 }
