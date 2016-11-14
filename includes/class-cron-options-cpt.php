@@ -68,40 +68,52 @@ class Cron_Options_CPT extends Singleton {
 		);
 
 		// Get events to re-render as the cron option
-		$jobs_posts = $this->get_jobs( array(
-			'post_type'        => self::POST_TYPE,
-			'post_status'      => self::POST_STATUS,
-			'suppress_filters' => false,
-			'posts_per_page'   => 1000,
-			'orderby'          => 'date',
-			'order'            => 'ASC',
-		) );
+		$page  = 1;
 
-		// Loop through results and built output Core expects
-		if ( ! empty( $jobs_posts ) ) {
-			foreach ( $jobs_posts as $jobs_post ) {
-				$timestamp = strtotime( $jobs_post->post_date_gmt );
+		do {
+			$jobs_posts = $this->get_jobs( array(
+				'post_type'        => self::POST_TYPE,
+				'post_status'      => self::POST_STATUS,
+				'suppress_filters' => false,
+				'posts_per_page'   => 100,
+				'paged'            => $page,
+				'orderby'          => 'date',
+				'order'            => 'ASC',
+			) );
 
-				$job_args = maybe_unserialize( $jobs_post->post_content_filtered );
-				if ( ! is_array( $job_args ) ) {
-					continue;
-				}
-
-				$action   = $job_args['action'];
-				$instance = $job_args['instance'];
-				$args     = $job_args['args'];
-
-				$cron_array[ $timestamp ][ $action ][ $instance ] = array(
-					'schedule' => $args['schedule'],
-					'args'     => $args['args'],
-				);
-
-				if ( isset( $args['interval'] ) ) {
-					$cron_array[ $timestamp ][ $action ][ $instance ]['interval'] = $args['interval'];
-				}
-
+			// Nothing more to add
+			if ( empty( $jobs_posts ) ) {
+				break;
 			}
-		}
+
+			$page++;
+
+			// Loop through results and built output Core expects
+			if ( ! empty( $jobs_posts ) ) {
+				foreach ( $jobs_posts as $jobs_post ) {
+					$timestamp = strtotime( $jobs_post->post_date_gmt );
+
+					$job_args = maybe_unserialize( $jobs_post->post_content_filtered );
+					if ( ! is_array( $job_args ) ) {
+						continue;
+					}
+
+					$action   = $job_args['action'];
+					$instance = $job_args['instance'];
+					$args     = $job_args['args'];
+
+					$cron_array[ $timestamp ][ $action ][ $instance ] = array(
+						'schedule' => $args['schedule'],
+						'args'     => $args['args'],
+					);
+
+					if ( isset( $args['interval'] ) ) {
+						$cron_array[ $timestamp ][ $action ][ $instance ]['interval'] = $args['interval'];
+					}
+
+				}
+			}
+		} while( true );
 
 		uksort( $cron_array, 'strnatcasecmp' );
 
@@ -202,7 +214,14 @@ class Cron_Options_CPT extends Singleton {
 
 			$orderby = 'date' === $args['orderby'] ? 'post_date' : $args['orderby'];
 
-			return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->posts} WHERE post_type = %s AND post_status = %s ORDER BY %s %s LIMIT %d;", $args['post_type'], $args['post_status'], $orderby, $args['order'], $args['posts_per_page'] ), 'OBJECT' );
+			if ( isset( $args['paged'] ) ) {
+				$paged  = max( 0, $args['paged'] - 1 );
+				$offset = $paged * $args['posts_per_page'];
+			} else {
+				$offset = 0;
+			}
+
+			return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->posts} WHERE post_type = %s AND post_status = %s ORDER BY %s %s LIMIT %d,%d;", $args['post_type'], $args['post_status'], $orderby, $args['order'], $offset, $args['posts_per_page'] ), 'OBJECT' );
 		}
 	}
 
