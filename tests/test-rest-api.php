@@ -51,7 +51,7 @@ class WPCCR_REST_API_Test extends WP_UnitTestCase {
 				array(
 					'timestamp' => $ev['timestamp'],
 					'action'    => md5( $ev['action'] ),
-					'instance'  => md5( serialize( $ev['args'] ) ),
+					'instance'  => md5( maybe_serialize( $ev['args'] ) ),
 				),
 			),
 			'endpoint' => get_rest_url( null, WP_Cron_Control_Revisited\REST_API_NAMESPACE . '/' . WP_Cron_Control_Revisited\REST_API_ENDPOINT_RUN ),
@@ -64,7 +64,7 @@ class WPCCR_REST_API_Test extends WP_UnitTestCase {
 	public function test_run_event() {
 		$ev = WP_Cron_Control_Revisited_Tests\Utils::create_test_event();
 		$ev['action'] = md5( $ev['action'] );
-		$ev['instance'] = md5( serialize( $ev['args'] ) );
+		$ev['instance'] = md5( maybe_serialize( $ev['args'] ) );
 		$ev['secret'] = WP_CRON_CONTROL_SECRET;
 		unset( $ev['args'] );
 

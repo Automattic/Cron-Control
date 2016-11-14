@@ -232,7 +232,7 @@ class Main extends Singleton {
 
 		return array(
 			'success' => true,
-			'message' => sprintf( __( 'Job with action `%1$s` and arguments `%2$s` completed in %3$d seconds.', 'wp-cron-control-revisited' ), $event['action'], serialize( $event['args'] ), $time_end - $time_start ),
+			'message' => sprintf( __( 'Job with action `%1$s` and arguments `%2$s` completed in %3$d seconds.', 'wp-cron-control-revisited' ), $event['action'], maybe_serialize( $event['args'] ), $time_end - $time_start ),
 		);
 	}
 
