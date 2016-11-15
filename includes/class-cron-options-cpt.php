@@ -158,41 +158,34 @@ class Cron_Options_CPT extends Singleton {
 	 */
 	private function convert_option( $new_value ) {
 		if ( is_array( $new_value ) && ! empty( $new_value ) ) {
-			foreach ( $new_value as $timestamp => $timestamp_events ) {
-				// Skip non-event data that Core includes in the option
-				if ( ! is_numeric( $timestamp ) ) {
-					continue;
-				}
+			$events = collapse_events_array( $new_value );
 
-				foreach ( $timestamp_events as $action => $action_instances ) {
-					foreach ( $action_instances as $instance => $instance_args ) {
-						$job_exists = $this->job_exists( array(
-							'name'             => sprintf( '%s-%s-%s', $timestamp, md5( $action ), $instance ),
-							'post_type'        => self::POST_TYPE,
-							'post_status'      => self::POST_STATUS,
-							'suppress_filters' => false,
-							'posts_per_page'   => 1,
-						) );
+			foreach ( $events as $event ) {
+				$job_exists = $this->job_exists( array(
+					'name'             => sprintf( '%s-%s-%s', $event['timestamp'], md5( $event['action'] ), $event['instance'] ),
+					'post_type'        => self::POST_TYPE,
+					'post_status'      => self::POST_STATUS,
+					'suppress_filters' => false,
+					'posts_per_page'   => 1,
+				) );
 
-						if ( ! $job_exists ) {
-							// Build minimum information needed to create a post
-							$job_post = array(
-								'post_title'            => sprintf( '%s | %s | %s', $timestamp, $action, $instance ),
-								'post_name'             => sprintf( '%s-%s-%s', $timestamp, md5( $action ), $instance ),
-								'post_content_filtered' => maybe_serialize( array(
-									'action'   => $action,
-									'instance' => $instance,
-									'args'     => $instance_args,
-								) ),
-								'post_date'             => date( 'Y-m-d H:i:s', $timestamp ),
-								'post_date_gmt'         => date( 'Y-m-d H:i:s', $timestamp ),
-								'post_type'             => self::POST_TYPE,
-								'post_status'           => self::POST_STATUS,
-							);
+				if ( ! $job_exists ) {
+					// Build minimum information needed to create a post
+					$job_post = array(
+						'post_title'            => sprintf( '%s | %s | %s', $event['timestamp'], $event['action'], $event['instance'] ),
+						'post_name'             => sprintf( '%s-%s-%s', $event['timestamp'], md5( $event['action'] ), $event['instance'] ),
+						'post_content_filtered' => maybe_serialize( array(
+							'action'   => $event['action'],
+							'instance' => $event['instance'],
+							'args'     => $event['args'],
+						) ),
+						'post_date'             => date( 'Y-m-d H:i:s', $event['timestamp'] ),
+						'post_date_gmt'         => date( 'Y-m-d H:i:s', $event['timestamp'] ),
+						'post_type'             => self::POST_TYPE,
+						'post_status'           => self::POST_STATUS,
+					);
 
-							$this->create_job( $job_post );
-						}
-					}
+					$this->create_job( $job_post );
 				}
 			}
 		}
@@ -345,22 +338,19 @@ class Cron_Options_CPT extends Singleton {
 	private function find_unscheduled_jobs( $new, $old ) {
 		$differences = array();
 
-		foreach ( $old as $timestamp => $timestamp_events ) {
-			// Skip non-event data that Core includes in the option
-			if ( ! is_numeric( $timestamp ) ) {
-				continue;
-			}
+		$old = collapse_events_array( $old );
 
-			foreach ( $timestamp_events as $action => $action_instances ) {
-				foreach ( $action_instances as $instance => $instance_args ) {
-					if ( ! isset( $new[ $timestamp ][ $action ][ $instance ] ) ) {
-						$differences[] = array(
-							'timestamp' => $timestamp,
-							'action'    => $action,
-							'instance'  => $instance,
-						);
-					}
-				}
+		foreach ( $old as $event ) {
+			$timestamp = $event['timestamp'];
+			$action    = $event['action'];
+			$instance  = $event['instance'];
+
+			if ( ! isset( $new[ $timestamp ][ $action ][ $instance ] ) ) {
+				$differences[] = array(
+					'timestamp' => $timestamp,
+					'action'    => $action,
+					'instance'  => $instance,
+				);
 			}
 		}
 
