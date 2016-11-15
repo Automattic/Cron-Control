@@ -93,4 +93,35 @@ class WPCCR_Cron_Options_CPT_Test extends WP_UnitTestCase {
 
 		$this->assertFalse( $second_event_ts );
 	}
+
+	/**
+	 * Test that events are unscheduled correctly by checking the CPT
+	 */
+	function test_event_unscheduling_against_cpt() {
+		// Schedule two events and prepare their data a bit for further testing
+		$first_event = WP_Cron_Control_Revisited_Tests\Utils::create_test_event();
+		$first_event['instance'] = md5( maybe_serialize( $first_event['args'] ) );
+		$first_event_args = $first_event['args'];
+		unset( $first_event['args'] );
+
+		sleep( 2 ); // More-thorough to test with events that don't have matching timestamps
+
+		$second_event = WP_Cron_Control_Revisited_Tests\Utils::create_test_event( true );
+		$second_event['instance'] = md5( maybe_serialize( $second_event['args'] ) );
+		$second_event_args = $second_event['args'];
+		unset( $second_event['args'] );
+
+		// First, check that posts were created for the two events
+		WP_Cron_Control_Revisited_Tests\Utils::compare_arrays( array( $first_event, $second_event ), WP_Cron_Control_Revisited_Tests\Utils::get_events_from_post_objects(), $this );
+
+		// Second, unschedule an event and confirm that the post is removed
+		wp_unschedule_event( $first_event['timestamp'], $first_event['action'], $first_event_args );
+
+		WP_Cron_Control_Revisited_Tests\Utils::compare_arrays( array( $second_event ), WP_Cron_Control_Revisited_Tests\Utils::get_events_from_post_objects(), $this );
+
+		// Finally, unschedule the second event and confirm its post is also deleted
+		wp_unschedule_event( $second_event['timestamp'], $second_event['action'], $second_event_args );
+
+		$this->assertEmpty( WP_Cron_Control_Revisited_Tests\Utils::get_events_from_post_objects() );
+	}
 }

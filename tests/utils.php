@@ -29,6 +29,33 @@ class Utils {
 	}
 
 	/**
+	 * Retrieve some events' post objects for use in testing
+	 */
+	static function get_events_from_post_objects() {
+		$events = get_posts( array(
+			'post_type'        => \WP_Cron_Control_Revisited\Cron_Options_CPT::POST_TYPE,
+			'post_status'      => \WP_Cron_Control_Revisited\Cron_Options_CPT::POST_STATUS,
+			'posts_per_page'   => 10,
+			'orderby'          => 'date',
+			'order'            => 'ASC',
+			'suppress_filters' => false,
+		) );
+
+		$parsed_events = array();
+
+		foreach ( $events as $event ) {
+			$event_args = explode( '|', $event->post_title );
+			$parsed_events[] = array(
+				'timestamp' => (int) $event_args[0],
+				'action'    => trim( $event_args[1] ),
+				'instance'  => trim( $event_args[2] ),
+			);
+		}
+
+		return $parsed_events;
+	}
+
+	/**
 	 * Check that two arrays are equal
 	 */
 	static function compare_arrays( $expected, $test, $context ) {
