@@ -12,6 +12,7 @@ namespace WP_Cron_Control_Revisited;
 
 // Load basics needed to instantiate plugin
 require __DIR__ . '/includes/constants.php';
+require __DIR__ . '/includes/utils.php';
 require __DIR__ . '/includes/abstract-class-singleton.php';
 require __DIR__ . '/includes/class-lock.php';
 
