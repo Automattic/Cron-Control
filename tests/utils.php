@@ -41,6 +41,10 @@ class Utils {
 			}
 		}
 
-		$context->assertEquals( $expected, $tested_data );
+		if ( is_object( $context ) ) {
+			$context->assertEquals( $expected, $tested_data );
+		} else {
+			return $tested_data;
+		}
 	}
 }
