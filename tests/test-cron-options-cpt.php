@@ -67,4 +67,30 @@ class WPCCR_Cron_Options_CPT_Test extends WP_UnitTestCase {
 			}
 		}
 	}
+
+	/**
+	 * Test that events are unscheduled correctly using Core functions
+	 */
+	function test_event_unscheduling_using_core_functions() {
+		$first_event = WP_Cron_Control_Revisited_Tests\Utils::create_test_event();
+		$second_event = WP_Cron_Control_Revisited_Tests\Utils::create_test_event( true );
+
+		$first_event_ts = wp_next_scheduled( $first_event['action'], $first_event['args'] );
+
+		$this->assertEquals( $first_event_ts, $first_event['timestamp'] );
+
+		wp_unschedule_event( $first_event_ts, $first_event['action'], $first_event['args'] );
+
+		$first_event_ts  = wp_next_scheduled( $first_event['action'], $first_event['args'] );
+		$second_event_ts = wp_next_scheduled( $second_event['action'], $second_event['args'] );
+
+		$this->assertFalse( $first_event_ts );
+		$this->assertEquals( $second_event_ts, $second_event['timestamp'] );
+
+		wp_unschedule_event( $second_event_ts, $second_event['action'], $second_event['args'] );
+
+		$second_event_ts = wp_next_scheduled( $second_event['action'], $second_event['args'] );
+
+		$this->assertFalse( $second_event_ts );
+	}
 }

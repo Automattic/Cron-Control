@@ -6,12 +6,16 @@ class Utils {
 	/**
 	 * Build a test event
 	 */
-	static function create_test_event() {
+	static function create_test_event( $allow_multiple = false ) {
 		$event = array(
 			'timestamp' => time(),
 			'action'    => 'wpccr_test_event',
 			'args'      => array(),
 		);
+
+		if ( $allow_multiple ) {
+			$event['action'] .= '_' . rand( 10, 100 );
+		}
 
 		$next = wp_next_scheduled( $event['action'], $event['args'] );
 
