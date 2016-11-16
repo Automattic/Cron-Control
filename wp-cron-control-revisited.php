@@ -4,7 +4,7 @@
  Plugin URI:
  Description: Take control of wp-cron execution.
  Author: Erick Hitter, Automattic
- Version: 0.1
+ Version: 1.0
  Text Domain: wp-cron-control-revisited
  */
 
