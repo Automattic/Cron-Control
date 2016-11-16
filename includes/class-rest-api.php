@@ -41,7 +41,7 @@ class REST_API extends Singleton {
 	 * List events pending for the current period
 	 */
 	public function get_events() {
-		return rest_ensure_response( Main::instance()->get_events() );
+		return rest_ensure_response( Events::instance()->get_events() );
 	}
 
 	/**
@@ -57,7 +57,7 @@ class REST_API extends Singleton {
 		$action    = isset( $event['action'] ) ? trim( sanitize_text_field( $event['action'] ) ) : null;
 		$instance  = isset( $event['instance'] ) ? trim( sanitize_text_field( $event['instance'] ) ) : null;
 
-		return rest_ensure_response( Main::instance()->run_event( $timestamp, $action, $instance ) );
+		return rest_ensure_response( Events::instance()->run_event( $timestamp, $action, $instance ) );
 	}
 
 	/**
