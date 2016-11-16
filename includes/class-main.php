@@ -120,41 +120,34 @@ class Main extends Singleton {
 		// Ensures events are sorted chronologically
 		uksort( $events, 'strnatcasecmp' );
 
+		// Simplify array format for further processing
+		$events = collapse_events_array( $events );
+
 		// Select only those events to run in the next sixty seconds
 		// Will include missed events as well
 		$current_events = $internal_events = array();
 		$current_window = strtotime( sprintf( '+%d seconds', JOB_QUEUE_WINDOW_IN_SECONDS ) );
 
-		foreach ( $events as $timestamp => $timestamp_events ) {
-			// Skip non-event data that Core includes in the option
-			if ( ! is_numeric( $timestamp ) ) {
+		foreach ( $events as $event ) {
+			// Skip events whose time hasn't come
+			if ( $event['timestamp'] > $current_window ) {
 				continue;
 			}
 
-			// Skip events whose time hasn't come
-			if ( $timestamp > $current_window ) {
-				break;
-			}
+			// Necessary data to identify an individual event
+			// `$event['action']` is hashed to avoid information disclosure
+			// Core hashes `$event['instance']` for us
+			$event = array(
+				'timestamp' => $event['timestamp'],
+				'action'    => md5( $event['action'] ),
+				'instance'  => $event['instance'],
+			);
 
-			// Extract just the essentials needed to retrieve the full job later on
-			foreach ( $timestamp_events as $action => $action_instances ) {
-				foreach ( $action_instances as $instance => $instance_args ) {
-					// Necessary data to identify an individual event
-					// `$action` is hashed to avoid information disclosure
-					// Core hashes `$instance` for us
-					$event = array(
-						'timestamp' => $timestamp,
-						'action'    => md5( $action ),
-						'instance'  => $instance,
-					);
-
-					// Queue internal events separately to avoid them being blocked
-					if ( is_internal_event( $action ) ) {
-						$internal_events[] = $event;
-					} else {
-						$current_events[] = $event;
-					}
-				}
+			// Queue internal events separately to avoid them being blocked
+			if ( is_internal_event( $event['action'] ) ) {
+				$internal_events[] = $event;
+			} else {
+				$current_events[] = $event;
 			}
 		}
 
@@ -245,15 +238,15 @@ class Main extends Singleton {
 		$events = get_option( 'cron' );
 		$event  = false;
 
-		if ( isset( $events[ $timestamp ] ) ) {
-			foreach ( $events[ $timestamp ] as $action => $action_events ) {
-				if ( hash_equals( md5( $action ), $action_hashed ) && isset( $action_events[ $instance ] ) ) {
-					$event              = $action_events[ $instance ];
-					$event['timestamp'] = $timestamp;
-					$event['action']    = $action;
-					$event['instance']  = $instance;
-					break;
-				}
+		$filtered_events = collapse_events_array( $events, $timestamp );
+
+		foreach ( $filtered_events as $filtered_event ) {
+			if ( hash_equals( md5( $filtered_event['action'] ), $action_hashed ) && hash_equals( $filtered_event['instance'], $instance ) ) {
+				$event = $filtered_event['args'];
+				$event['timestamp'] = $filtered_event['timestamp'];
+				$event['action']    = $filtered_event['action'];
+				$event['instance']  = $filtered_event['instance'];
+				break;
 			}
 		}
 
