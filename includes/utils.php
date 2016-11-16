@@ -1,6 +1,6 @@
 <?php
 
-namespace WP_Cron_Control_Revisited;
+namespace Automattic\WP\Cron_Control;
 
 /**
  * Produce a simplified version of the cron events array

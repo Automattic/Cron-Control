@@ -8,7 +8,7 @@
  Text Domain: wp-cron-control-revisited
  */
 
-namespace WP_Cron_Control_Revisited;
+namespace Automattic\WP\Cron_Control;
 
 // Load basics needed to instantiate plugin
 require __DIR__ . '/includes/constants.php';

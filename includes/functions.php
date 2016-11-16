@@ -1,6 +1,6 @@
 <?php
 
-namespace WP_Cron_Control_Revisited;
+namespace Automattic\WP\Cron_Control;
 
 /**
  * Check if an event is an internal one that the plugin will always run

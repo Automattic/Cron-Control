@@ -1,6 +1,6 @@
 <?php
 
-namespace WP_Cron_Control_Revisited;
+namespace Automattic\WP\Cron_Control;
 
 abstract class Singleton {
 	/**

@@ -1,6 +1,6 @@
 <?php
 
-namespace WP_Cron_Control_Revisited_Tests;
+namespace Automattic\WP\Cron_Control\Tests;
 
 class Utils {
 	/**
@@ -33,8 +33,8 @@ class Utils {
 	 */
 	static function get_events_from_post_objects() {
 		$events = get_posts( array(
-			'post_type'        => \WP_Cron_Control_Revisited\Cron_Options_CPT::POST_TYPE,
-			'post_status'      => \WP_Cron_Control_Revisited\Cron_Options_CPT::POST_STATUS,
+			'post_type'        => \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE,
+			'post_status'      => \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_STATUS,
 			'posts_per_page'   => 10,
 			'orderby'          => 'date',
 			'order'            => 'ASC',

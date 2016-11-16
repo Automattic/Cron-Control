@@ -14,7 +14,7 @@ class WPCCR_Cron_Options_CPT_Test extends WP_UnitTestCase {
 	 * Custom post type exists
 	 */
 	function test_cpt_exists() {
-		$this->assertTrue( post_type_exists( WP_Cron_Control_Revisited\Cron_Options_CPT::POST_TYPE ) );
+		$this->assertTrue( post_type_exists( Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE ) );
 	}
 
 	/**
@@ -23,10 +23,10 @@ class WPCCR_Cron_Options_CPT_Test extends WP_UnitTestCase {
 	function test_events_exist() {
 		global $wpdb;
 
-		$event     = WP_Cron_Control_Revisited_Tests\Utils::create_test_event();
+		$event     = Automattic\WP\Cron_Control\Tests\Utils::create_test_event();
 		$post_name = sprintf( '%s-%s-%s', $event['timestamp'], md5( $event['action'] ), md5( maybe_serialize( $event['args'] ) ) );
 
-		$entry = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $wpdb->posts WHERE post_type = %s AND post_status = %s AND post_name = %s LIMIT 1", WP_Cron_Control_Revisited\Cron_Options_CPT::POST_TYPE, WP_Cron_Control_Revisited\Cron_Options_CPT::POST_STATUS, $post_name ) );
+		$entry = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $wpdb->posts WHERE post_type = %s AND post_status = %s AND post_name = %s LIMIT 1", Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE, Automattic\WP\Cron_Control\Cron_Options_CPT::POST_STATUS, $post_name ) );
 
 		$this->assertEquals( count( $entry ), 1 );
 
@@ -35,14 +35,14 @@ class WPCCR_Cron_Options_CPT_Test extends WP_UnitTestCase {
 
 		$this->assertEquals( $event['action'], $instance['action'] );
 		$this->assertEquals( md5( maybe_serialize( $event['args'] ) ), $instance['instance'] );
-		WP_Cron_Control_Revisited_Tests\Utils::compare_arrays( $event['args'], $instance['args'], $this );
+		Automattic\WP\Cron_Control\Tests\Utils::compare_arrays( $event['args'], $instance['args'], $this );
 	}
 
 	/**
 	 * Check format of filtered array returned from CPT
 	 */
 	function test_filter_cron_option_get() {
-		$event = WP_Cron_Control_Revisited_Tests\Utils::create_test_event();
+		$event = Automattic\WP\Cron_Control\Tests\Utils::create_test_event();
 
 		$cron = get_option( 'cron' );
 
@@ -52,7 +52,7 @@ class WPCCR_Cron_Options_CPT_Test extends WP_UnitTestCase {
 		$this->assertEquals( $cron['version'], 2 );
 
 		// Validate the remaining structure
-		$cron = \WP_Cron_Control_Revisited\collapse_events_array( $cron );
+		$cron = \Automattic\WP\Cron_Control\collapse_events_array( $cron );
 
 		foreach ( $cron as $single_cron ) {
 			$this->assertEquals( $single_cron['timestamp'], $event['timestamp'] );
@@ -68,8 +68,8 @@ class WPCCR_Cron_Options_CPT_Test extends WP_UnitTestCase {
 	 * Test that events are unscheduled correctly using Core functions
 	 */
 	function test_event_unscheduling_using_core_functions() {
-		$first_event = WP_Cron_Control_Revisited_Tests\Utils::create_test_event();
-		$second_event = WP_Cron_Control_Revisited_Tests\Utils::create_test_event( true );
+		$first_event = Automattic\WP\Cron_Control\Tests\Utils::create_test_event();
+		$second_event = Automattic\WP\Cron_Control\Tests\Utils::create_test_event( true );
 
 		$first_event_ts = wp_next_scheduled( $first_event['action'], $first_event['args'] );
 
@@ -95,29 +95,29 @@ class WPCCR_Cron_Options_CPT_Test extends WP_UnitTestCase {
 	 */
 	function test_event_unscheduling_against_cpt() {
 		// Schedule two events and prepare their data a bit for further testing
-		$first_event = WP_Cron_Control_Revisited_Tests\Utils::create_test_event();
+		$first_event = Automattic\WP\Cron_Control\Tests\Utils::create_test_event();
 		$first_event['instance'] = md5( maybe_serialize( $first_event['args'] ) );
 		$first_event_args = $first_event['args'];
 		unset( $first_event['args'] );
 
 		sleep( 2 ); // More-thorough to test with events that don't have matching timestamps
 
-		$second_event = WP_Cron_Control_Revisited_Tests\Utils::create_test_event( true );
+		$second_event = Automattic\WP\Cron_Control\Tests\Utils::create_test_event( true );
 		$second_event['instance'] = md5( maybe_serialize( $second_event['args'] ) );
 		$second_event_args = $second_event['args'];
 		unset( $second_event['args'] );
 
 		// First, check that posts were created for the two events
-		WP_Cron_Control_Revisited_Tests\Utils::compare_arrays( array( $first_event, $second_event ), WP_Cron_Control_Revisited_Tests\Utils::get_events_from_post_objects(), $this );
+		Automattic\WP\Cron_Control\Tests\Utils::compare_arrays( array( $first_event, $second_event ), Automattic\WP\Cron_Control\Tests\Utils::get_events_from_post_objects(), $this );
 
 		// Second, unschedule an event and confirm that the post is removed
 		wp_unschedule_event( $first_event['timestamp'], $first_event['action'], $first_event_args );
 
-		WP_Cron_Control_Revisited_Tests\Utils::compare_arrays( array( $second_event ), WP_Cron_Control_Revisited_Tests\Utils::get_events_from_post_objects(), $this );
+		Automattic\WP\Cron_Control\Tests\Utils::compare_arrays( array( $second_event ), Automattic\WP\Cron_Control\Tests\Utils::get_events_from_post_objects(), $this );
 
 		// Finally, unschedule the second event and confirm its post is also deleted
 		wp_unschedule_event( $second_event['timestamp'], $second_event['action'], $second_event_args );
 
-		$this->assertEmpty( WP_Cron_Control_Revisited_Tests\Utils::get_events_from_post_objects() );
+		$this->assertEmpty( Automattic\WP\Cron_Control\Tests\Utils::get_events_from_post_objects() );
 	}
 }
