@@ -64,7 +64,7 @@ class Main extends Singleton {
 	 * Block direct cron execution as early as possible
 	 */
 	public function block_direct_cron() {
-		if ( false !== strpos( $_SERVER['REQUEST_URI'], '/wp-cron.php' ) ) {
+		if ( false !== stripos( $_SERVER['REQUEST_URI'], '/wp-cron.php' ) || false !== stripos( $_SERVER['SCRIPT_NAME'], '/wp-cron.php' ) ) {
 			status_header( 403 );
 			wp_send_json_error( new \WP_Error( 'forbidden', sprintf( __( 'Normal cron execution is blocked when the %s plugin is active.', 'wp-cron-control-revisited' ), 'WP-Cron Control Revisited' ) ) );
 		}
