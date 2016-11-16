@@ -52,19 +52,15 @@ class WPCCR_Cron_Options_CPT_Test extends WP_UnitTestCase {
 		$this->assertEquals( $cron['version'], 2 );
 
 		// Validate the remaining structure
-		foreach ( $cron as $timestamp => $timestamp_events ) {
-			if ( ! is_numeric( $timestamp ) ) {
-				continue;
-			}
+		$cron = \WP_Cron_Control_Revisited\collapse_events_array( $cron );
 
-			foreach ( $timestamp_events as $action => $action_instances ) {
-				$this->assertEquals( $action, $event['action'] );
-
-				foreach ( $action_instances as $instance => $instance_args ) {
-					$this->assertArrayHasKey( 'schedule', $instance_args );
-					$this->assertArrayHasKey( 'args', $instance_args );
-				}
-			}
+		foreach ( $cron as $single_cron ) {
+			$this->assertEquals( $single_cron['timestamp'], $event['timestamp'] );
+			$this->assertEquals( $single_cron['action'], $event['action'] );
+			$this->assertArrayHasKey( 'args', $single_cron );
+			$this->assertArrayHasKey( 'schedule', $single_cron['args'] );
+			$this->assertArrayHasKey( 'args', $single_cron['args'] );
+			$this->assertEquals( $single_cron['args']['args'], $event['args'] );
 		}
 	}
 
