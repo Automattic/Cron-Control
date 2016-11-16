@@ -162,7 +162,7 @@ class Cron_Options_CPT extends Singleton {
 
 			foreach ( $events as $event ) {
 				$job_exists = $this->job_exists( array(
-					'name'             => sprintf( '%s-%s-%s', $event['timestamp'], md5( $event['action'] ), $event['instance'] ),
+					'name'             => $this->event_name( $event['timestamp'], $event['action'], $event['instance'] ),
 					'post_type'        => self::POST_TYPE,
 					'post_status'      => self::POST_STATUS,
 					'suppress_filters' => false,
@@ -172,8 +172,8 @@ class Cron_Options_CPT extends Singleton {
 				if ( ! $job_exists ) {
 					// Build minimum information needed to create a post
 					$job_post = array(
-						'post_title'            => sprintf( '%s | %s | %s', $event['timestamp'], $event['action'], $event['instance'] ),
-						'post_name'             => sprintf( '%s-%s-%s', $event['timestamp'], md5( $event['action'] ), $event['instance'] ),
+						'post_title'            => $this->event_title( $event['timestamp'], $event['action'], $event['instance'] ),
+						'post_name'             => $this->event_name( $event['timestamp'], $event['action'], $event['instance'] ),
 						'post_content_filtered' => maybe_serialize( array(
 							'action'   => $event['action'],
 							'instance' => $event['instance'],
@@ -299,7 +299,7 @@ class Cron_Options_CPT extends Singleton {
 	 */
 	private function delete_job( $timestamp, $action, $instance ) {
 		$job = $this->job_exists( array(
-			'name'             => sprintf( '%s-%s-%s', $timestamp, md5( $action ), $instance ),
+			'name'             => $this->event_name( $timestamp, $action, $instance ),
 			'post_type'        => self::POST_TYPE,
 			'post_status'      => self::POST_STATUS,
 			'suppress_filters' => false,
@@ -355,6 +355,20 @@ class Cron_Options_CPT extends Singleton {
 		}
 
 		return $differences;
+	}
+
+	/**
+	 * Generate a standardized post name from an event's arguments
+	 */
+	private function event_name( $timestamp, $action, $instance ) {
+		return sprintf( '%s-%s-%s', $timestamp, md5( $action ), $instance );
+	}
+
+	/**
+	 * Generate a standardized, human-readable post title from an event's arguments
+	 */
+	private function event_title( $timestamp, $action, $instance ) {
+		return sprintf( '%s | %s | %s', $timestamp, $action, $instance );
 	}
 }
 
