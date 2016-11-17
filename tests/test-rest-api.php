@@ -38,7 +38,7 @@ class REST_API_Tests extends \WP_UnitTestCase {
 		$ev = Utils::create_test_event();
 
 		$request = new \WP_REST_Request( 'POST', '/' . \Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API_ENDPOINT_LIST );
-		$request->set_body( wp_json_encode( array( 'secret' => WP_CRON_CONTROL_SECRET, ) ) );
+		$request->set_body( wp_json_encode( array( 'secret' => \WP_CRON_CONTROL_SECRET, ) ) );
 		$request->set_header( 'content-type', 'application/json' );
 
 		$response = $this->server->dispatch( $request );
@@ -67,7 +67,7 @@ class REST_API_Tests extends \WP_UnitTestCase {
 		$ev = Utils::create_test_event();
 		$ev['action'] = md5( $ev['action'] );
 		$ev['instance'] = md5( maybe_serialize( $ev['args'] ) );
-		$ev['secret'] = WP_CRON_CONTROL_SECRET;
+		$ev['secret'] = \WP_CRON_CONTROL_SECRET;
 		unset( $ev['args'] );
 
 		$request = new \WP_REST_Request( 'PUT', '/' . \Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API_ENDPOINT_RUN );

@@ -9,7 +9,7 @@ class Utils {
 	static function create_test_event( $allow_multiple = false ) {
 		$event = array(
 			'timestamp' => time(),
-			'action'    => 'wpccr_test_event',
+			'action'    => 'a8c_cron_control_test_event',
 			'args'      => array(),
 		);
 
