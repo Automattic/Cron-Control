@@ -14,6 +14,6 @@ const JOB_CONCURRENCY_LIMIT           = 10;
 /**
  * REST API
  */
-const REST_API_NAMESPACE     = 'wp-cron-control-revisited/v1';
+const REST_API_NAMESPACE     = 'cron-control/v1';
 const REST_API_ENDPOINT_LIST = 'events';
 const REST_API_ENDPOINT_RUN  = 'event';
