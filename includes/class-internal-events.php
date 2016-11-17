@@ -20,28 +20,28 @@ class Internal_Events extends Singleton {
 		// Internal jobs variables
 		$this->internal_jobs = array(
 			array(
-				'schedule' => 'wpccrij_minute',
-				'action'   => 'wpccrij_force_publish_missed_schedules',
+				'schedule' => 'a8c_cron_control_minute',
+				'action'   => 'a8c_cron_control_force_publish_missed_schedules',
 				'callback' => 'force_publish_missed_schedules',
 			),
 			array(
-				'schedule' => 'wpccrij_ten_minutes',
-				'action'   => 'wpccrij_confirm_scheduled_posts',
+				'schedule' => 'a8c_cron_control_ten_minutes',
+				'action'   => 'a8c_cron_control_confirm_scheduled_posts',
 				'callback' => 'confirm_scheduled_posts',
 			),
 			array(
 				'schedule' => 'daily',
-				'action'   => 'wpccrij_delete_cron_option',
+				'action'   => 'a8c_cron_control_delete_cron_option',
 				'callback' => 'delete_cron_option',
 			),
 		);
 
 		$this->internal_jobs_schedules = array(
-			'wpccrij_minute' => array(
+			'a8c_cron_control_minute' => array(
 				'interval' => 1 * MINUTE_IN_SECONDS,
 				'display' => __( 'Cron Control internal job - every minute', 'automattic-cron-control' ),
 			),
-			'wpccrij_ten_minutes' => array(
+			'a8c_cron_control_ten_minutes' => array(
 				'interval' => 10 * MINUTE_IN_SECONDS,
 				'display' => __( 'Cron Control internal job - every 10 minutes', 'automattic-cron-control' ),
 			),
@@ -99,7 +99,7 @@ class Internal_Events extends Singleton {
 			foreach ( $missed_posts as $missed_post ) {
 				check_and_publish_future_post( $missed_post );
 
-				do_action( 'wpccr_published_post_that_missed_schedule', $missed_post );
+				do_action( 'a8c_cron_control_published_post_that_missed_schedule', $missed_post );
 			}
 		}
 	}
@@ -121,12 +121,12 @@ class Internal_Events extends Singleton {
 				if ( false === $timestamp ) {
 					wp_schedule_single_event( $gmt_time, 'publish_future_post', array( $future_post->ID ) );
 
-					do_action( 'wpccr_publish_scheduled', $future_post->ID );
+					do_action( 'a8c_cron_control_publish_scheduled', $future_post->ID );
 				} elseif ( (int) $timestamp !== $gmt_time ) {
 					wp_clear_scheduled_hook( 'publish_future_post', array( (int) $future_post->ID ) );
 					wp_schedule_single_event( $gmt_time, 'publish_future_post', array( $future_post->ID ) );
 
-					do_action( 'wpccr_publish_rescheduled', $future_post->ID );
+					do_action( 'a8c_cron_control_publish_rescheduled', $future_post->ID );
 				}
 			}
 		}

@@ -48,11 +48,11 @@ class Lock {
 	private static function get_key( $lock, $type = 'lock' ) {
 		switch ( $type ) {
 			case 'lock' :
-				return "wpccr_lock_{$lock}";
+				return "a8ccc_lock_{$lock}";
 				break;
 
 			case 'timestamp' :
-				return "wpccr_lock_ts_{$lock}";
+				return "a8ccc_lock_ts_{$lock}";
 				break;
 		}
 
