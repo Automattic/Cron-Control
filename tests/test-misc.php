@@ -1,14 +1,16 @@
 <?php
 /**
- * Class WPCCR_Misc_Test
+ * Class Misc_Tests
  *
- * @package WP_Cron_Control_Revisited
+ * @package Automattic_Cron_Control
  */
+
+namespace Automattic\WP\Cron_Control\Tests;
 
 /**
  * Sample test case.
  */
-class WPCCR_Misc_Test extends WP_UnitTestCase {
+class Misc_Tests extends \WP_UnitTestCase {
 
 	/**
 	 * Expected values for certain constants

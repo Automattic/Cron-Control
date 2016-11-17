@@ -1,20 +1,22 @@
 <?php
 /**
- * Class WPCCR_Internal_Events_Test
+ * Class Internal_Events_Tests
  *
- * @package WP_Cron_Control_Revisited
+ * @package Automattic_Cron_Control
  */
+
+namespace Automattic\WP\Cron_Control\Tests;
 
 /**
  * Sample test case.
  */
-class WPCCR_Internal_Events_Test extends WP_UnitTestCase {
+class Internal_Events_Tests extends \WP_UnitTestCase {
 
 	/**
 	 * Internal events should be scheduled
 	 */
 	function test_events() {
-		Automattic\WP\Cron_Control\Internal_Events::instance()->schedule_internal_events();
+		\Automattic\WP\Cron_Control\Internal_Events::instance()->schedule_internal_events();
 
 		$events = \Automattic\WP\Cron_Control\collapse_events_array( get_option( 'cron' ) );
 

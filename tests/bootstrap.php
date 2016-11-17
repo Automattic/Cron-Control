@@ -2,7 +2,7 @@
 /**
  * PHPUnit bootstrap file
  *
- * @package WP_Cron_Control_Revisited
+ * @package Automattic_Cron_Control
  */
 
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
@@ -19,7 +19,7 @@ require_once $_tests_dir . '/includes/functions.php';
 function _manually_load_plugin() {
 	define( 'WP_CRON_CONTROL_SECRET', 'testtesttest' );
 
-	require dirname( dirname( __FILE__ ) ) . '/wp-cron-control-revisited.php';
+	require dirname( dirname( __FILE__ ) ) . '/cron-control.php';
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 

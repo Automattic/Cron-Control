@@ -1,14 +1,16 @@
 <?php
 /**
- * Class WPCCR_REST_API_Test
+ * Class REST_API_Tests
  *
- * @package WP_Cron_Control_Revisited
+ * @package Automattic_Cron_Control
  */
+
+namespace Automattic\WP\Cron_Control\Tests;
 
 /**
  * Sample test case.
  */
-class WPCCR_REST_API_Test extends WP_UnitTestCase {
+class REST_API_Tests extends \WP_UnitTestCase {
 	/**
 	 * Prepare for REST API tests
 	 */
@@ -16,7 +18,7 @@ class WPCCR_REST_API_Test extends WP_UnitTestCase {
 		parent::setUp();
 
 		global $wp_rest_server;
-		$this->server = $wp_rest_server = new WP_REST_Server;
+		$this->server = $wp_rest_server = new \WP_REST_Server;
 		do_action( 'rest_api_init' );
 	}
 
@@ -24,7 +26,7 @@ class WPCCR_REST_API_Test extends WP_UnitTestCase {
 	 * Verify that GET requests to the endpoint fail
 	 */
 	public function test_invalid_request() {
-		$request = new WP_REST_Request( 'GET', '/' . Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . Automattic\WP\Cron_Control\REST_API_ENDPOINT_LIST );
+		$request = new \WP_REST_Request( 'GET', '/' . \Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API_ENDPOINT_LIST );
 		$response = $this->server->dispatch( $request );
 		$this->assertResponseStatus( 404, $response );
 	}
@@ -33,9 +35,9 @@ class WPCCR_REST_API_Test extends WP_UnitTestCase {
 	 * Test that list endpoint returns expected format
 	 */
 	public function test_get_items() {
-		$ev = Automattic\WP\Cron_Control\Tests\Utils::create_test_event();
+		$ev = Utils::create_test_event();
 
-		$request = new WP_REST_Request( 'POST', '/' . Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . Automattic\WP\Cron_Control\REST_API_ENDPOINT_LIST );
+		$request = new \WP_REST_Request( 'POST', '/' . \Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API_ENDPOINT_LIST );
 		$request->set_body( wp_json_encode( array( 'secret' => WP_CRON_CONTROL_SECRET, ) ) );
 		$request->set_header( 'content-type', 'application/json' );
 
@@ -54,7 +56,7 @@ class WPCCR_REST_API_Test extends WP_UnitTestCase {
 					'instance'  => md5( maybe_serialize( $ev['args'] ) ),
 				),
 			),
-			'endpoint' => get_rest_url( null, Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . Automattic\WP\Cron_Control\REST_API_ENDPOINT_RUN ),
+			'endpoint' => get_rest_url( null, \Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API_ENDPOINT_RUN ),
 		), $response );
 	}
 
@@ -62,13 +64,13 @@ class WPCCR_REST_API_Test extends WP_UnitTestCase {
 	 * Test that list endpoint returns expected format
 	 */
 	public function test_run_event() {
-		$ev = Automattic\WP\Cron_Control\Tests\Utils::create_test_event();
+		$ev = Utils::create_test_event();
 		$ev['action'] = md5( $ev['action'] );
 		$ev['instance'] = md5( maybe_serialize( $ev['args'] ) );
 		$ev['secret'] = WP_CRON_CONTROL_SECRET;
 		unset( $ev['args'] );
 
-		$request = new WP_REST_Request( 'PUT', '/' . Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . Automattic\WP\Cron_Control\REST_API_ENDPOINT_RUN );
+		$request = new \WP_REST_Request( 'PUT', '/' . \Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API_ENDPOINT_RUN );
 		$request->set_body( wp_json_encode( $ev ) );
 		$request->set_header( 'content-type', 'application/json' );
 
@@ -93,7 +95,7 @@ class WPCCR_REST_API_Test extends WP_UnitTestCase {
 	 * Ensure response includes the expected data
 	 */
 	protected function assertResponseData( $data, $response ) {
-		Automattic\WP\Cron_Control\Tests\Utils::compare_arrays( $data, $response->get_data(), $this );
+		Utils::compare_arrays( $data, $response->get_data(), $this );
 	}
 
 	/**
