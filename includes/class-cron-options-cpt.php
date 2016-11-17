@@ -12,7 +12,7 @@ class Cron_Options_CPT extends Singleton {
 	 */
 	const LOCK = 'create-jobs';
 
-	const POST_TYPE   = 'wpccr_events';
+	const POST_TYPE   = 'a8c_cron_ctrl_events';
 	const POST_STATUS = 'inherit';
 
 	private $posts_to_clean = array();
