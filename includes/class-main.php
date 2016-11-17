@@ -52,7 +52,7 @@ class Main extends Singleton {
 		foreach ( $constants as $constant => $expected_value ) {
 			if ( defined( $constant ) ) {
 				if ( constant( $constant ) !== $expected_value ) {
-					error_log( sprintf( __( '%s: %s set to unexpected value; must be corrected for proper behaviour.', 'wp-cron-control-revisited' ), 'WP-Cron Control Revisited', $constant ) );
+					error_log( sprintf( __( '%s: %s set to unexpected value; must be corrected for proper behaviour.', 'automattic-cron-control' ), 'Cron Control', $constant ) );
 				}
 			} else {
 				define( $constant, $expected_value );
@@ -66,7 +66,7 @@ class Main extends Singleton {
 	public function block_direct_cron() {
 		if ( false !== stripos( $_SERVER['REQUEST_URI'], '/wp-cron.php' ) || false !== stripos( $_SERVER['SCRIPT_NAME'], '/wp-cron.php' ) ) {
 			status_header( 403 );
-			wp_send_json_error( new \WP_Error( 'forbidden', sprintf( __( 'Normal cron execution is blocked when the %s plugin is active.', 'wp-cron-control-revisited' ), 'WP-Cron Control Revisited' ) ) );
+			wp_send_json_error( new \WP_Error( 'forbidden', sprintf( __( 'Normal cron execution is blocked when the %s plugin is active.', 'automattic-cron-control' ), 'Cron Control' ) ) );
 		}
 	}
 
@@ -89,7 +89,7 @@ class Main extends Singleton {
 	public function admin_notice() {
 		?>
 		<div class="notice notice-error">
-			<p><?php printf( __( '<strong>%1$s</strong>: To use this plugin, define the constant %2$s.', 'wp-cron-control-revisited' ), 'WP-Cron Control Revisited', '<code>WP_CRON_CONTROL_SECRET</code>' ); ?></p>
+			<p><?php printf( __( '<strong>%1$s</strong>: To use this plugin, define the constant %2$s.', 'automattic-cron-control' ), 'Cron Control', '<code>WP_CRON_CONTROL_SECRET</code>' ); ?></p>
 		</div>
 		<?php
 	}

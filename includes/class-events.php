@@ -113,12 +113,12 @@ class Events extends Singleton {
 	public function run_event( $timestamp, $action, $instance ) {
 		// Validate input data
 		if ( empty( $timestamp ) || empty( $action ) || empty( $instance ) ) {
-			return new \WP_Error( 'missing-data', __( 'Invalid or incomplete request data.', 'wp-cron-control-revisited' ) );
+			return new \WP_Error( 'missing-data', __( 'Invalid or incomplete request data.', 'automattic-cron-control' ) );
 		}
 
 		// Ensure we don't run jobs too far ahead
 		if ( $timestamp > strtotime( sprintf( '+%d seconds', JOB_EXECUTION_BUFFER_IN_SECONDS ) ) ) {
-			return new \WP_Error( 'premature', __( 'Event is not scheduled to be run yet.', 'wp-cron-control-revisited' ) );
+			return new \WP_Error( 'premature', __( 'Event is not scheduled to be run yet.', 'automattic-cron-control' ) );
 		}
 
 		// Find the event to retrieve the full arguments
@@ -127,7 +127,7 @@ class Events extends Singleton {
 
 		// Nothing to do...
 		if ( ! is_array( $event ) ) {
-			return new \WP_Error( 'no-event', __( 'The specified event could not be found.', 'wp-cron-control-revisited' ) );
+			return new \WP_Error( 'no-event', __( 'The specified event could not be found.', 'automattic-cron-control' ) );
 		}
 
 		// And we're off!
@@ -135,7 +135,7 @@ class Events extends Singleton {
 
 		// Limit how many events are processed concurrently
 		if ( ! is_internal_event( $event['action'] ) && ! Lock::check_lock( self::LOCK ) ) {
-			return new \WP_Error( 'no-free-threads', __( 'No resources available to run this job.', 'wp-cron-control-revisited' ) );
+			return new \WP_Error( 'no-free-threads', __( 'No resources available to run this job.', 'automattic-cron-control' ) );
 		}
 
 		// Prepare environment to run job
@@ -164,7 +164,7 @@ class Events extends Singleton {
 
 		return array(
 			'success' => true,
-			'message' => sprintf( __( 'Job with action `%1$s` and arguments `%2$s` completed in %3$d seconds.', 'wp-cron-control-revisited' ), $event['action'], maybe_serialize( $event['args'] ), $time_end - $time_start ),
+			'message' => sprintf( __( 'Job with action `%1$s` and arguments `%2$s` completed in %3$d seconds.', 'automattic-cron-control' ), $event['action'], maybe_serialize( $event['args'] ), $time_end - $time_start ),
 		);
 	}
 }

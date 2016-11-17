@@ -39,11 +39,11 @@ class Internal_Events extends Singleton {
 		$this->internal_jobs_schedules = array(
 			'wpccrij_minute' => array(
 				'interval' => 1 * MINUTE_IN_SECONDS,
-				'display' => __( 'WP-Cron Control Revisited internal job - every minute', 'wp-cron-control-revisited' ),
+				'display' => __( 'Cron Control internal job - every minute', 'automattic-cron-control' ),
 			),
 			'wpccrij_ten_minutes' => array(
 				'interval' => 10 * MINUTE_IN_SECONDS,
-				'display' => __( 'WP-Cron Control Revisited internal job - every 10 minutes', 'wp-cron-control-revisited' ),
+				'display' => __( 'Cron Control internal job - every 10 minutes', 'automattic-cron-control' ),
 			),
 		);
 

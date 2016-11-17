@@ -1,11 +1,11 @@
 <?php
 /*
- Plugin Name: WP-Cron Control Revisited
+ Plugin Name: Cron Control
  Plugin URI:
- Description: Take control of wp-cron execution.
+ Description: Execute WordPress cron events in parallel, using a custom post type for event storage.
  Author: Erick Hitter, Automattic
  Version: 1.0
- Text Domain: wp-cron-control-revisited
+ Text Domain: automattic-cron-control
  */
 
 namespace Automattic\WP\Cron_Control;

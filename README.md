@@ -1,4 +1,4 @@
-# WP-Cron Control Revisited
+# Cron Control
 
 Execute WordPress cron events in parallel, using a custom post type for event storage.
 
