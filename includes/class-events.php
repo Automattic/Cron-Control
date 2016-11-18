@@ -73,7 +73,7 @@ class Events extends Singleton {
 
 		return array(
 			'events'   => array_merge( $current_events, $internal_events ),
-			'endpoint' => get_rest_url( null, REST_API_NAMESPACE . '/' . REST_API_ENDPOINT_RUN ),
+			'endpoint' => get_rest_url( null, REST_API::API_NAMESPACE . '/' . REST_API::ENDPOINT_RUN ),
 		);
 	}
 

@@ -26,7 +26,7 @@ class REST_API_Tests extends \WP_UnitTestCase {
 	 * Verify that GET requests to the endpoint fail
 	 */
 	public function test_invalid_request() {
-		$request = new \WP_REST_Request( 'GET', '/' . \Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API_ENDPOINT_LIST );
+		$request = new \WP_REST_Request( 'GET', '/' . \Automattic\WP\Cron_Control\REST_API::API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API::ENDPOINT_LIST );
 		$response = $this->server->dispatch( $request );
 		$this->assertResponseStatus( 404, $response );
 	}
@@ -37,7 +37,7 @@ class REST_API_Tests extends \WP_UnitTestCase {
 	public function test_get_items() {
 		$ev = Utils::create_test_event();
 
-		$request = new \WP_REST_Request( 'POST', '/' . \Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API_ENDPOINT_LIST );
+		$request = new \WP_REST_Request( 'POST', '/' . \Automattic\WP\Cron_Control\REST_API::API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API::ENDPOINT_LIST );
 		$request->set_body( wp_json_encode( array( 'secret' => \WP_CRON_CONTROL_SECRET, ) ) );
 		$request->set_header( 'content-type', 'application/json' );
 
@@ -56,7 +56,7 @@ class REST_API_Tests extends \WP_UnitTestCase {
 					'instance'  => md5( maybe_serialize( $ev['args'] ) ),
 				),
 			),
-			'endpoint' => get_rest_url( null, \Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API_ENDPOINT_RUN ),
+			'endpoint' => get_rest_url( null, \Automattic\WP\Cron_Control\REST_API::API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API::ENDPOINT_RUN ),
 		), $response );
 	}
 
@@ -70,7 +70,7 @@ class REST_API_Tests extends \WP_UnitTestCase {
 		$ev['secret'] = \WP_CRON_CONTROL_SECRET;
 		unset( $ev['args'] );
 
-		$request = new \WP_REST_Request( 'PUT', '/' . \Automattic\WP\Cron_Control\REST_API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API_ENDPOINT_RUN );
+		$request = new \WP_REST_Request( 'PUT', '/' . \Automattic\WP\Cron_Control\REST_API::API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API::ENDPOINT_RUN );
 		$request->set_body( wp_json_encode( $ev ) );
 		$request->set_header( 'content-type', 'application/json' );
 

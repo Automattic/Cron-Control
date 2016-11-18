@@ -4,6 +4,13 @@ namespace Automattic\WP\Cron_Control;
 
 class REST_API extends Singleton {
 	/**
+	 * API SETUP
+	 */
+	const API_NAMESPACE = 'cron-control/v1';
+	const ENDPOINT_LIST = 'events';
+	const ENDPOINT_RUN  = 'event';
+
+	/**
 	 * PLUGIN SETUP
 	 */
 
@@ -22,14 +29,14 @@ class REST_API extends Singleton {
 	 * Register API routes
 	 */
 	public function rest_api_init() {
-		register_rest_route( REST_API_NAMESPACE, '/' . REST_API_ENDPOINT_LIST, array(
+		register_rest_route( self::API_NAMESPACE, '/' . self::ENDPOINT_LIST, array(
 			'methods'             => 'POST',
 			'callback'            => array( $this, 'get_events' ),
 			'permission_callback' => array( $this, 'check_secret' ),
 			'show_in_index'       => false,
 		) );
 
-		register_rest_route( REST_API_NAMESPACE, '/' . REST_API_ENDPOINT_RUN, array(
+		register_rest_route( self::API_NAMESPACE, '/' . self::ENDPOINT_RUN, array(
 			'methods'             => 'PUT',
 			'callback'            => array( $this, 'run_event' ),
 			'permission_callback' => array( $this, 'check_secret' ),
