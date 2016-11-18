@@ -149,7 +149,7 @@ class Cron_Options_CPT extends Singleton {
 		$jobs = $this->find_unscheduled_jobs( $new_value, $old_value );
 
 		foreach ( $jobs as $job ) {
-			$this->delete_job( $job['timestamp'], $job['action'], $job['instance'] );
+			$this->mark_job_completed( $job['timestamp'], $job['action'], $job['instance'] );
 		}
 	}
 
@@ -197,6 +197,8 @@ class Cron_Options_CPT extends Singleton {
 
 	/**
 	 * Retrieve list of jobs, respecting whether or not the CPT is registered
+	 *
+	 * `WP_Query` also can't be used before `init` due to capabilities checks
 	 */
 	private function get_jobs( $args ) {
 		// If called before `init`, we need to query directly because post types aren't registered earlier
@@ -219,23 +221,16 @@ class Cron_Options_CPT extends Singleton {
 	}
 
 	/**
-	 * Check if a job post exists, respecting Core's loading order
+	 * Check if a job post exists
 	 */
 	private function job_exists( $job_post ) {
-		// If called before `init`, we need to insert directly because post types aren't registered earlier
-		if ( did_action( 'init' ) ) {
-			$exists = get_posts( $job_post );
-		} else {
-			global $wpdb;
-
-			$exists = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_name = %s AND post_type = %s AND post_status = %s LIMIT 1;", $job_post['name'], self::POST_TYPE, self::POST_STATUS ) );
-		}
-
-		return empty( $exists ) ? false : array_shift( $exists );
+		return get_page_by_path( $job_post['name'], OBJECT, self::POST_TYPE );
 	}
 
 	/**
 	 * Create a job post, respecting whether or not Core is ready for CPTs
+	 *
+	 * `wp_insert_post()` can't be called as early as we need, in part because of the capabilities checks Core performs
 	 */
 	private function create_job( $job_post ) {
 		// Limit how many events to insert at once
@@ -289,7 +284,9 @@ class Cron_Options_CPT extends Singleton {
 	}
 
 	/**
-	 * Remove an event's CPT entry
+	 * Mark an event's CPT entry as completed
+	 *
+	 * Trashed posts will be cleaned up by an internal job
 	 *
 	 * @param $timestamp  int     Unix timestamp
 	 * @param $action     string  name of action used when the event is registered (unhashed)
@@ -297,7 +294,7 @@ class Cron_Options_CPT extends Singleton {
 	 *
 	 * @return bool
 	 */
-	private function delete_job( $timestamp, $action, $instance ) {
+	private function mark_job_completed( $timestamp, $action, $instance ) {
 		$job = $this->job_exists( array(
 			'name'             => $this->event_name( $timestamp, $action, $instance ),
 			'post_type'        => self::POST_TYPE,
@@ -310,17 +307,7 @@ class Cron_Options_CPT extends Singleton {
 			return false;
 		}
 
-		// If called before `init`, we need to delete directly because post types aren't registered earlier
-		if ( did_action( 'init' ) ) {
-			wp_delete_post( $job->ID, true );
-		} else {
-			global $wpdb;
-
-			$wpdb->delete( $wpdb->postmeta, array( 'post_id' => $job->ID, ) );
-			$wpdb->delete( $wpdb->posts, array( 'ID' => $job->ID, ) );
-
-			$this->posts_to_clean[] = $job->ID;
-		}
+		wp_trash_post( $job->ID );
 
 		return true;
 	}
