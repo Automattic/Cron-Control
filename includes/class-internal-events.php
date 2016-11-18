@@ -34,6 +34,11 @@ class Internal_Events extends Singleton {
 				'action'   => 'a8c_cron_control_delete_cron_option',
 				'callback' => 'delete_cron_option',
 			),
+			array(
+				'schedule' => 'hourly',
+				'action'   => 'a8c_cron_control_purge_completed_events',
+				'callback' => 'purge_completed_events',
+			),
 		);
 
 		$this->internal_jobs_schedules = array(
@@ -77,7 +82,7 @@ class Internal_Events extends Singleton {
 	}
 
 	/**
-	 * PLUGIN FUNCTIONALITY
+	 * PLUGIN UTILITIES
 	 */
 
 	/**
@@ -86,6 +91,10 @@ class Internal_Events extends Singleton {
 	public function is_internal_event( $action ) {
 		return in_array( $action, wp_list_pluck( $this->internal_jobs, 'action' ) );
 	}
+
+	/**
+	 * EVENT CALLBACKS
+	 */
 
 	/**
 	 * Published scheduled posts that miss their schedule
@@ -137,6 +146,28 @@ class Internal_Events extends Singleton {
 	 */
 	public function delete_cron_option() {
 		delete_option( 'cron' );
+	}
+
+	/**
+	 * Delete event objects for events that have run
+	 *
+	 * Given volume of events that can be created, waiting for `wp_scheduled_delete()`, which defaults to a trailing 30-day delete, is unwise
+	 */
+	public function purge_completed_events() {
+		$trashed_posts = get_posts( array(
+			'post_type'        => Cron_Options_CPT::POST_TYPE,
+			'post_status'      => Cron_Options_CPT::POST_STATUS_COMPLETED,
+			'posts_per_page'   => 100,
+			'fields'           => 'ids',
+		) );
+
+		if ( is_array( $trashed_posts ) && ! empty( $trashed_posts ) ) {
+			foreach ( $trashed_posts as $trashed_post_id ) {
+				wp_delete_post( $trashed_post_id, true );
+
+				do_action( 'a8c_cron_control_purged_completed_event', $trashed_post_id );
+			}
+		}
 	}
 }
 

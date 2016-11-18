@@ -21,7 +21,7 @@ class Internal_Events_Tests extends \WP_UnitTestCase {
 		$events = \Automattic\WP\Cron_Control\collapse_events_array( get_option( 'cron' ) );
 
 		// Check that the plugin scheduled the expected number of events
-		$this->assertEquals( count( $events ), 3 );
+		$this->assertEquals( count( $events ), 4 );
 
 		// Confirm that the scheduled jobs came from the Internal Events class
 		foreach ( $events as $event ) {
