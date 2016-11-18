@@ -326,6 +326,8 @@ class Cron_Options_CPT extends Singleton {
 			global $wpdb;
 
 			$wpdb->update( 'posts', array( 'post_status' => self::POST_STATUS_COMPLETED, ), array( 'ID' => $jid, ) );
+			wp_add_trashed_suffix_to_post_name_for_post( $jid );
+			$this->posts_to_clean[] = $jid;
 		}
 
 		return true;
