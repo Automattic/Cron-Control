@@ -308,7 +308,25 @@ class Cron_Options_CPT extends Singleton {
 			return false;
 		}
 
-		wp_trash_post( $job->ID );
+		$this->mark_job_post_completed( $job->ID );
+
+		return true;
+	}
+
+	/**
+	 * Set a job post to the "completed" status
+	 *
+	 * `wp_trash_post()` calls `wp_insert_post()`, which can't be used before `init` due to capabilities checks
+	 */
+	private function mark_job_post_completed( $jid ) {
+		// If called before `init`, we need to modify directly because post types aren't registered earlier
+		if ( did_action( 'init' ) ) {
+			wp_trash_post( $jid );
+		} else {
+			global $wpdb;
+
+			$wpdb->update( 'posts', array( 'post_status' => self::POST_STATUS_COMPLETED, ), array( 'ID' => $jid, ) );
+		}
 
 		return true;
 	}
