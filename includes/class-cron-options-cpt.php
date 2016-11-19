@@ -89,6 +89,12 @@ class Cron_Options_CPT extends Singleton {
 
 			$page++;
 
+			// Something's probably wrong if a site has more than 1,500 pending cron actions
+			if ( $page > 15 ) {
+				do_action( 'a8c_cron_control_stopped_runaway_cron_option_rebuild' );
+				break;
+			}
+
 			// Loop through results and built output Core expects
 			if ( ! empty( $jobs_posts ) ) {
 				foreach ( $jobs_posts as $jobs_post ) {
