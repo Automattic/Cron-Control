@@ -114,24 +114,25 @@ class Events extends Singleton {
 
 		// Ensure we don't run jobs too far ahead
 		if ( $timestamp > strtotime( sprintf( '+%d seconds', JOB_EXECUTION_BUFFER_IN_SECONDS ) ) ) {
-			return new \WP_Error( 'premature', __( 'Event is not scheduled to be run yet.', 'automattic-cron-control' ) );
+			return new \WP_Error( 'premature', sprintf( __( 'Job with identifier `%1$s` is not scheduled to run yet.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ) );
 		}
 
 		// Find the event to retrieve the full arguments
 		$event = $this->get_event( $timestamp, $action, $instance );
-		unset( $timestamp, $action, $instance );
 
 		// Nothing to do...
 		if ( ! is_array( $event ) ) {
-			return new \WP_Error( 'no-event', __( 'The specified event could not be found.', 'automattic-cron-control' ) );
+			return new \WP_Error( 'no-event', sprintf( __( 'Job with identifier `%1$s` could not be found.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ) );
 		}
+
+		unset( $timestamp, $action, $instance );
 
 		// And we're off!
 		$time_start = microtime( true );
 
 		// Limit how many events are processed concurrently
 		if ( ! is_internal_event( $event['action'] ) && ! Lock::check_lock( self::LOCK ) ) {
-			return new \WP_Error( 'no-free-threads', __( 'No resources available to run this job.', 'automattic-cron-control' ) );
+			return new \WP_Error( 'no-free-threads', sprintf( __( 'No resources available to run the job with action action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event['action'], maybe_serialize( $event['args'] ) ) );
 		}
 
 		// Prepare environment to run job
