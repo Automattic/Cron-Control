@@ -34,7 +34,7 @@ class Utils {
 	static function get_events_from_post_objects() {
 		$events = get_posts( array(
 			'post_type'        => \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE,
-			'post_status'      => \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_STATUS,
+			'post_status'      => \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_STATUS_PENDING,
 			'posts_per_page'   => 10,
 			'orderby'          => 'date',
 			'order'            => 'ASC',

@@ -28,7 +28,7 @@ class Cron_Options_CPT_Tests extends \WP_UnitTestCase {
 		$event     = \Automattic\WP\Cron_Control\Tests\Utils::create_test_event();
 		$post_name = sprintf( '%s-%s-%s', $event['timestamp'], md5( $event['action'] ), md5( maybe_serialize( $event['args'] ) ) );
 
-		$entry = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $wpdb->posts WHERE post_type = %s AND post_status = %s AND post_name = %s LIMIT 1", \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE, \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_STATUS, $post_name ) );
+		$entry = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $wpdb->posts WHERE post_type = %s AND post_status = %s AND post_name = %s LIMIT 1", \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE, \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_STATUS_PENDING, $post_name ) );
 
 		$this->assertEquals( count( $entry ), 1 );
 

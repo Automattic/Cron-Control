@@ -13,7 +13,7 @@ class Cron_Options_CPT extends Singleton {
 	const LOCK = 'create-jobs';
 
 	const POST_TYPE             = 'a8c_cron_ctrl_events';
-	const POST_STATUS           = 'inherit';
+	const POST_STATUS_PENDING   = 'inherit';
 	const POST_STATUS_COMPLETED = 'trash';
 
 	private $posts_to_clean = array();
@@ -74,7 +74,7 @@ class Cron_Options_CPT extends Singleton {
 		do {
 			$jobs_posts = $this->get_jobs( array(
 				'post_type'        => self::POST_TYPE,
-				'post_status'      => self::POST_STATUS,
+				'post_status'      => self::POST_STATUS_PENDING,
 				'suppress_filters' => false,
 				'posts_per_page'   => 100,
 				'paged'            => $page,
@@ -177,7 +177,7 @@ class Cron_Options_CPT extends Singleton {
 						'post_date'             => date( 'Y-m-d H:i:s', $event['timestamp'] ),
 						'post_date_gmt'         => date( 'Y-m-d H:i:s', $event['timestamp'] ),
 						'post_type'             => self::POST_TYPE,
-						'post_status'           => self::POST_STATUS,
+						'post_status'           => self::POST_STATUS_PENDING,
 					);
 
 					$this->create_job( $job_post );
@@ -223,7 +223,7 @@ class Cron_Options_CPT extends Singleton {
 	private function job_exists( $timestamp, $action, $instance, $return_id = false ) {
 		global $wpdb;
 
-		 $exists = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_name = %s AND post_type = %s AND post_status = %s LIMIT 1;", $this->event_name( $timestamp, $action, $instance ), self::POST_TYPE, self::POST_STATUS ) );
+		 $exists = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_name = %s AND post_type = %s AND post_status = %s LIMIT 1;", $this->event_name( $timestamp, $action, $instance ), self::POST_TYPE, self::POST_STATUS_PENDING ) );
 
 		if ( $return_id ) {
 			return empty( $exists ) ? 0 : (int) array_shift( $exists );
