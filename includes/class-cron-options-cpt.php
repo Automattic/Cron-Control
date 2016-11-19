@@ -92,6 +92,14 @@ class Cron_Options_CPT extends Singleton {
 			// Loop through results and built output Core expects
 			if ( ! empty( $jobs_posts ) ) {
 				foreach ( $jobs_posts as $jobs_post ) {
+					// If, somehow, posts are created with slugs that have been modified by Core, they're duplicate events and can be deleted
+					// Since we use hyphens to separate the event's identifiers, we expect a certain number of them and any deviation indicates Core incremented to avoid duplication
+					$test_for_duplicates = explode( '-', $jobs_post->post_name );
+					if ( 4 === count( $test_for_duplicates ) ) {
+						$this->mark_job_post_completed( $jobs_post->ID );
+						continue;
+					}
+
 					$timestamp = strtotime( $jobs_post->post_date_gmt );
 
 					$job_args = maybe_unserialize( $jobs_post->post_content_filtered );
@@ -162,13 +170,7 @@ class Cron_Options_CPT extends Singleton {
 			$events = collapse_events_array( $new_value );
 
 			foreach ( $events as $event ) {
-				$job_exists = $this->job_exists( array(
-					'name'             => $this->event_name( $event['timestamp'], $event['action'], $event['instance'] ),
-					'post_type'        => self::POST_TYPE,
-					'post_status'      => self::POST_STATUS,
-					'suppress_filters' => false,
-					'posts_per_page'   => 1,
-				) );
+				$job_exists = $this->job_exists( $event['timestamp'], $event['action'], $event['instance'] );
 
 				if ( ! $job_exists ) {
 					// Build minimum information needed to create a post
@@ -224,8 +226,16 @@ class Cron_Options_CPT extends Singleton {
 	/**
 	 * Check if a job post exists
 	 */
-	private function job_exists( $job_post ) {
-		return get_page_by_path( $job_post['name'], OBJECT, self::POST_TYPE );
+	private function job_exists( $timestamp, $action, $instance, $return_id = false ) {
+		global $wpdb;
+
+		 $exists = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_name = %s AND post_type = %s AND post_status = %s LIMIT 1;", $this->event_name( $timestamp, $action, $instance ), self::POST_TYPE, self::POST_STATUS ) );
+
+		if ( $return_id ) {
+			return empty( $exists ) ? 0 : (int) array_shift( $exists );
+		} else {
+			return ! empty( $exists );
+		}
 	}
 
 	/**
@@ -296,21 +306,13 @@ class Cron_Options_CPT extends Singleton {
 	 * @return bool
 	 */
 	private function mark_job_completed( $timestamp, $action, $instance ) {
-		$job = $this->job_exists( array(
-			'name'             => $this->event_name( $timestamp, $action, $instance ),
-			'post_type'        => self::POST_TYPE,
-			'post_status'      => self::POST_STATUS,
-			'suppress_filters' => false,
-			'posts_per_page'   => 1,
-		) );
+		$job_post_id = $this->job_exists( $timestamp, $action, $instance, true );
 
-		if ( ! $job ) {
+		if ( ! $job_post_id ) {
 			return false;
 		}
 
-		$this->mark_job_post_completed( $job->ID );
-
-		return true;
+		return $this->mark_job_post_completed( $job_post_id );
 	}
 
 	/**
@@ -318,16 +320,16 @@ class Cron_Options_CPT extends Singleton {
 	 *
 	 * `wp_trash_post()` calls `wp_insert_post()`, which can't be used before `init` due to capabilities checks
 	 */
-	private function mark_job_post_completed( $jid ) {
+	private function mark_job_post_completed( $job_post_id ) {
 		// If called before `init`, we need to modify directly because post types aren't registered earlier
 		if ( did_action( 'init' ) ) {
-			wp_trash_post( $jid );
+			wp_trash_post( $job_post_id );
 		} else {
 			global $wpdb;
 
-			$wpdb->update( 'posts', array( 'post_status' => self::POST_STATUS_COMPLETED, ), array( 'ID' => $jid, ) );
-			wp_add_trashed_suffix_to_post_name_for_post( $jid );
-			$this->posts_to_clean[] = $jid;
+			$wpdb->update( 'posts', array( 'post_status' => self::POST_STATUS_COMPLETED, ), array( 'ID' => $job_post_id, ) );
+			wp_add_trashed_suffix_to_post_name_for_post( $job_post_id );
+			$this->posts_to_clean[] = $job_post_id;
 		}
 
 		return true;
