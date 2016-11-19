@@ -314,16 +314,16 @@ class Cron_Options_CPT extends Singleton {
 	 *
 	 * `wp_trash_post()` calls `wp_insert_post()`, which can't be used before `init` due to capabilities checks
 	 */
-	private function mark_job_post_completed( $jid ) {
+	private function mark_job_post_completed( $job_post_id ) {
 		// If called before `init`, we need to modify directly because post types aren't registered earlier
 		if ( did_action( 'init' ) ) {
-			wp_trash_post( $jid );
+			wp_trash_post( $job_post_id );
 		} else {
 			global $wpdb;
 
-			$wpdb->update( 'posts', array( 'post_status' => self::POST_STATUS_COMPLETED, ), array( 'ID' => $jid, ) );
-			wp_add_trashed_suffix_to_post_name_for_post( $jid );
-			$this->posts_to_clean[] = $jid;
+			$wpdb->update( 'posts', array( 'post_status' => self::POST_STATUS_COMPLETED, ), array( 'ID' => $job_post_id, ) );
+			wp_add_trashed_suffix_to_post_name_for_post( $job_post_id );
+			$this->posts_to_clean[] = $job_post_id;
 		}
 
 		return true;
