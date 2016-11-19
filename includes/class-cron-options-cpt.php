@@ -92,14 +92,6 @@ class Cron_Options_CPT extends Singleton {
 			// Loop through results and built output Core expects
 			if ( ! empty( $jobs_posts ) ) {
 				foreach ( $jobs_posts as $jobs_post ) {
-					// If, somehow, posts are created with slugs that have been modified by Core, they're duplicate events and can be deleted
-					// Since we use hyphens to separate the event's identifiers, we expect a certain number of them and any deviation indicates Core incremented to avoid duplication
-					$test_for_duplicates = explode( '-', $jobs_post->post_name );
-					if ( 4 === count( $test_for_duplicates ) ) {
-						$this->mark_job_post_completed( $jobs_post->ID );
-						continue;
-					}
-
 					$timestamp = strtotime( $jobs_post->post_date_gmt );
 
 					$job_args = maybe_unserialize( $jobs_post->post_content_filtered );
