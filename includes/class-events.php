@@ -31,10 +31,6 @@ class Events extends Singleton {
 			return array( 'events' => null, );
 		}
 
-		// To be safe, re-sort the array just as Core does when events are scheduled
-		// Ensures events are sorted chronologically
-		uksort( $events, 'strnatcasecmp' );
-
 		// Simplify array format for further processing
 		$events = collapse_events_array( $events );
 

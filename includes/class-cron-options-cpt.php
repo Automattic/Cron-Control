@@ -122,6 +122,8 @@ class Cron_Options_CPT extends Singleton {
 			}
 		} while( true );
 
+		// Re-sort the array just as Core does when events are scheduled
+		// Ensures events are sorted chronologically
 		uksort( $cron_array, 'strnatcasecmp' );
 
 		// If we're unscheduling an event, hold onto the previous value so we can identify what's unscheduled
