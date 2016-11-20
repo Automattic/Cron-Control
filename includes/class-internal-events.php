@@ -106,7 +106,9 @@ class Internal_Events extends Singleton {
 
 		if ( ! empty( $missed_posts ) ) {
 			foreach ( $missed_posts as $missed_post ) {
-				check_and_publish_future_post( $missed_post );
+				$missed_post = absint( $missed_post );
+				wp_publish_post( $missed_post );
+				wp_clear_scheduled_hook( 'publish_future_post', array( $missed_post ) );
 
 				do_action( 'a8c_cron_control_published_post_that_missed_schedule', $missed_post );
 			}
@@ -132,7 +134,7 @@ class Internal_Events extends Singleton {
 
 					do_action( 'a8c_cron_control_publish_scheduled', $future_post->ID );
 				} elseif ( (int) $timestamp !== $gmt_time ) {
-					wp_clear_scheduled_hook( 'publish_future_post', array( (int) $future_post->ID ) );
+					wp_clear_scheduled_hook( 'publish_future_post', array( $future_post->ID ) );
 					wp_schedule_single_event( $gmt_time, 'publish_future_post', array( $future_post->ID ) );
 
 					do_action( 'a8c_cron_control_publish_rescheduled', $future_post->ID );
