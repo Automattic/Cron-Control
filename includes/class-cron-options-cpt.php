@@ -12,7 +12,7 @@ class Cron_Options_CPT extends Singleton {
 	 */
 	const LOCK = 'create-jobs';
 
-	const POST_TYPE             = 'a8c_cron_ctrl_events';
+	const POST_TYPE             = 'a8c_cron_ctrl_event';
 	const POST_STATUS_PENDING   = 'inherit';
 	const POST_STATUS_COMPLETED = 'trash';
 
