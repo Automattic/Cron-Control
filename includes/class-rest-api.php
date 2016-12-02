@@ -75,7 +75,7 @@ class REST_API extends Singleton {
 
 		// For now, mimic original plugin's "authentication" method. This needs to be better.
 		if ( ! isset( $body['secret'] ) || ! hash_equals( \WP_CRON_CONTROL_SECRET, $body['secret'] ) ) {
-			return new \WP_Error( 'no-secret', __( 'Secret must be specified with all requests', 'automattic-cron-control' ) );
+			return new \WP_Error( 'no-secret', __( 'Secret must be specified with all requests', 'automattic-cron-control' ), array( 'status' => 400, ) );
 		}
 
 		return true;
