@@ -16,6 +16,8 @@ class Cron_Options_CPT extends Singleton {
 	const POST_STATUS_PENDING   = 'inherit';
 	const POST_STATUS_COMPLETED = 'trash';
 
+	const CACHE_KEY             = 'a8c_cron_ctrl_option';
+
 	private $posts_to_clean = array();
 
 	private $option_before_unscheduling = null;
@@ -64,6 +66,14 @@ class Cron_Options_CPT extends Singleton {
 	 * Override cron option requests with data from CPT
 	 */
 	public function get_option() {
+		// Use cached value for reads, except when we're unscheduling and state is important
+		$cached_option = wp_cache_get( self::CACHE_KEY, null, true );
+
+		if ( ! $this->is_unscheduling() && false !== $cached_option ) {
+			return $cached_option;
+		}
+
+		// Start building a new cron option
 		$cron_array = array(
 			'version' => 2, // Core versions the cron array; without this, events will continually requeue
 		);
@@ -132,6 +142,9 @@ class Cron_Options_CPT extends Singleton {
 		} else {
 			$this->option_before_unscheduling = null;
 		}
+
+		// Cache the results, bearing in mind that they won't be used during unscheduling events
+		wp_cache_set( self::CACHE_KEY, $cron_array, null, 1 * \HOUR_IN_SECONDS );
 
 		return $cron_array;
 	}
@@ -287,6 +300,9 @@ class Cron_Options_CPT extends Singleton {
 			}
 		}
 
+		// Delete internal cache
+		wp_cache_delete( self::CACHE_KEY );
+
 		// Allow more events to be created
 		Lock::free_lock( self::LOCK );
 	}
@@ -328,6 +344,9 @@ class Cron_Options_CPT extends Singleton {
 			wp_add_trashed_suffix_to_post_name_for_post( $job_post_id );
 			$this->posts_to_clean[] = $job_post_id;
 		}
+
+		// Delete internal cache
+		wp_cache_delete( self::CACHE_KEY );
 
 		return true;
 	}
