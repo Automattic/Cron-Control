@@ -201,26 +201,21 @@ class Cron_Options_CPT extends Singleton {
 	/**
 	 * Retrieve list of jobs, respecting whether or not the CPT is registered
 	 *
-	 * `WP_Query` also can't be used before `init` due to capabilities checks
+	 * Uses a direct query to avoid stale caches that result in duplicate events
 	 */
 	private function get_jobs( $args ) {
-		// If called before `init`, we need to query directly because post types aren't registered earlier
-		if ( did_action( 'init' ) ) {
-			return get_posts( $args );
+		global $wpdb;
+
+		$orderby = 'date' === $args['orderby'] ? 'post_date' : $args['orderby'];
+
+		if ( isset( $args['paged'] ) ) {
+			$paged  = max( 0, $args['paged'] - 1 );
+			$offset = $paged * $args['posts_per_page'];
 		} else {
-			global $wpdb;
-
-			$orderby = 'date' === $args['orderby'] ? 'post_date' : $args['orderby'];
-
-			if ( isset( $args['paged'] ) ) {
-				$paged  = max( 0, $args['paged'] - 1 );
-				$offset = $paged * $args['posts_per_page'];
-			} else {
-				$offset = 0;
-			}
-
-			return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->posts} WHERE post_type = %s AND post_status = %s ORDER BY %s %s LIMIT %d,%d;", $args['post_type'], $args['post_status'], $orderby, $args['order'], $offset, $args['posts_per_page'] ), 'OBJECT' );
+			$offset = 0;
 		}
+
+		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->posts} WHERE post_type = %s AND post_status = %s ORDER BY %s %s LIMIT %d,%d;", $args['post_type'], $args['post_status'], $orderby, $args['order'], $offset, $args['posts_per_page'] ), 'OBJECT' );
 	}
 
 	/**
