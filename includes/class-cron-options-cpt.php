@@ -67,10 +67,12 @@ class Cron_Options_CPT extends Singleton {
 	 */
 	public function get_option() {
 		// Use cached value for reads, except when we're unscheduling and state is important
-		$cached_option = wp_cache_get( self::CACHE_KEY, null, true );
+		if ( ! $this->is_unscheduling() ) {
+			$cached_option = wp_cache_get( self::CACHE_KEY, null, true );
 
-		if ( ! $this->is_unscheduling() && false !== $cached_option ) {
-			return $cached_option;
+			if ( false !== $cached_option ) {
+				return $cached_option;
+			}
 		}
 
 		// Start building a new cron option
