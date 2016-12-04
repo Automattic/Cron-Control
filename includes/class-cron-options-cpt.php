@@ -98,6 +98,12 @@ class Cron_Options_CPT extends Singleton {
 			// Loop through results and built output Core expects
 			if ( ! empty( $jobs_posts ) ) {
 				foreach ( $jobs_posts as $jobs_post ) {
+					// Detect duplicates, as indicated by Core's suffixing of post_name
+					if ( substr_count( $jobs_post->post_name, '-' ) > 2 ) {
+						$this->mark_job_post_completed( $jobs_post->ID );
+						continue;
+					}
+
 					$timestamp = strtotime( $jobs_post->post_date_gmt );
 
 					$job_args = maybe_unserialize( $jobs_post->post_content_filtered );
