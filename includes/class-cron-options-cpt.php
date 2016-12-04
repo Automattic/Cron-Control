@@ -186,22 +186,7 @@ class Cron_Options_CPT extends Singleton {
 				$job_exists = $this->job_exists( $event['timestamp'], $event['action'], $event['instance'] );
 
 				if ( ! $job_exists ) {
-					// Build minimum information needed to create a post
-					$job_post = array(
-						'post_title'            => $this->event_title( $event['timestamp'], $event['action'], $event['instance'] ),
-						'post_name'             => $this->event_name( $event['timestamp'], $event['action'], $event['instance'] ),
-						'post_content_filtered' => maybe_serialize( array(
-							'action'   => $event['action'],
-							'instance' => $event['instance'],
-							'args'     => $event['args'],
-						) ),
-						'post_date'             => date( 'Y-m-d H:i:s', $event['timestamp'] ),
-						'post_date_gmt'         => date( 'Y-m-d H:i:s', $event['timestamp'] ),
-						'post_type'             => self::POST_TYPE,
-						'post_status'           => self::POST_STATUS_PENDING,
-					);
-
-					$this->create_job( $job_post );
+					$this->create_job( $event['timestamp'], $event['action'], $event['args'] );
 				}
 			}
 		}
@@ -253,11 +238,28 @@ class Cron_Options_CPT extends Singleton {
 	 *
 	 * `wp_insert_post()` can't be called as early as we need, in part because of the capabilities checks Core performs
 	 */
-	private function create_job( $job_post ) {
+	public function create_job( $timestamp, $action, $args ) {
 		// Limit how many events to insert at once
 		if ( ! Lock::check_lock( self::LOCK, 5 ) ) {
 			return false;
 		}
+
+		// Build minimum information needed to create a post
+		$instance = md5( serialize( $args['args'] ) );
+
+		$job_post = array(
+			'post_title'            => $this->event_title( $timestamp, $action, $instance ),
+			'post_name'             => $this->event_name( $timestamp, $action, $instance ),
+			'post_content_filtered' => maybe_serialize( array(
+				'action'   => $action,
+				'instance' => $instance,
+				'args'     => $args,
+			) ),
+			'post_date'             => date( 'Y-m-d H:i:s', $timestamp ),
+			'post_date_gmt'         => date( 'Y-m-d H:i:s', $timestamp ),
+			'post_type'             => self::POST_TYPE,
+			'post_status'           => self::POST_STATUS_PENDING,
+		);
 
 		// If called before `init`, we need to insert directly because post types aren't registered earlier
 		if ( did_action( 'init' ) ) {
@@ -318,7 +320,7 @@ class Cron_Options_CPT extends Singleton {
 	 *
 	 * @return bool
 	 */
-	private function mark_job_completed( $timestamp, $action, $instance ) {
+	public function mark_job_completed( $timestamp, $action, $instance ) {
 		$job_post_id = $this->job_exists( $timestamp, $action, $instance, true );
 
 		if ( ! $job_post_id ) {
