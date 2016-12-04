@@ -236,15 +236,18 @@ class Cron_Options_CPT extends Singleton {
 	}
 
 	/**
-	 * Create a job post, respecting whether or not Core is ready for CPTs
+	 * Create a post object for a given event
 	 *
-	 * `wp_insert_post()` can't be called as early as we need, in part because of the capabilities checks Core performs
+	 * Can't call `wp_insert_post()` because `wp_unique_post_slug()` breaks the plugin's expectations
+	 * Also doesn't call `wp_insert_post()` because this function is needed before post types and capabilities are ready.
 	 */
 	public function create_job( $timestamp, $action, $args ) {
 		// Limit how many events to insert at once
 		if ( ! Lock::check_lock( self::LOCK, 5 ) ) {
 			return false;
 		}
+
+		global $wpdb;
 
 		// Build minimum information needed to create a post
 		$instance = md5( serialize( $args['args'] ) );
@@ -259,49 +262,38 @@ class Cron_Options_CPT extends Singleton {
 			) ),
 			'post_date'             => date( 'Y-m-d H:i:s', $timestamp ),
 			'post_date_gmt'         => date( 'Y-m-d H:i:s', $timestamp ),
+			'post_modified'         => current_time( 'mysql' ),
+			'post_modified_gmt'     => current_time( 'mysql', true ),
 			'post_type'             => self::POST_TYPE,
 			'post_status'           => self::POST_STATUS_PENDING,
+			'post_author'           => 0,
+			'post_parent'           => 0,
+			'comment_status'        => 'closed',
+			'ping_status'           => 'closed',
 		);
 
-		// If called before `init`, we need to insert directly because post types aren't registered earlier
-		if ( did_action( 'init' ) ) {
-			wp_insert_post( $job_post );
-		} else {
-			global $wpdb;
+		// Some sanitization in place of `sanitize_post()`, which we can't use this early
+		foreach ( array( 'post_title', 'post_name', 'post_content_filtered' ) as $field ) {
+			$job_post[ $field ] = sanitize_text_field( $job_post[ $field ] );
+		}
 
-			// Additional data needed to manually create a post
-			$job_post = wp_parse_args( $job_post, array(
-				'post_author'       => 0,
-				'comment_status'    => 'closed',
-				'ping_status'       => 'closed',
-				'post_parent'       => 0,
-				'post_modified'     => current_time( 'mysql' ),
-				'post_modified_gmt' => current_time( 'mysql', true ),
-			) );
+		// Duplicate some processing performed in `wp_insert_post()`
+		$charset = $wpdb->get_col_charset( $wpdb->posts, 'post_title' );
+		if ( 'utf8' === $charset ) {
+			$job_post['post_title'] = wp_encode_emoji( $job_post['post_title'] );
+		}
 
-			// Some sanitization in place of `sanitize_post()`, which we can't use this early
-			foreach ( array( 'post_title', 'post_name', 'post_content_filtered' ) as $field ) {
-				$job_post[ $field ] = sanitize_text_field( $job_post[ $field ] );
-			}
+		$job_post = wp_unslash( $job_post );
 
-			// Duplicate some processing performed in `wp_insert_post()`
-			$charset = $wpdb->get_col_charset( $wpdb->posts, 'post_title' );
-			if ( 'utf8' === $charset ) {
-				$job_post['post_title'] = wp_encode_emoji( $job_post['post_title'] );
-			}
+		// Set this so it isn't empty, even though it serves us no purpose
+		$job_post['guid'] = esc_url( add_query_arg( self::POST_TYPE, $job_post['post_name'], home_url( '/' ) ) );
 
-			$job_post = wp_unslash( $job_post );
+		// Create the post
+		$inserted = $wpdb->insert( $wpdb->posts, $job_post );
 
-			// Set this so it isn't empty, even though it serves us no purpose
-			$job_post['guid'] = esc_url( add_query_arg( self::POST_TYPE, $job_post['post_name'], home_url( '/' ) ) );
-
-			// Create the post
-			$inserted = $wpdb->insert( $wpdb->posts, $job_post );
-
-			// Clear caches for new posts once the post type is registered
-			if ( $inserted ) {
-				$this->posts_to_clean[] = $wpdb->insert_id;
-			}
+		// Clear caches for new posts once the post type is registered
+		if ( $inserted ) {
+			$this->posts_to_clean[] = $wpdb->insert_id;
 		}
 
 		// Delete internal cache
