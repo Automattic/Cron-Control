@@ -147,7 +147,7 @@ class Events extends Singleton {
 			call_user_func_array( 'wp_reschedule_event', $reschedule_args );
 		}
 
-		wp_unschedule_event( $event['timestamp'], $event['action'], $event['args'] );
+		Cron_Options_CPT::instance()->mark_job_completed( $event['timestamp'], $event['action'], $event['instance'] );
 
 		// Run the event
 		do_action_ref_array( $event['action'], $event['args'] );
