@@ -141,13 +141,7 @@ class Events extends Singleton {
 		define( 'DOING_CRON', true );
 
 		// Remove the event, and reschedule if desired
-		// Follows pattern Core uses in wp-cron.php
-		if ( false !== $event['schedule'] ) {
-			$reschedule_args = array( $event['timestamp'], $event['schedule'], $event['action'], $event['args'] );
-			call_user_func_array( 'wp_reschedule_event', $reschedule_args );
-		}
-
-		Cron_Options_CPT::instance()->mark_job_completed( $event['timestamp'], $event['action'], $event['instance'] );
+		$this->update_event_record( $event );
 
 		// Run the event
 		do_action_ref_array( $event['action'], $event['args'] );
@@ -163,6 +157,18 @@ class Events extends Singleton {
 			'success' => true,
 			'message' => sprintf( __( 'Job with action `%1$s` and arguments `%2$s` completed in %3$d seconds.', 'automattic-cron-control' ), $event['action'], maybe_serialize( $event['args'] ), $time_end - $time_start ),
 		);
+	}
+
+	/**
+	 * Mark an event completed, and reschedule when requested
+	 */
+	private function update_event_record( $event ) {
+		if ( false !== $event['schedule'] ) {
+			$reschedule_args = array( $event['timestamp'], $event['schedule'], $event['action'], $event['args'] );
+			call_user_func_array( 'wp_reschedule_event', $reschedule_args );
+		}
+
+		Cron_Options_CPT::instance()->mark_job_completed( $event['timestamp'], $event['action'], $event['instance'] );
 	}
 }
 
