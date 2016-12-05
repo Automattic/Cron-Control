@@ -75,9 +75,19 @@ class Internal_Events extends Singleton {
 	public function schedule_internal_events() {
 		$when = strtotime( sprintf( '+%d seconds', JOB_QUEUE_WINDOW_IN_SECONDS ) );
 
+		$schedules = wp_get_schedules();
+
 		foreach ( $this->internal_jobs as $job_args ) {
 			if ( ! wp_next_scheduled( $job_args['action'] ) ) {
-				wp_schedule_event( $when, $job_args['schedule'], $job_args['action'] );
+				$interval = array_key_exists( $job_args['schedule'], $schedules ) ? $schedules[ $job_args['schedule'] ]['interval'] : 0;
+
+				$args = array(
+					'schedule' => $job_args['schedule'],
+					'args'     => array(),
+					'interval' => $interval,
+				);
+
+				Cron_Options_CPT::instance()->create_or_update_job( $when, $job_args['action'], $args );
 			}
 		}
 	}
