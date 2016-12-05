@@ -129,8 +129,10 @@ class Cron_Options_CPT extends Singleton {
 						continue;
 					}
 
+					// Retrieve event's remaining data
 					$job_args = maybe_unserialize( $jobs_post->post_content_filtered );
 					if ( ! is_array( $job_args ) ) {
+						$this->mark_job_post_completed( $jobs_post->ID );
 						continue;
 					}
 
