@@ -300,6 +300,7 @@ class Cron_Options_CPT extends Singleton {
 		// Create the post, or update an existing entry to run again in the future
 		if ( is_int( $update_id ) && $update_id > 0 ) {
 			$inserted = $wpdb->update( $wpdb->posts, $job_post, array( 'ID' => $update_id, ) );
+			$this->posts_to_clean[] = $update_id;
 		} else {
 			$inserted = $wpdb->insert( $wpdb->posts, $job_post );
 		}
