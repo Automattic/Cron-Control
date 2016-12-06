@@ -29,6 +29,7 @@ class One_Time_Fixers extends \WP_CLI_Command {
 		if ( is_numeric( $count ) ) {
 			$count = (int) $count;
 			\WP_CLI::line( sprintf( __( 'Found %s total items', 'automattic-cron-control' ), number_format_i18n( $count ) ) . "\n\n" );
+			\WP_CLI::confirm( __( 'Proceed?', 'automattic-cron-control' ) );
 		} else {
 			\WP_CLI::error( __( 'Something went wrong...aborting!', 'automattic-cron-control' ) );
 		}
