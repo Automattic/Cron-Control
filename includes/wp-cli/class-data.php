@@ -6,8 +6,6 @@ namespace Automattic\WP\Cron_Control\CLI;
  * Manage Cron Control's data, including internal caches
  */
 class Data extends \WP_CLI_Command {
-	private $time_format = 'Y-m-d H:i:s';
-
 	/**
 	 * Flush Cron Control's internal caches
 	 *
@@ -148,9 +146,9 @@ class Data extends \WP_CLI_Command {
 				'ID'                => $event->ID,
 				'action'            => '',
 				'instance'          => '',
-				'next_run_gmt'      => date( $this->time_format, strtotime( $event->post_date_gmt ) ),
+				'next_run_gmt'      => date( TIME_FORMAT, strtotime( $event->post_date_gmt ) ),
 				'next_run_relative' => $this->calculate_interval( strtotime( $event->post_date_gmt ) - time() ),
-				'last_updated_gmt'  => date( $this->time_format, strtotime( $event->post_modified_gmt ) ),
+				'last_updated_gmt'  => date( TIME_FORMAT, strtotime( $event->post_modified_gmt ) ),
 				'recurrence'        => __( 'Non-repeating', 'automattic-cron-control' ),
 				'schedule_name'     => __( 'n/a', 'automattic-cron-control' ),
 				'event_args'        => '',

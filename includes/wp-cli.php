@@ -7,6 +7,11 @@ if ( ! defined( '\WP_CLI' ) || ! \WP_CLI ) {
 }
 
 /**
+ * Consistent time format across commands
+ */
+const TIME_FORMAT = 'Y-m-d H:i:s';
+
+/**
  *  Clear all of the caches for memory management
  */
 function stop_the_insanity() {
