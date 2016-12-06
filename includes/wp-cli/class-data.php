@@ -6,6 +6,8 @@ namespace Automattic\WP\Cron_Control\CLI;
  * Manage Cron Control's data, including internal caches
  */
 class Data extends \WP_CLI_Command {
+	private $time_format = 'Y-m-d H:i:s';
+
 	/**
 	 * Flush Cron Control's internal caches
 	 *
@@ -60,7 +62,7 @@ class Data extends \WP_CLI_Command {
 			if ( $events['total_items'] <= $total_events_to_display ) {
 				\WP_CLI::line( sprintf( __( 'Displaying all %s entries', 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ) ) );
 			} else {
-				\WP_CLI::line( sprintf( __( 'Displaying %s of %s entries', 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ), number_format_i18n( $events['total_items'] ) ) );
+				\WP_CLI::line( sprintf( __( 'Displaying %s of %s entries, page %s of %s', 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ), number_format_i18n( $events['total_items'] ), number_format_i18n( $events['page'] ), number_format_i18n( $events['total_pages'] ) ) );
 			}
 
 			// And reformat
@@ -71,9 +73,8 @@ class Data extends \WP_CLI_Command {
 				'next_run_gmt',
 				'next_run_relative',
 				'recurrence',
+				'last_updated_gmt',
 				'event_args',
-				'created_gmt',
-				'modified_gmt',
 			) );
 		}
 	}
@@ -128,10 +129,11 @@ class Data extends \WP_CLI_Command {
 			\WP_CLI::error( __( 'Problem retrieving events', 'automattic-cron-control' ) );
 		}
 
-		// Include total for pagination etc
+		// Include totals for pagination etc
 		$total_items = (int) $wpdb->get_var( 'SELECT FOUND_ROWS()' );
+		$total_pages = ceil( $total_items / $limit );
 
-		return compact( 'status', 'limit', 'page', 'offset', 'items', 'total_items' );
+		return compact( 'status', 'limit', 'page', 'offset', 'items', 'total_items', 'total_pages' );
 	}
 
 	/**
@@ -140,27 +142,113 @@ class Data extends \WP_CLI_Command {
 	private function format_events( $events ) {
 		$formatted_events = array();
 
-		// Get schedules, for recurrence data
-		$schedules = wp_get_schedules();
-
 		// Reformat events
 		foreach ( $events as $event ) {
 			$row = array(
-				'ID'                => '',
+				'ID'                => $event->ID,
 				'action'            => '',
 				'instance'          => '',
-				'next_run_gmt'      => '',
-				'next_run_relative' => '',
-				'recurrence'        => '',
+				'next_run_gmt'      => date( $this->time_format, strtotime( $event->post_date_gmt ) ),
+				'next_run_relative' => $this->calculate_interval( strtotime( $event->post_date_gmt ) - time() ),
+				'recurrence'        => 'Non-repeating',
+				'last_updated_gmt'  => date( $this->time_format, strtotime( $event->post_modified_gmt ) ),
 				'event_args'        => '',
-				'created_gmt'       => '',
-				'modified_gmt'      => '',
 			);
+
+			// Most data serialized in the post
+			$all_args = maybe_unserialize( $event->post_content_filtered );
+			if ( is_array( $all_args ) ) {
+				// Action
+				if ( isset( $all_args['action'] ) ) {
+					$row['action'] = $all_args['action'];
+				}
+
+				// Instance
+				if ( isset( $all_args['instance'] ) ) {
+					$row['instance'] = $all_args['instance'];
+				}
+
+				// Additional arguments
+				if ( isset( $all_args['args'] ) ) {
+					$args = $all_args['args'];
+
+					// Event arguments themselves
+					if ( isset( $args['args'] ) ) {
+						$row['event_args'] = maybe_serialize( $args['args'] );
+					}
+
+					// Human-readable
+					if ( isset( $args['interval'] ) && $args['interval'] ) {
+						$row['recurrence'] = $this->calculate_interval( $args['interval'] );
+					}
+				}
+			}
 
 			$formatted_events[] = $row;
 		}
 
 		return $formatted_events;
+	}
+
+	/**
+	 * Convert a time interval into human-readable format.
+	 *
+	 * Similar to WordPress' built-in `human_time_diff()` but returns two time period chunks instead of just one.
+	 *
+	 * Borrowed from WP-CLI
+	 *
+	 * @param int $since An interval of time in seconds
+	 * @return string The interval in human readable format
+	 */
+	private function calculate_interval( $since ) {
+		if ( $since <= 0 ) {
+			return 'now';
+		}
+
+		$since = absint( $since );
+
+		// array of time period chunks
+		$chunks = array(
+			array( 60 * 60 * 24 * 365 , \_n_noop( '%s year', '%s years' ) ),
+			array( 60 * 60 * 24 * 30 , \_n_noop( '%s month', '%s months' ) ),
+			array( 60 * 60 * 24 * 7, \_n_noop( '%s week', '%s weeks' ) ),
+			array( 60 * 60 * 24 , \_n_noop( '%s day', '%s days' ) ),
+			array( 60 * 60 , \_n_noop( '%s hour', '%s hours' ) ),
+			array( 60 , \_n_noop( '%s minute', '%s minutes' ) ),
+			array(  1 , \_n_noop( '%s second', '%s seconds' ) ),
+		);
+
+		// we only want to output two chunks of time here, eg:
+		// x years, xx months
+		// x days, xx hours
+		// so there's only two bits of calculation below:
+
+		// step one: the first chunk
+		for ( $i = 0, $j = count( $chunks ); $i < $j; $i++ ) {
+			$seconds = $chunks[$i][0];
+			$name = $chunks[$i][1];
+
+			// finding the biggest chunk (if the chunk fits, break)
+			if ( ( $count = floor( $since / $seconds ) ) != 0 ){
+				break;
+			}
+		}
+
+		// set output var
+		$output = sprintf( \_n( $name[0], $name[1], $count ), $count );
+
+		// step two: the second chunk
+		if ( $i + 1 < $j ) {
+			$seconds2 = $chunks[$i + 1][0];
+			$name2    = $chunks[$i + 1][1];
+
+			if ( ( $count2 = floor( ( $since - ( $seconds * $count ) ) / $seconds2 ) ) != 0 ) {
+				// add to output var
+				$output .= ' ' . sprintf( \_n( $name2[0], $name2[1], $count2 ), $count2 );
+			}
+		}
+
+		return $output;
 	}
 }
 
