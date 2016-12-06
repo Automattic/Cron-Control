@@ -2,7 +2,7 @@
 
 namespace Automattic\WP\Cron_Control\CLI;
 
-class One_Time_Fixers extends \WPCOM_VIP_CLI_Command {
+class One_Time_Fixers extends \WP_CLI_Command {
 
 	/**
 	 * Remove corrupt Cron Control data resulting from initial plugin deployment
@@ -79,7 +79,7 @@ class One_Time_Fixers extends \WPCOM_VIP_CLI_Command {
 
 			// Some cleanup
 			unset( $items );
-			$this->stop_the_insanity();
+			stop_the_insanity();
 
 			// Prepare for the next batch
 			$page++;
