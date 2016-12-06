@@ -3,30 +3,15 @@
 namespace Automattic\WP\Cron_Control\CLI;
 
 /**
- * Manage Cron Control's data, including internal caches
+ * Manage Cron Control's data
  */
-class Data extends \WP_CLI_Command {
-	/**
-	 * Flush Cron Control's internal caches
-	 *
-	 * @subcommand flush-caches
-	 */
-	public function flush_internal_caches( $args, $assoc_args ) {
-		$flushed = \Automattic\WP\Cron_Control\flush_internal_caches();
-
-		if ( $flushed ) {
-			\WP_CLI::success( __( 'Internal caches cleared', 'automattic-cron-control' ) );
-		} else {
-			\WP_CLI::warning( __( 'No caches to clear', 'automattic-cron-control' ) );
-		}
-	}
-
+class Events extends \WP_CLI_Command {
 	/**
 	 * List cron events
 	 *
 	 * Intentionally bypasses caching to ensure latest data is shown
 	 *
-	 * @subcommand list-events
+	 * @subcommand list
 	 */
 	public function list_events( $args, $assoc_args ) {
 		$events = $this->get_events( $args, $assoc_args );
@@ -42,7 +27,7 @@ class Data extends \WP_CLI_Command {
 
 			// Not much to do
 			if ( 0 === $events['total_items'] ) {
-				\WP_CLI::success( __( 'Nothing to display', 'automattic-cron-control' ) );
+				\WP_CLI::success( __( 'No events to display', 'automattic-cron-control' ) );
 				return;
 			}
 
@@ -256,4 +241,4 @@ class Data extends \WP_CLI_Command {
 	}
 }
 
-\WP_CLI::add_command( 'cron-control-data', 'Automattic\WP\Cron_Control\CLI\Data' );
+\WP_CLI::add_command( 'cron-control events', 'Automattic\WP\Cron_Control\CLI\Events' );
