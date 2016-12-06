@@ -12,7 +12,7 @@ class Cache extends \WP_CLI_Command {
 	 * @subcommand flush
 	 */
 	public function flush_internal_caches( $args, $assoc_args ) {
-		$flushed = \Automattic\WP\Cron_Control\flush_internal_caches();
+		$flushed = \Automattic\WP\Cron_Control\_flush_internal_caches();
 
 		if ( $flushed ) {
 			\WP_CLI::success( __( 'Internal caches cleared', 'automattic-cron-control' ) );
