@@ -69,9 +69,14 @@ class One_Time_Fixers extends \WP_CLI_Command {
 
 			\WP_CLI::line( sprintf( __( 'Found %s items in this batch' ), number_format_i18n( count( $items ) ) ) );
 
-			if ( ! $dry_run ) {
-				foreach ( $items as $item ) {
-					\WP_CLI::line( "{$item->ID}, `{$item->post_title}`" );
+			if ( $dry_run && $page > 1 ) {
+				\WP_CLI::warning( sprintf( __( 'During dry runs, the query will return the same results each time. Since events are deleted during a live run, the command will advance through the %s item(s) found.', 'automattic-cron-control' ), number_format_i18n( $count ) ) );
+			}
+
+			foreach ( $items as $item ) {
+				\WP_CLI::line( "{$item->ID}, `{$item->post_title}`" );
+
+				if ( ! $dry_run ) {
 					wp_delete_post( $item->ID, true );
 				}
 			}
