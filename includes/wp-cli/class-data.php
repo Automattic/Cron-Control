@@ -9,12 +9,10 @@ class Data extends \WP_CLI_Command {
 	/**
 	 * Flush Cron Control's internal caches
 	 *
-	 * eg.: `wp --allow-root cron-control-data flush-cache`
-	 *
-	 * @subcommand flush-cache
+	 * @subcommand flush-caches
 	 */
-	public function flush_internal_cache( $args, $assoc_args ) {
-		$flushed = wp_cache_delete( \Automattic\WP\Cron_Control\Cron_Options_CPT::CACHE_KEY );
+	public function flush_internal_caches( $args, $assoc_args ) {
+		$flushed = \Automattic\WP\Cron_Control\flush_internal_caches();
 
 		if ( $flushed ) {
 			\WP_CLI::success( __( 'Internal caches cleared', 'automattic-cron-control' ) );
