@@ -52,12 +52,6 @@ class Data extends \WP_CLI_Command {
 			$events_for_display      = $this->format_events( $events['items'] );
 			$total_events_to_display = count( $events_for_display );
 
-			// How shall we display?
-			$format = 'table';
-			if ( isset( $assoc_args['format'] ) ) {
-				$format = $assoc_args['format'];
-			}
-
 			// Count, noting if showing fewer than all
 			if ( $events['total_items'] <= $total_events_to_display ) {
 				\WP_CLI::line( sprintf( __( 'Displaying all %s entries', 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ) ) );
@@ -66,6 +60,11 @@ class Data extends \WP_CLI_Command {
 			}
 
 			// And reformat
+			$format = 'table';
+			if ( isset( $assoc_args['format'] ) ) {
+				$format = $assoc_args['format'];
+			}
+
 			\WP_CLI\Utils\format_items( $format, $events_for_display, array(
 				'ID',
 				'action',
