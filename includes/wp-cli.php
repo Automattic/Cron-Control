@@ -30,4 +30,5 @@ function stop_the_insanity() {
 /**
  * Load commands
  */
+require __DIR__ . '/wp-cli/class-data.php';
 require __DIR__ . '/wp-cli/class-one-time-fixers.php';
