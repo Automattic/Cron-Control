@@ -71,9 +71,9 @@ class Data extends \WP_CLI_Command {
 				'instance',
 				'next_run_gmt',
 				'next_run_relative',
+				'last_updated_gmt',
 				'recurrence',
 				'schedule_name',
-				'last_updated_gmt',
 				'event_args',
 			) );
 		}
@@ -150,9 +150,9 @@ class Data extends \WP_CLI_Command {
 				'instance'          => '',
 				'next_run_gmt'      => date( $this->time_format, strtotime( $event->post_date_gmt ) ),
 				'next_run_relative' => $this->calculate_interval( strtotime( $event->post_date_gmt ) - time() ),
+				'last_updated_gmt'  => date( $this->time_format, strtotime( $event->post_modified_gmt ) ),
 				'recurrence'        => __( 'Non-repeating', 'automattic-cron-control' ),
 				'schedule_name'     => __( 'n/a', 'automattic-cron-control' ),
-				'last_updated_gmt'  => date( $this->time_format, strtotime( $event->post_modified_gmt ) ),
 				'event_args'        => '',
 			);
 
