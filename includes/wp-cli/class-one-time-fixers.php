@@ -30,8 +30,7 @@ class One_Time_Fixers extends \WP_CLI_Command {
 			$count = (int) $count;
 			\WP_CLI::line( sprintf( __( 'Found %s total items', 'automattic-cron-control' ), number_format_i18n( $count ) ) . "\n\n" );
 		} else {
-			\WP_CLI::line( __( 'Something went wrong...aborting!', 'automattic-cron-control' ) );
-			return;
+			\WP_CLI::error( __( 'Something went wrong...aborting!', 'automattic-cron-control' ) );
 		}
 
 		// Should we really destroy all this data?
