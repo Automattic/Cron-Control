@@ -62,7 +62,7 @@ class One_Time_Fixers extends \WP_CLI_Command {
 		do {
 			\WP_CLI::line( "\n\n" . sprintf( __( 'Processing page %s of %s', 'automattic-cron-control' ), number_format_i18n( $page ), number_format_i18n( $pages ) ) . "\n" );
 
-			$items = $wpdb->get_results( $wpdb->prepare( "SELECT ID, post_title FROM {$wpdb->posts} WHERE post_type = %s LIMIT %d", 'a8c_cron_ctrl_event', $page_size ) );
+			$items = $wpdb->get_results( $wpdb->prepare( "SELECT ID, post_title FROM {$wpdb->posts} WHERE post_type = %s LIMIT %d,%d", 'a8c_cron_ctrl_event', absint( ( $page - 1 ) * $page_size ),$page_size ) );
 
 			// Nothing more to do
 			if ( ! is_array( $items ) || empty( $items ) ) {
@@ -71,10 +71,6 @@ class One_Time_Fixers extends \WP_CLI_Command {
 			}
 
 			\WP_CLI::line( sprintf( __( 'Found %s items in this batch' ), number_format_i18n( count( $items ) ) ) );
-
-			if ( $dry_run && $page > 1 ) {
-				\WP_CLI::warning( sprintf( __( 'During dry runs, the query will return the same results each time. Since events are deleted during a live run, the command will advance through the %s item(s) found.', 'automattic-cron-control' ), number_format_i18n( $count ) ) );
-			}
 
 			foreach ( $items as $item ) {
 				\WP_CLI::line( "{$item->ID}, `{$item->post_title}`" );
@@ -95,8 +91,10 @@ class One_Time_Fixers extends \WP_CLI_Command {
 				break;
 			}
 
-			// Don't rush into the next batch
-			sleep( 5 );
+			// Don't rush into the next batch, unless we haven't done anything
+			if ( ! $dry_run ) {
+				sleep( 5 );
+			}
 		} while( true );
 
 		// Remove the now-stale cache when actively run

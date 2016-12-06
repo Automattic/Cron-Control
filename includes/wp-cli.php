@@ -7,6 +7,11 @@ if ( ! defined( '\WP_CLI' ) || ! \WP_CLI ) {
 }
 
 /**
+ * Consistent time format across commands
+ */
+const TIME_FORMAT = 'Y-m-d H:i:s';
+
+/**
  *  Clear all of the caches for memory management
  */
 function stop_the_insanity() {
@@ -30,5 +35,6 @@ function stop_the_insanity() {
 /**
  * Load commands
  */
-require __DIR__ . '/wp-cli/class-data.php';
+require __DIR__ . '/wp-cli/class-cache.php';
+require __DIR__ . '/wp-cli/class-events.php';
 require __DIR__ . '/wp-cli/class-one-time-fixers.php';
