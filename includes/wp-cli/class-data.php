@@ -73,6 +73,7 @@ class Data extends \WP_CLI_Command {
 				'next_run_gmt',
 				'next_run_relative',
 				'recurrence',
+				'schedule_name',
 				'last_updated_gmt',
 				'event_args',
 			) );
@@ -150,7 +151,8 @@ class Data extends \WP_CLI_Command {
 				'instance'          => '',
 				'next_run_gmt'      => date( $this->time_format, strtotime( $event->post_date_gmt ) ),
 				'next_run_relative' => $this->calculate_interval( strtotime( $event->post_date_gmt ) - time() ),
-				'recurrence'        => 'Non-repeating',
+				'recurrence'        => __( 'Non-repeating', 'automattic-cron-control' ),
+				'schedule_name'     => __( 'n/a', 'automattic-cron-control' ),
 				'last_updated_gmt'  => date( $this->time_format, strtotime( $event->post_modified_gmt ) ),
 				'event_args'        => '',
 			);
@@ -177,9 +179,14 @@ class Data extends \WP_CLI_Command {
 						$row['event_args'] = maybe_serialize( $args['args'] );
 					}
 
-					// Human-readable
+					// Human-readable version of next run
 					if ( isset( $args['interval'] ) && $args['interval'] ) {
 						$row['recurrence'] = $this->calculate_interval( $args['interval'] );
+					}
+
+					// Named schedule
+					if ( isset( $args['schedule'] ) && $args['schedule'] ) {
+						$row['schedule_name'] = $args['schedule'];
 					}
 				}
 			}
