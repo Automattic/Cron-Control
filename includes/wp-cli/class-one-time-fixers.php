@@ -98,7 +98,7 @@ class One_Time_Fixers extends \WP_CLI_Command {
 		}
 
 		// Fin
-		\WP_CLI::line( "\n" . __( 'All done.', 'automattic-cron-control' ) );
+		\WP_CLI::success( __( 'All done.', 'automattic-cron-control' ) );
 	}
 }
 
