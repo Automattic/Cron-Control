@@ -2,8 +2,10 @@
 
 namespace Automattic\WP\Cron_Control\CLI;
 
+/**
+ * Run one-time fixers for Cron Control
+ */
 class One_Time_Fixers extends \WP_CLI_Command {
-
 	/**
 	 * Remove corrupt Cron Control data resulting from initial plugin deployment
 	 *
