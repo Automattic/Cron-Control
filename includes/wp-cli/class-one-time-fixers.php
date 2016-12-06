@@ -7,7 +7,7 @@ class One_Time_Fixers extends \WPCOM_VIP_CLI_Command {
 	/**
 	 * Remove corrupt Cron Control data resulting from initial plugin deployment
 	 *
-	 * eg.: `wp --allow-root cron-control remove-all-plugin-data --batch-size=15 --dry-run=true`
+	 * eg.: `wp --allow-root cron-control-fixers remove-all-plugin-data --batch-size=15 --dry-run=true`
 	 *
 	 * @subcommand remove-all-plugin-data
 	 */
@@ -103,4 +103,4 @@ class One_Time_Fixers extends \WPCOM_VIP_CLI_Command {
 	}
 }
 
-\WP_CLI::add_command( 'cron-control', 'Automattic\WP\Cron_Control\CLI\One_Time_Fixers' );
+\WP_CLI::add_command( 'cron-control-fixers', 'Automattic\WP\Cron_Control\CLI\One_Time_Fixers' );
