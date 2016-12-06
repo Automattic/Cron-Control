@@ -26,11 +26,56 @@ class Data extends \WP_CLI_Command {
 	 *
 	 * Intentionally bypasses caching to ensure latest data is shown
 	 *
-	 * @subcommand show-events
+	 * @subcommand list-events
 	 */
-	public function show_events( $args, $assoc_args ) {
+	public function list_events( $args, $assoc_args ) {
 		$events = $this->get_events( $args, $assoc_args );
-		$this->format_events( $events );
+
+		// Output in the requested format
+		if ( isset( $assoc_args['format'] ) && 'ids' === $assoc_args['format'] ) {
+			echo implode( ' ', wp_list_pluck( $events['items'], 'ID' ) );
+		} else {
+			// Lest someone think the `completed` record should be...complete
+			if ( isset( $assoc_args['status'] ) && 'completed' === $assoc_args['status'] ) {
+				\WP_CLI::warning( __( 'Entries are purged automatically, so this cannot be relied upon as a record of past event execution.', 'automattic-cron-control' ) );
+			}
+
+			// Not much to do
+			if ( 0 === $events['total_items'] ) {
+				\WP_CLI::success( __( 'Nothing to display', 'automattic-cron-control' ) );
+				return;
+			}
+
+			// Prepare events for display
+			$events_for_display      = $this->format_events( $events['items'] );
+			$total_events_to_display = count( $events_for_display );
+
+			// How shall we display?
+			$format = 'table';
+			if ( isset( $assoc_args['format'] ) ) {
+				$format = $assoc_args['format'];
+			}
+
+			// Count, noting if showing fewer than all
+			if ( $events['total_items'] <= $total_events_to_display ) {
+				\WP_CLI::line( sprintf( __( 'Displaying all %s entries', 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ) ) );
+			} else {
+				\WP_CLI::line( sprintf( __( 'Displaying %s of %s entries', 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ), number_format_i18n( $events['total_items'] ) ) );
+			}
+
+			// And reformat
+			\WP_CLI\Utils\format_items( $format, $events_for_display, array(
+				'ID',
+				'action',
+				'instance',
+				'next_run_gmt',
+				'next_run_relative',
+				'recurrence',
+				'event_args',
+				'created_gmt',
+				'modified_gmt',
+			) );
+		}
 	}
 
 	/**
@@ -84,15 +129,39 @@ class Data extends \WP_CLI_Command {
 		}
 
 		// Include total for pagination etc
-		$total_items = $wpdb->get_var( 'SELECT FOUND_ROWS()' );
+		$total_items = (int) $wpdb->get_var( 'SELECT FOUND_ROWS()' );
 
 		return compact( 'status', 'limit', 'page', 'offset', 'items', 'total_items' );
 	}
 
 	/**
-	 *
+	 * Format event data into something human-readable
 	 */
-	private function format_events( $events ) {}
+	private function format_events( $events ) {
+		$formatted_events = array();
+
+		// Get schedules, for recurrence data
+		$schedules = wp_get_schedules();
+
+		// Reformat events
+		foreach ( $events as $event ) {
+			$row = array(
+				'ID'                => '',
+				'action'            => '',
+				'instance'          => '',
+				'next_run_gmt'      => '',
+				'next_run_relative' => '',
+				'recurrence'        => '',
+				'event_args'        => '',
+				'created_gmt'       => '',
+				'modified_gmt'      => '',
+			);
+
+			$formatted_events[] = $row;
+		}
+
+		return $formatted_events;
+	}
 }
 
 \WP_CLI::add_command( 'cron-control-data', 'Automattic\WP\Cron_Control\CLI\Data' );
