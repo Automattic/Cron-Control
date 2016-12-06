@@ -54,7 +54,7 @@ class Data extends \WP_CLI_Command {
 
 			// Count, noting if showing fewer than all
 			if ( $events['total_items'] <= $total_events_to_display ) {
-				\WP_CLI::line( sprintf( __( 'Displaying all %s entries', 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ) ) );
+				\WP_CLI::line( sprintf( _n( 'Displaying one entry', 'Displaying all %s entries', $total_events_to_display, 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ) ) );
 			} else {
 				\WP_CLI::line( sprintf( __( 'Displaying %s of %s entries, page %s of %s', 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ), number_format_i18n( $events['total_items'] ), number_format_i18n( $events['page'] ), number_format_i18n( $events['total_pages'] ) ) );
 			}
