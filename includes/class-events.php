@@ -28,6 +28,7 @@ class Events extends Singleton {
 	 * Prepare environment to run job
 	 *
 	 * Must run as early as possible, particularly before any client code is loaded
+	 * This also runs before Core has parsed the request and set the \REST_REQUEST constant
 	 */
 	public function prepare_environment() {
 		if ( ! is_rest_endpoint_request( 'run' ) ) {
