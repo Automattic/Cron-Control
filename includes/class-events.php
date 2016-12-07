@@ -133,7 +133,7 @@ class Events extends Singleton {
 		}
 
 		// Ensure we don't run jobs too far ahead
-		if ( $timestamp > strtotime( sprintf( '+%d seconds', JOB_EXECUTION_BUFFER_IN_SECONDS ) ) ) {
+		if ( $timestamp > time() ) {
 			return new \WP_Error( 'premature', sprintf( __( 'Job with identifier `%1$s` is not scheduled to run yet.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ), array( 'status' => 403, ) );
 		}
 
