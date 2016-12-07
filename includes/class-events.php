@@ -147,9 +147,6 @@ class Events extends Singleton {
 
 		unset( $timestamp, $action, $instance );
 
-		// And we're off!
-		$time_start = microtime( true );
-
 		// Limit how many events are processed concurrently
 		if ( ! is_internal_event( $event['action'] ) && ! Lock::check_lock( self::LOCK ) ) {
 			return new \WP_Error( 'no-free-threads', sprintf( __( 'No resources available to run the job with action action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event['action'], maybe_serialize( $event['args'] ) ), array( 'status' => 429, ) );
@@ -167,11 +164,9 @@ class Events extends Singleton {
 			Lock::free_lock( self::LOCK );
 		}
 
-		$time_end = microtime( true );
-
 		return array(
 			'success' => true,
-			'message' => sprintf( __( 'Job with action `%1$s` and arguments `%2$s` completed in %3$d seconds.', 'automattic-cron-control' ), $event['action'], maybe_serialize( $event['args'] ), $time_end - $time_start ),
+			'message' => sprintf( __( 'Job with action `%1$s` and arguments `%2$s` executed.', 'automattic-cron-control' ), $event['action'], maybe_serialize( $event['args'] ) ),
 		);
 	}
 
