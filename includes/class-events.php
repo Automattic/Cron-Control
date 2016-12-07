@@ -132,7 +132,7 @@ class Events extends Singleton {
 			return new \WP_Error( 'missing-data', __( 'Invalid or incomplete request data.', 'automattic-cron-control' ), array( 'status' => 400, ) );
 		}
 
-		// Ensure we don't run jobs too far ahead
+		// Ensure we don't run jobs ahead of time
 		if ( $timestamp > time() ) {
 			return new \WP_Error( 'premature', sprintf( __( 'Job with identifier `%1$s` is not scheduled to run yet.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ), array( 'status' => 403, ) );
 		}
