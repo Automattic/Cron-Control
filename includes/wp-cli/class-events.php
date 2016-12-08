@@ -113,8 +113,9 @@ class Events extends \WP_CLI_Command {
 		\WP_CLI::line( sprintf( __( 'Found event %d with action `%s` and instance identifier `%s`', 'automattic-cron-control' ), $args[0], $event_data['action'], $event_data['instance'] ) );
 
 		// Proceed?
-		if ( $event_data['timestamp'] > time() ) {
-			\WP_CLI::warning( sprintf( __( 'This event is not scheduled to run until %s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $event_data['timestamp'] ) ) );
+		$now = time();
+		if ( $event_data['timestamp'] > $now ) {
+			\WP_CLI::warning( sprintf( __( 'This event is not scheduled to run until %1$s GMT (%2$s)', 'automattic-cron-control' ), date( TIME_FORMAT, $event_data['timestamp'] ), $this->calculate_interval( $event_data['timestamp'] - $now ) ) );
 		}
 
 		\WP_CLI::confirm( sprintf( __( 'Run this event?', 'automattic-cron-control' ) ) );
