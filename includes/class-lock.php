@@ -15,7 +15,7 @@ class Lock {
 
 		// Default limit for concurrent events
 		if ( ! is_numeric( $limit ) ) {
-			$limit = JOB_CONCURRENCY_LIMIT;
+			$limit = LOCK_DEFAULT_LIMIT;
 		}
 
 		// Check if process can run
