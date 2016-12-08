@@ -123,17 +123,18 @@ class Events extends Singleton {
 	 * @param $timestamp  int     Unix timestamp
 	 * @param $action     string  md5 hash of the action used when the event is registered
 	 * @param $instance   string  md5 hash of the event's arguments array, which Core uses to index the `cron` option
+	 * @param $force      bool    Ignore timestamp and run event anyway?
 	 *
 	 * @return array|\WP_Error
 	 */
-	public function run_event( $timestamp, $action, $instance ) {
+	public function run_event( $timestamp, $action, $instance, $force = false ) {
 		// Validate input data
 		if ( empty( $timestamp ) || empty( $action ) || empty( $instance ) ) {
 			return new \WP_Error( 'missing-data', __( 'Invalid or incomplete request data.', 'automattic-cron-control' ), array( 'status' => 400, ) );
 		}
 
 		// Ensure we don't run jobs ahead of time
-		if ( $timestamp > time() ) {
+		if ( ! $force && $timestamp > time() ) {
 			return new \WP_Error( 'premature', sprintf( __( 'Job with identifier `%1$s` is not scheduled to run yet.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ), array( 'status' => 403, ) );
 		}
 
