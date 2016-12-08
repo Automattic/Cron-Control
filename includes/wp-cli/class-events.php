@@ -286,13 +286,11 @@ class Events extends \WP_CLI_Command {
 
 		if ( is_object( $event_post ) && ! is_wp_error( $event_post ) ) {
 			// Parse basic event data and output, lest someone delete the wrong thing
-			$event_details = explode( '|', $event_post->post_title );
-			$event_details = array_map( 'trim', $event_details );
-			list( $timestamp, $action, $instance ) = $event_details;
+			$event_details = $this->get_event_details_from_post_title( $event_post->post_title );
 
-			\WP_CLI::line( sprintf( __( 'Execution time: %s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $timestamp ) ) );
-			\WP_CLI::line( sprintf( __( 'Action: %s', 'automattic-cron-control' ), $action ) );
-			\WP_CLI::line( sprintf( __( 'Instance identifier: %s', 'automattic-cron-control' ), $instance ) );
+			\WP_CLI::line( sprintf( __( 'Execution time: %s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $event_details['timestamp'] ) ) );
+			\WP_CLI::line( sprintf( __( 'Action: %s', 'automattic-cron-control' ), $event_details['action'] ) );
+			\WP_CLI::line( sprintf( __( 'Instance identifier: %s', 'automattic-cron-control' ), $event_details['instance'] ) );
 			\WP_CLI::line( '' );
 			\WP_CLI::confirm( sprintf( __( 'Are you sure you want to delete this event?', 'automattic-cron-control' ) ) );
 
@@ -318,6 +316,20 @@ class Events extends \WP_CLI_Command {
 		\WP_CLI::error( 'Coming soon to a CLI near you!' );
 
 		return;
+	}
+
+	/**
+	 * Parse event details stored in an item's post_title
+	 */
+	private function get_event_details_from_post_title( $title ) {
+		$event_details = explode( '|', $title );
+		$event_details = array_map( 'trim', $event_details );
+
+		return array(
+			'timestamp' => $event_details[0],
+			'action'    => $event_details[1],
+			'instance'  => $event_details[2],
+		);
 	}
 }
 
