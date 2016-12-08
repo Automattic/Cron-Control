@@ -288,6 +288,11 @@ class Events extends \WP_CLI_Command {
 			// Parse basic event data and output, lest someone delete the wrong thing
 			$event_details = $this->get_event_details_from_post_title( $event_post->post_title );
 
+			// Warning about Internal Events
+			if ( \Automattic\WP\Cron_Control\is_internal_event( $event_details['action'] ) ) {
+				\WP_CLI::warning( __( 'This is an event created by the Cron Control plugin. It will recreated automatically.', 'automattic-cron-control' ) );
+			}
+
 			\WP_CLI::line( sprintf( __( 'Execution time: %s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $event_details['timestamp'] ) ) );
 			\WP_CLI::line( sprintf( __( 'Action: %s', 'automattic-cron-control' ), $event_details['action'] ) );
 			\WP_CLI::line( sprintf( __( 'Instance identifier: %s', 'automattic-cron-control' ), $event_details['instance'] ) );
