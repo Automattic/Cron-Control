@@ -285,6 +285,7 @@ class Events extends \WP_CLI_Command {
 		$event_post = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->posts} WHERE post_type = %s AND ID = %d LIMIT 1", \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE, $jid ) );
 
 		if ( is_object( $event_post ) && ! is_wp_error( $event_post ) ) {
+			// Parse basic event data and output, lest someone delete the wrong thing
 			$event_details = explode( '|', $event_post->post_title );
 			$event_details = array_map( 'trim', $event_details );
 			list( $timestamp, $action, $instance ) = $event_details;
@@ -295,6 +296,7 @@ class Events extends \WP_CLI_Command {
 			\WP_CLI::line( '' );
 			\WP_CLI::confirm( sprintf( __( 'Are you sure you want to delete this event?', 'automattic-cron-control' ) ) );
 
+			// Try to delete the item and provide some relevant output
 			$trashed = wp_delete_post( $event_post->ID, true );
 
 			if ( false === $trashed ) {
