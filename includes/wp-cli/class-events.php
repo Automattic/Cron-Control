@@ -87,6 +87,57 @@ class Events extends \WP_CLI_Command {
 	}
 
 	/**
+	 * Run an event given an ID
+	 *
+	 * @subcommand run
+	 * @synopsis <event_id>
+	 */
+	public function run_event( $args, $assoc_args ) {
+		// Validate ID
+		if ( ! is_numeric( $args[0] ) ) {
+			\WP_CLI::error( __( 'Specify the ID of an event to run', 'automattic-cron-control' ) );
+		}
+
+		// Validate event ID and get the information needed to execute it
+		global $wpdb;
+
+		$event = $wpdb->get_var( $wpdb->prepare( "SELECT post_title FROM {$wpdb->posts} WHERE ID = %d AND post_type = %s AND post_status = %s LIMIT 1", $args[0], \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE, \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_STATUS_PENDING ) );
+
+		if ( empty( $event ) ) {
+			\WP_CLI::error( sprintf( __( 'Failed to locate event %d. Please confirm that the entry exists and that the ID is that of an event.', 'automattic-cron-control' ), $args[0] ) );
+		}
+
+		// Event data
+		$event_data = $this->get_event_details_from_post_title( $event );
+
+		\WP_CLI::line( sprintf( __( 'Found event %d with action `%s` and instance identifier `%s`', 'automattic-cron-control' ), $args[0], $event_data['action'], $event_data['instance'] ) );
+
+		// Proceed?
+		if ( $event_data['timestamp'] > time() ) {
+			\WP_CLI::warning( sprintf( __( 'This event is not scheduled to run until %s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $event_data['timestamp'] ) ) );
+		}
+
+		\WP_CLI::confirm( sprintf( __( 'Run this event?', 'automattic-cron-control' ) ) );
+
+		// Environment preparation
+		if ( ! defined( 'DOING_CRON' ) ) {
+			define( 'DOING_CRON', true );
+		}
+
+		// Run the event
+		$run = \Automattic\WP\Cron_Control\Events::instance()->run_event( $event_data['timestamp'], md5( $event_data['action'] ), $event_data['instance'], true );
+
+		// Output based on run attempt
+		if ( is_array( $run ) ) {
+			\WP_CLI::success( $run['message'] );
+		} elseif ( is_wp_error( $run ) ) {
+			\WP_CLI::error( $run->get_error_message() );
+		} else {
+			\WP_CLI::error( __( 'Failed to run event', 'automattic-cron-control' ) );
+		}
+	}
+
+	/**
 	 * Retrieve list of events, and related data, for a given request
 	 */
 	private function get_events( $args, $assoc_args ) {
