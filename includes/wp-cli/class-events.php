@@ -129,7 +129,7 @@ class Events extends \WP_CLI_Command {
 		$offset = absint( ( $page - 1 ) * $limit );
 
 		// Query
-		$items = $wpdb->get_results( $wpdb->prepare( "SELECT SQL_CALC_FOUND_ROWS ID, post_content_filtered, post_date_gmt, post_modified_gmt FROM {$wpdb->posts} WHERE post_type = %s AND post_status = %s ORDER BY post_date ASC LIMIT %d,%d", \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE, $post_status, $offset, $limit ) );
+		$items = $wpdb->get_results( $wpdb->prepare( "SELECT SQL_CALC_FOUND_ROWS ID, post_title, post_content_filtered, post_date_gmt, post_modified_gmt FROM {$wpdb->posts} WHERE post_type = %s AND post_status = %s ORDER BY post_date ASC LIMIT %d,%d", \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE, $post_status, $offset, $limit ) );
 
 		// Bail if we don't get results
 		if ( ! is_array( $items ) ) {
@@ -326,7 +326,7 @@ class Events extends \WP_CLI_Command {
 		$event_details = array_map( 'trim', $event_details );
 
 		return array(
-			'timestamp' => $event_details[0],
+			'timestamp' => (int) $event_details[0],
 			'action'    => $event_details[1],
 			'instance'  => $event_details[2],
 		);
