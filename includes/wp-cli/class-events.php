@@ -74,11 +74,13 @@ class Events extends \WP_CLI_Command {
 		// Remove a specific event
 		if ( isset( $assoc_args['event_id'] ) ) {
 			$this->delete_event_by_id( $args, $assoc_args );
+			return;
 		}
 
 		// Remove all events with a given action
 		if ( isset( $assoc_args['action'] ) ) {
 			$this->delete_event_by_action( $args, $action );
+			return;
 		}
 
 		\WP_CLI::error( __( 'Specify something to delete, or see the `cron-control-fixers` command to remove all data.', 'automattic-cron-control' ) );
@@ -305,8 +307,6 @@ class Events extends \WP_CLI_Command {
 		}
 
 		\WP_CLI::error( sprintf( __( 'Failed to delete event %d. Please confirm that the entry exists and that the ID is that of an event.', 'automattic-cron-control' ), $jid ) );
-
-		return;
 	}
 
 	/**
