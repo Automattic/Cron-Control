@@ -12,6 +12,7 @@ class Events extends \WP_CLI_Command {
 	 * Intentionally bypasses caching to ensure latest data is shown
 	 *
 	 * @subcommand list
+	 * @synopsis [--status=<pending|completed>] [--page=<page>] [--limit=<limit>] [--format=<format>]
 	 */
 	public function list_events( $args, $assoc_args ) {
 		$events = $this->get_events( $args, $assoc_args );
