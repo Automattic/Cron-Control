@@ -79,7 +79,7 @@ class Events extends \WP_CLI_Command {
 
 		// Remove all events with a given action
 		if ( isset( $assoc_args['action'] ) ) {
-			$this->delete_event_by_action( $args, $action );
+			$this->delete_event_by_action( $args, $assoc_args );
 			return;
 		}
 
