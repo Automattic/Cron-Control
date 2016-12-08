@@ -45,13 +45,16 @@ class Lock extends \WP_CLI_Command {
 
 		// Reset requested
 		if ( isset( $assoc_args['reset'] ) ) {
-			\WP_CLI::warning( __( 'Resetting lock', 'automattic-cron-control' ) . "\n" );
+			\WP_CLI::warning( __( 'Resetting lock...', 'automattic-cron-control' ) . "\n" );
 
 			$lock      = \Automattic\WP\Cron_Control\Lock::get_lock_value( $lock_name );
 			$timestamp = \Automattic\WP\Cron_Control\Lock::get_lock_timestamp( $lock_name );
 
 			\WP_CLI::line( sprintf( __( 'Previous value: %s', 'automattic-cron-control' ), number_format_i18n( $lock ) ) );
-			\WP_CLI::line( sprintf( __( 'Previous lock expiration: %s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $timestamp ) ) . "\n" );
+			\WP_CLI::line( sprintf( __( 'Previously modified: %s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $timestamp ) ) . "\n" );
+
+			\WP_CLI::confirm( sprintf( __( 'Are you sure you want to reset this lock?', 'automattic-cron-control' ) ) );
+			\WP_CLI::line( '' );
 
 			\Automattic\WP\Cron_Control\Lock::reset_lock( $lock_name );
 			\WP_CLI::success( __( 'Lock reset', 'automattic-cron-control' ) . "\n" );
@@ -63,7 +66,7 @@ class Lock extends \WP_CLI_Command {
 		$timestamp = \Automattic\WP\Cron_Control\Lock::get_lock_timestamp( $lock_name );
 
 		\WP_CLI::line( sprintf( __( 'Current value: %s', 'automattic-cron-control' ), number_format_i18n( $lock ) ) );
-		\WP_CLI::line( sprintf( __( 'Lock expiration: %s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $timestamp ) ) );
+		\WP_CLI::line( sprintf( __( 'Last modified: %s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $timestamp ) ) );
 	}
 }
 
