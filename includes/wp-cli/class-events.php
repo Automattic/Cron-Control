@@ -65,6 +65,26 @@ class Events extends \WP_CLI_Command {
 	}
 
 	/**
+	 * Remove events by ID or action
+	 *
+	 * @subcommand delete
+	 * @synopsis [--event_id=<event_id>] [--action=<action>]
+	 */
+	public function delete_events( $args, $assoc_args ) {
+		// Remove a specific event
+		if ( isset( $assoc_args['event_id'] ) ) {
+			$this->delete_event_by_id( $args, $assoc_args );
+		}
+
+		// Remove all events with a given action
+		if ( isset( $assoc_args['action'] ) ) {
+			$this->delete_event_by_action( $args, $action );
+		}
+
+		\WP_CLI::error( __( 'Specify something to delete, or see the `cron-control-fixers` command to remove all data.', 'automattic-cron-control' ) );
+	}
+
+	/**
 	 * Retrieve list of events, and related data, for a given request
 	 */
 	private function get_events( $args, $assoc_args ) {
@@ -242,6 +262,60 @@ class Events extends \WP_CLI_Command {
 		}
 
 		return $output;
+	}
+
+	/**
+	 * Delete an event by ID
+	 */
+	private function delete_event_by_id( $args, $assoc_args ) {
+		$jid = absint( $assoc_args['event_id'] );
+
+		// Validate ID
+		if ( ! $jid ) {
+			\WP_CLI::error( __( 'Invalid event ID', 'automattic-cron-control' ) );
+		}
+
+		\WP_CLI::line( __( 'Locating event...', 'automattic-cron-control' ) . "\n" );
+
+		// Look up full object and confirm that the entry belongs to this plugin's CPT
+		global $wpdb;
+
+		$event_post = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->posts} WHERE post_type = %s AND ID = %d LIMIT 1", \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE, $jid ) );
+
+		if ( is_object( $event_post ) && ! is_wp_error( $event_post ) ) {
+			$event_details = explode( '|', $event_post->post_title );
+			$event_details = array_map( 'trim', $event_details );
+			list( $timestamp, $action, $instance ) = $event_details;
+
+			\WP_CLI::line( sprintf( __( 'Execution time: %s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $timestamp ) ) );
+			\WP_CLI::line( sprintf( __( 'Action: %s', 'automattic-cron-control' ), $action ) );
+			\WP_CLI::line( sprintf( __( 'Instance identifier: %s', 'automattic-cron-control' ), $instance ) );
+			\WP_CLI::line( '' );
+			\WP_CLI::confirm( sprintf( __( 'Are you sure you want to delete this event?', 'automattic-cron-control' ) ) );
+
+			$trashed = wp_delete_post( $event_post->ID, true );
+
+			if ( false === $trashed ) {
+				\WP_CLI::error( sprintf( __( 'Failed to delete event %d', 'automattic-cron-control' ), $jid ) );
+			} else {
+				\Automattic\WP\Cron_Control\_flush_internal_caches();
+				\WP_CLI::success( sprintf( __( 'Removed event %d', 'automattic-cron-control' ), $jid ) );
+				return;
+			}
+		}
+
+		\WP_CLI::error( sprintf( __( 'Failed to delete event %d. Please confirm that the entry exists and that the ID is that of an event.', 'automattic-cron-control' ), $jid ) );
+
+		return;
+	}
+
+	/**
+	 * Delete all events of the same action
+	 */
+	private function delete_event_by_action( $args, $assoc_args ) {
+		\WP_CLI::error( 'Coming soon to a CLI near you!' );
+
+		return;
 	}
 }
 
