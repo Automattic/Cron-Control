@@ -123,7 +123,7 @@ class Events extends Singleton {
 	 * @param $timestamp  int     Unix timestamp
 	 * @param $action     string  md5 hash of the action used when the event is registered
 	 * @param $instance   string  md5 hash of the event's arguments array, which Core uses to index the `cron` option
-	 * @param $force      bool    Ignore timestamp and run event anyway?
+	 * @param $force      bool    Run event regardless of timestamp or lock status? eg, when executing jobs via wp-cli
 	 *
 	 * @return array|\WP_Error
 	 */
@@ -148,9 +148,11 @@ class Events extends Singleton {
 
 		unset( $timestamp, $action, $instance );
 
-		// Limit how many events are processed concurrently
-		if ( ! $this->can_run_event( $event ) ) {
-			return new \WP_Error( 'no-free-threads', sprintf( __( 'No resources available to run the job with action action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event['action'], maybe_serialize( $event['args'] ) ), array( 'status' => 429, ) );
+		// Limit how many events are processed concurrently, unless explicitly bypassed
+		if ( ! $force ) {
+			if ( ! $this->can_run_event( $event ) ) {
+				return new \WP_Error( 'no-free-threads', sprintf( __( 'No resources available to run the job with action action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event[ 'action' ], maybe_serialize( $event[ 'args' ] ) ), array( 'status' => 429, ) );
+			}
 		}
 
 		// Mark the event completed, and reschedule if desired
@@ -161,7 +163,8 @@ class Events extends Singleton {
 		do_action_ref_array( $event['action'], $event['args'] );
 
 		// Free process for the next event
-		if ( ! is_internal_event( $event['action'] ) ) {
+		// Lock isn't set when event execution is forced or event is Internal, so we don't want to alter it
+		if ( ! $force && ! is_internal_event( $event['action'] ) ) {
 			Lock::free_lock( self::LOCK );
 		}
 
