@@ -17,6 +17,11 @@ class Events extends \WP_CLI_Command {
 	public function list_events( $args, $assoc_args ) {
 		$events = $this->get_events( $args, $assoc_args );
 
+		// Prevent one from requesting a page that doesn't exist
+		if ( $events['page'] > $events['total_pages'] ) {
+			\WP_CLI::error( __( 'Invalid page requested', 'automattic-cron-control' ) );
+		}
+
 		// Output in the requested format
 		if ( isset( $assoc_args['format'] ) && 'ids' === $assoc_args['format'] ) {
 			echo implode( ' ', wp_list_pluck( $events['items'], 'ID' ) );
@@ -27,8 +32,8 @@ class Events extends \WP_CLI_Command {
 			}
 
 			// Not much to do
-			if ( 0 === $events['total_items'] ) {
-				\WP_CLI::success( __( 'No events to display', 'automattic-cron-control' ) );
+			if ( 0 === $events['total_items'] || empty( $events['items'] ) ) {
+				\WP_CLI::warning( __( 'No events to display', 'automattic-cron-control' ) );
 				return;
 			}
 
