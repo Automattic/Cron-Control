@@ -150,6 +150,9 @@ class Events extends Singleton {
 
 		// Limit how many events are processed concurrently, unless explicitly bypassed
 		if ( ! $force ) {
+			// Prepare event-level lock
+			$this->prime_event_action_lock( $event );
+
 			if ( ! $this->can_run_event( $event ) ) {
 				return new \WP_Error( 'no-free-threads', sprintf( __( 'No resources available to run the job with action action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event[ 'action' ], maybe_serialize( $event[ 'args' ] ) ), array( 'status' => 429, ) );
 			}
@@ -174,6 +177,17 @@ class Events extends Singleton {
 	}
 
 	/**
+	 * Prime the event-specific lock
+	 *
+	 * Used to ensure only one instance of a particular event, such as `wp_version_check` runs at one time
+	 *
+	 * @param $event array Event data
+	 */
+	private function prime_event_action_lock( $event ) { error_log( var_export( $this->get_lock_key_for_event_action( $event ), true ) );
+		Lock::prime_lock( $this->get_lock_key_for_event_action( $event ), JOB_LOCK_EXPIRY_IN_MINUTES );
+	}
+
+	/**
 	 * Are resources available to run this event?
 	 *
 	 * @param $event array Event data
@@ -191,11 +205,18 @@ class Events extends Singleton {
 			return false;
 		}
 
+		// Limit to one concurrent execution of a specific action
+		if ( ! Lock::check_lock( $this->get_lock_key_for_event_action( $event ), 1 ) ) {
+			return false;
+		}
+
 		// Let's go!
 		return true;
 	}
 
 	/**
+	 * Free locks after event completes
+	 *
 	 * @param $event array Event data
 	 */
 	private function do_lock_cleanup( $event ) {
@@ -203,6 +224,21 @@ class Events extends Singleton {
 		if ( ! is_internal_event( $event['action'] ) ) {
 			Lock::free_lock( self::LOCK );
 		}
+
+		// Reset individual event lock
+		Lock::reset_lock( $this->get_lock_key_for_event_action( $event ), JOB_LOCK_EXPIRY_IN_MINUTES );
+	}
+
+	/**
+	 * Turn the event action into a string that can be used with a lock
+	 *
+	 * @param $event array Event data
+	 *
+	 * @return string
+	 */
+	public function get_lock_key_for_event_action( $event ) {
+		// Hashed solely to constrain overall length
+		return md5( 'ev-' . $event['action'] );
 	}
 
 	/**
