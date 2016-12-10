@@ -183,7 +183,7 @@ class Events extends Singleton {
 	 *
 	 * @param $event array Event data
 	 */
-	private function prime_event_action_lock( $event ) { error_log( var_export( $this->get_lock_key_for_event_action( $event ), true ) );
+	private function prime_event_action_lock( $event ) {
 		Lock::prime_lock( $this->get_lock_key_for_event_action( $event ), JOB_LOCK_EXPIRY_IN_MINUTES );
 	}
 
