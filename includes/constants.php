@@ -19,4 +19,5 @@ const JOB_CREATION_CONCURRENCY_LIMIT = 5;
 /**
  * Locks
  */
-const LOCK_DEFAULT_LIMIT = 10;
+const LOCK_DEFAULT_LIMIT             = 10;
+const LOCK_DEFULT_TIMEOUT_IN_MINUTES = 10;

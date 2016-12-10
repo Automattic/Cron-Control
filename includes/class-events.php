@@ -206,7 +206,7 @@ class Events extends Singleton {
 		}
 
 		// Limit to one concurrent execution of a specific action
-		if ( ! Lock::check_lock( $this->get_lock_key_for_event_action( $event ), 1 ) ) {
+		if ( ! Lock::check_lock( $this->get_lock_key_for_event_action( $event ), 1, JOB_LOCK_EXPIRY_IN_MINUTES ) ) {
 			return false;
 		}
 

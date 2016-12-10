@@ -6,9 +6,16 @@ class Lock {
 	/**
 	 * Set a lock and limit how many concurrent jobs are permitted
 	 */
-	public static function check_lock( $lock, $limit = null ) {
-		// Prevent deadlock
-		if ( self::get_lock_timestamp( $lock ) < time() - JOB_TIMEOUT_IN_MINUTES * MINUTE_IN_SECONDS ) {
+	public static function check_lock( $lock, $limit = null, $timeout_in_minutes = null ) {
+		// Timeout, should a process die before its lock is freed
+		if ( is_numeric( $timeout_in_minutes ) ) {
+			$timeout = $timeout_in_minutes * \MINUTE_IN_SECONDS;
+		} else {
+			$timeout = LOCK_DEFULT_TIMEOUT_IN_MINUTES * \MINUTE_IN_SECONDS;
+		}
+
+		// Check for, and recover from, deadlock
+		if ( self::get_lock_timestamp( $lock ) < time() - $timeout ) {
 			self::reset_lock( $lock );
 			return true;
 		}
