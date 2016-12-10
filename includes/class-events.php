@@ -162,10 +162,9 @@ class Events extends Singleton {
 		// Run the event
 		do_action_ref_array( $event['action'], $event['args'] );
 
-		// Free process for the next event
-		// Lock isn't set when event execution is forced or event is Internal, so we don't want to alter it
-		if ( ! $force && ! is_internal_event( $event['action'] ) ) {
-			Lock::free_lock( self::LOCK );
+		// Free process for the next event, unless it wasn't set to begin with
+		if ( ! $force ) {
+			$this->do_lock_cleanup( $event );
 		}
 
 		return array(
@@ -194,6 +193,16 @@ class Events extends Singleton {
 
 		// Let's go!
 		return true;
+	}
+
+	/**
+	 * @param $event array Event data
+	 */
+	private function do_lock_cleanup( $event ) {
+		// Lock isn't set when event is Internal, so we don't want to alter it
+		if ( ! is_internal_event( $event['action'] ) ) {
+			Lock::free_lock( self::LOCK );
+		}
 	}
 
 	/**
