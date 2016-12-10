@@ -18,7 +18,8 @@ class Events extends \WP_CLI_Command {
 		$events = $this->get_events( $args, $assoc_args );
 
 		// Prevent one from requesting a page that doesn't exist
-		if ( $events['page'] > $events['total_pages'] ) {
+		// Shouldn't error when first page is requested, though, as that is handled below and is an odd behaviour otherwise
+		if ( $events['page'] > $events['total_pages'] && $events['page'] > 1 ) {
 			\WP_CLI::error( __( 'Invalid page requested', 'automattic-cron-control' ) );
 		}
 
