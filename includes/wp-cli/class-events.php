@@ -45,7 +45,7 @@ class Events extends \WP_CLI_Command {
 			if ( $events['total_items'] <= $total_events_to_display ) {
 				\WP_CLI::line( sprintf( _n( 'Displaying one entry', 'Displaying all %s entries', $total_events_to_display, 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ) ) );
 			} else {
-				\WP_CLI::line( sprintf( __( 'Displaying %s of %s entries, page %s of %s', 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ), number_format_i18n( $events['total_items'] ), number_format_i18n( $events['page'] ), number_format_i18n( $events['total_pages'] ) ) );
+				\WP_CLI::line( sprintf( __( 'Displaying %1$s of %2$s entries, page %3$s of %4$s', 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ), number_format_i18n( $events['total_items'] ), number_format_i18n( $events['page'] ), number_format_i18n( $events['total_pages'] ) ) );
 			}
 
 			// And reformat
@@ -115,7 +115,7 @@ class Events extends \WP_CLI_Command {
 		// Event data
 		$event_data = $this->get_event_details_from_post_title( $event );
 
-		\WP_CLI::line( sprintf( __( 'Found event %d with action `%s` and instance identifier `%s`', 'automattic-cron-control' ), $args[0], $event_data['action'], $event_data['instance'] ) );
+		\WP_CLI::line( sprintf( __( 'Found event %1$d with action `%2$s` and instance identifier `%3$s`', 'automattic-cron-control' ), $args[0], $event_data['action'], $event_data['instance'] ) );
 
 		// Proceed?
 		$now = time();
