@@ -186,7 +186,7 @@ class Events extends \WP_CLI_Command {
 		$offset = absint( ( $page - 1 ) * $limit );
 
 		// Query
-		$items = $wpdb->get_results( $wpdb->prepare( "SELECT SQL_CALC_FOUND_ROWS ID, post_title, post_content_filtered, post_date_gmt, post_modified_gmt FROM {$wpdb->posts} WHERE post_type = %s AND post_status = %s ORDER BY post_date ASC LIMIT %d,%d", \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE, $post_status, $offset, $limit ) );
+		$items = $wpdb->get_results( $wpdb->prepare( "SELECT SQL_CALC_FOUND_ROWS ID, post_title, post_content_filtered, post_date_gmt, post_modified_gmt, post_status FROM {$wpdb->posts} WHERE post_type = %s AND post_status = %s ORDER BY post_date ASC LIMIT %d,%d", \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE, $post_status, $offset, $limit ) );
 
 		// Bail if we don't get results
 		if ( ! is_array( $items ) ) {
@@ -213,13 +213,18 @@ class Events extends \WP_CLI_Command {
 				'action'            => '',
 				'instance'          => '',
 				'next_run_gmt'      => date( TIME_FORMAT, strtotime( $event->post_date_gmt ) ),
-				'next_run_relative' => $this->calculate_interval( strtotime( $event->post_date_gmt ) - time() ),
+				'next_run_relative' => '',
 				'last_updated_gmt'  => date( TIME_FORMAT, strtotime( $event->post_modified_gmt ) ),
 				'recurrence'        => __( 'Non-repeating', 'automattic-cron-control' ),
 				'internal_event'    => '',
 				'schedule_name'     => __( 'n/a', 'automattic-cron-control' ),
 				'event_args'        => '',
 			);
+
+			// Provide relative next run only for events that have yet to run
+			if ( $event->post_status === \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_STATUS_PENDING ) {
+				$row['next_run_relative'] = $this->calculate_interval( strtotime( $event->post_date_gmt ) - time() );
+			}
 
 			// Most data serialized in the post
 			$all_args = maybe_unserialize( $event->post_content_filtered );
