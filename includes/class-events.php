@@ -149,7 +149,7 @@ class Events extends Singleton {
 		unset( $timestamp, $action, $instance );
 
 		// Limit how many events are processed concurrently
-		if ( ! is_internal_event( $event['action'] ) && ! Lock::check_lock( self::LOCK, JOB_CONCURRENCY_LIMIT ) ) {
+		if ( ! $this->can_run_event( $event ) ) {
 			return new \WP_Error( 'no-free-threads', sprintf( __( 'No resources available to run the job with action action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event['action'], maybe_serialize( $event['args'] ) ), array( 'status' => 429, ) );
 		}
 
@@ -169,6 +169,28 @@ class Events extends Singleton {
 			'success' => true,
 			'message' => sprintf( __( 'Job with action `%1$s` and arguments `%2$s` executed.', 'automattic-cron-control' ), $event['action'], maybe_serialize( $event['args'] ) ),
 		);
+	}
+
+	/**
+	 * Are resources available to run this event?
+	 *
+	 * @param $event array Event data
+	 *
+	 * @return bool
+	 */
+	private function can_run_event( $event ) {
+		// Internal Events always run
+		if ( is_internal_event( $event['action'] ) ) {
+			return true;
+		}
+
+		// Check if any resources are available to execute this job
+		if ( ! Lock::check_lock( self::LOCK, JOB_CONCURRENCY_LIMIT ) ) {
+			return false;
+		}
+
+		// Let's go!
+		return true;
 	}
 
 	/**
