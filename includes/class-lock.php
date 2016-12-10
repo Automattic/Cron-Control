@@ -30,14 +30,14 @@ class Lock {
 	/**
 	 * When event completes, allow another
 	 */
-	public static function free_lock( $lock ) {
+	public static function free_lock( $lock, $expires = 0 ) {
 		if ( self::get_lock_value( $lock ) > 1 ) {
 			wp_cache_decr( self::get_key( $lock ) );
 		} else {
-			wp_cache_set( self::get_key( $lock ), 0 );
+			wp_cache_set( self::get_key( $lock ), 0, null, $expires );
 		}
 
-		wp_cache_set( self::get_key( $lock, 'timestamp' ), time() );
+		wp_cache_set( self::get_key( $lock, 'timestamp' ), time(), null, $expires );
 
 		return true;
 	}
@@ -62,9 +62,9 @@ class Lock {
 	/**
 	 * Ensure lock entries are initially set
 	 */
-	public static function prime_lock( $lock ) {
-		wp_cache_add( self::get_key( $lock ), 0 );
-		wp_cache_add( self::get_key( $lock, 'timestamp' ), time() );
+	public static function prime_lock( $lock, $expires = 0 ) {
+		wp_cache_add( self::get_key( $lock ), 0, null, $expires );
+		wp_cache_add( self::get_key( $lock, 'timestamp' ), time(), null, $expires );
 
 		return null;
 	}
@@ -86,9 +86,9 @@ class Lock {
 	/**
 	 * Clear a lock's current values, in order to free it
 	 */
-	public static function reset_lock( $lock ) {
-		wp_cache_set( self::get_key( $lock ), 0 );
-		wp_cache_set( self::get_key( $lock, 'timestamp' ), time() );
+	public static function reset_lock( $lock, $expires = 0 ) {
+		wp_cache_set( self::get_key( $lock ), 0, null, $expires );
+		wp_cache_set( self::get_key( $lock, 'timestamp' ), time(), null, $expires );
 
 		return true;
 	}
