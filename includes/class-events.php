@@ -70,7 +70,9 @@ class Events extends Singleton {
 				if ( false === $event['args']['schedule'] ) {
 					wp_unschedule_event( $event['timestamp'], $event['action'], $event['args']['args'] );
 				} else {
-					wp_reschedule_event( $event['timestamp'], $event['args']['schedule'], $event['action'], $event['args']['args'] );
+					$timestamp = $event['timestamp'] + ( isset( $event['args']['interval'] ) ? $event['args']['interval'] : 0 );
+					wp_reschedule_event( $timestamp, $event['args']['schedule'], $event['action'], $event['args']['args'] );
+					unset( $timestamp );
 				}
 
 				continue;
