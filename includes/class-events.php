@@ -89,7 +89,7 @@ class Events extends Singleton {
 
 		// Limit batch size to avoid resource exhaustion
 		if ( count( $current_events ) > JOB_QUEUE_SIZE ) {
-			$current_events = array_slice( $current_events, 0, JOB_QUEUE_SIZE );
+			$current_events = $this->reduce_queue( $current_events );
 		}
 
 		return array(
@@ -330,6 +330,19 @@ class Events extends Singleton {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Trim events queue down to the limit set by JOB_QUEUE_SIZE
+	 *
+	 * @param $events  array  List of events to be run in the current period
+	 *
+	 * @return array
+	 */
+	private function reduce_queue( $events ) {
+		$reduced_queue = array_slice( $events, 0, JOB_QUEUE_SIZE );
+
+		return $reduced_queue;
 	}
 }
 
