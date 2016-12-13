@@ -66,15 +66,7 @@ class Events extends Singleton {
 			}
 
 			// Skip events that don't have any callbacks hooked to their actions, unless their execution is requested
-			if ( false === has_action( $event['action'] ) && ! apply_filters( 'a8c_cron_control_run_event_with_no_callbacks', false, $event ) ) {
-				if ( false === $event['args']['schedule'] ) {
-					wp_unschedule_event( $event['timestamp'], $event['action'], $event['args']['args'] );
-				} else {
-					$timestamp = $event['timestamp'] + ( isset( $event['args']['interval'] ) ? $event['args']['interval'] : 0 );
-					wp_reschedule_event( $timestamp, $event['args']['schedule'], $event['action'], $event['args']['args'] );
-					unset( $timestamp );
-				}
-
+			if ( ! $this->action_has_callback_or_should_run_anyway( $event ) ) {
 				continue;
 			}
 
@@ -307,6 +299,37 @@ class Events extends Singleton {
 
 		// Either event doesn't recur, or the interval couldn't be determined
 		Cron_Options_CPT::instance()->mark_job_completed( $event['timestamp'], $event['action'], $event['instance'] );
+	}
+
+	/**
+	 * Check that an event has a callback to run, and allow the check to be overridden
+	 * Empty events are, by default, skipped and removed/rescheduled
+	 *
+	 * @param $event  array  Event data
+	 *
+	 * @return bool
+	 */
+	private function action_has_callback_or_should_run_anyway( $event ) {
+		// Event has a callback, so let's get on with it
+		if ( false !== has_action( $event['action'] ) ) {
+			return true;
+		}
+
+		// Run the event anyway, perhaps because callbacks are added using the `all` action
+		if ( apply_filters( 'a8c_cron_control_run_event_with_no_callbacks', false, $event ) ) {
+			return true;
+		}
+
+		// Remove or reschedule the empty event
+		if ( false === $event['args']['schedule'] ) {
+			wp_unschedule_event( $event['timestamp'], $event['action'], $event['args']['args'] );
+		} else {
+			$timestamp = $event['timestamp'] + ( isset( $event['args']['interval'] ) ? $event['args']['interval'] : 0 );
+			wp_reschedule_event( $timestamp, $event['args']['schedule'], $event['action'], $event['args']['args'] );
+			unset( $timestamp );
+		}
+
+		return false;
 	}
 }
 
