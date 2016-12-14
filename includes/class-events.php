@@ -73,7 +73,7 @@ class Events extends Singleton {
 			// Necessary data to identify an individual event
 			// `$event['action']` is hashed to avoid information disclosure
 			// Core hashes `$event['instance']` for us
-			$event = array(
+			$event_data_public = array(
 				'timestamp' => $event['timestamp'],
 				'action'    => md5( $event['action'] ),
 				'instance'  => $event['instance'],
@@ -81,9 +81,9 @@ class Events extends Singleton {
 
 			// Queue internal events separately to avoid them being blocked
 			if ( is_internal_event( $event['action'] ) ) {
-				$internal_events[] = $event;
+				$internal_events[] = $event_data_public;
 			} else {
-				$current_events[] = $event;
+				$current_events[] = $event_data_public;
 			}
 		}
 
@@ -92,6 +92,7 @@ class Events extends Singleton {
 			$current_events = $this->reduce_queue( $current_events );
 		}
 
+		// Combine with Internal Events and return necessary data to process the event queue
 		return array(
 			'events'   => array_merge( $current_events, $internal_events ),
 			'endpoint' => get_rest_url( null, REST_API::API_NAMESPACE . '/' . REST_API::ENDPOINT_RUN ),
