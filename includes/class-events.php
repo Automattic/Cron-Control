@@ -293,18 +293,18 @@ class Events extends Singleton {
 	 * @return bool
 	 */
 	private function can_run_event( $event ) {
-		// Internal Events always run
+		// Limit to one concurrent execution of a specific action
+		if ( ! Lock::check_lock( $this->get_lock_key_for_event_action( $event ), 1, JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS ) ) {
+			return false;
+		}
+
+		// Internal Events aren't subject to the global lock
 		if ( is_internal_event( $event['action'] ) ) {
 			return true;
 		}
 
 		// Check if any resources are available to execute this job
 		if ( ! Lock::check_lock( self::LOCK, JOB_CONCURRENCY_LIMIT ) ) {
-			return false;
-		}
-
-		// Limit to one concurrent execution of a specific action
-		if ( ! Lock::check_lock( $this->get_lock_key_for_event_action( $event ), 1, JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS ) ) {
 			return false;
 		}
 
