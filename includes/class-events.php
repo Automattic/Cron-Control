@@ -144,12 +144,7 @@ class Events extends Singleton {
 
 		$i = 1; // Intentionally not zero-indexed to facilitate comparisons against $action_counts members
 
-		while ( count( $reduced_queue ) < JOB_QUEUE_SIZE && ! empty( $events ) ) {
-			// Circuit breaker
-			if ( $i > 15 ) {
-				break;
-			}
-
+		while ( $i <= 15 && count( $reduced_queue ) < JOB_QUEUE_SIZE && ! empty( $events ) ) {
 			// Each time the events array is iterated over, move one instance of an action to the current queue
 			foreach ( $events as $key => $event ) {
 				$action = $event['action'];
