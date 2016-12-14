@@ -341,7 +341,60 @@ class Events extends Singleton {
 	 * @return array
 	 */
 	private function reduce_queue( $events ) {
-		$reduced_queue = array_slice( $events, 0, JOB_QUEUE_SIZE );
+		// Loop through events, adding one of each action during each iteration
+		$reduced_queue = array();
+		$action_counts = array();
+
+		$i = 1; // Intentionally not zero-indexed to facilitate comparisons against $action_counts members
+
+		while ( count( $reduced_queue ) < (JOB_QUEUE_SIZE*3) && ! empty( $events ) ) {
+			// Circuit breaker
+			if ( $i > 15 ) {
+				break;
+			}
+
+			// Each time the events array is iterated over, move one instance of an action to the current queue
+			foreach ( $events as $key => $event ) {
+				$action = $event['action'];
+
+				// Prime the count
+				if ( ! isset( $action_counts[ $action ] ) ) {
+					$action_counts[ $action ] = 0;
+				}
+
+				// Check and do the move
+				if ( $action_counts[ $action ] < $i ) {
+					$reduced_queue[] = $event;
+					$action_counts[ $action ]++;
+					unset( $events[ $key ] );
+				}
+			}
+
+			// When done with an iteration and events remain, start again from the beginning of the $events array
+			if ( empty( $events ) ) {
+				break;
+			} else {
+				$i++;
+				reset( $events );
+
+				continue;
+			}
+		}
+
+		/**
+		 * IMPORTANT: DO NOT re-sort the $reduced_queue array from this point forward.
+		 * Doing so defeats the preceding effort.
+		 *
+		 * While the events are now out of order with respect to timestamp, they're ordered
+		 * such that one of each action is run before another of an already-run action.
+		 * The timestamp mis-ordering is trivial given that we're only dealing with events
+		 * for the current JOB_QUEUE_WINDOW_IN_SECONDS.
+		 */
+
+		// Finally, ensure that we don't have more than we need
+		if ( count( $reduced_queue ) > JOB_QUEUE_SIZE ) {
+			$reduced_queue = array_slice( $reduced_queue, 0, JOB_QUEUE_SIZE );
+		}
 
 		return $reduced_queue;
 	}
