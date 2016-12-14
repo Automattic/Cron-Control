@@ -100,27 +100,100 @@ class Events extends Singleton {
 	}
 
 	/**
-	 * Find an event's data using its hashed representations
+	 * Check that an event has a callback to run, and allow the check to be overridden
+	 * Empty events are, by default, skipped and removed/rescheduled
 	 *
-	 * The `$instance` argument is hashed for us by Core, while we hash the action to avoid information disclosure
+	 * @param $event  array  Event data
+	 *
+	 * @return bool
 	 */
-	private function get_event( $timestamp, $action_hashed, $instance ) {
-		$events = get_option( 'cron' );
-		$event  = false;
+	private function action_has_callback_or_should_run_anyway( $event ) {
+		// Event has a callback, so let's get on with it
+		if ( false !== has_action( $event['action'] ) ) {
+			return true;
+		}
 
-		$filtered_events = collapse_events_array( $events, $timestamp );
+		// Run the event anyway, perhaps because callbacks are added using the `all` action
+		if ( apply_filters( 'a8c_cron_control_run_event_with_no_callbacks', false, $event ) ) {
+			return true;
+		}
 
-		foreach ( $filtered_events as $filtered_event ) {
-			if ( hash_equals( md5( $filtered_event['action'] ), $action_hashed ) && hash_equals( $filtered_event['instance'], $instance ) ) {
-				$event = $filtered_event['args'];
-				$event['timestamp'] = $filtered_event['timestamp'];
-				$event['action']    = $filtered_event['action'];
-				$event['instance']  = $filtered_event['instance'];
+		// Remove or reschedule the empty event
+		if ( false === $event['args']['schedule'] ) {
+			wp_unschedule_event( $event['timestamp'], $event['action'], $event['args']['args'] );
+		} else {
+			$timestamp = $event['timestamp'] + ( isset( $event['args']['interval'] ) ? $event['args']['interval'] : 0 );
+			wp_reschedule_event( $timestamp, $event['args']['schedule'], $event['action'], $event['args']['args'] );
+			unset( $timestamp );
+		}
+
+		return false;
+	}
+
+	/**
+	 * Trim events queue down to the limit set by JOB_QUEUE_SIZE
+	 *
+	 * @param $events  array  List of events to be run in the current period
+	 *
+	 * @return array
+	 */
+	private function reduce_queue( $events ) {
+		// Loop through events, adding one of each action during each iteration
+		$reduced_queue = array();
+		$action_counts = array();
+
+		$i = 1; // Intentionally not zero-indexed to facilitate comparisons against $action_counts members
+
+		while ( count( $reduced_queue ) < (JOB_QUEUE_SIZE*3) && ! empty( $events ) ) {
+			// Circuit breaker
+			if ( $i > 15 ) {
 				break;
+			}
+
+			// Each time the events array is iterated over, move one instance of an action to the current queue
+			foreach ( $events as $key => $event ) {
+				$action = $event['action'];
+
+				// Prime the count
+				if ( ! isset( $action_counts[ $action ] ) ) {
+					$action_counts[ $action ] = 0;
+				}
+
+				// Check and do the move
+				if ( $action_counts[ $action ] < $i ) {
+					$reduced_queue[] = $event;
+					$action_counts[ $action ]++;
+					unset( $events[ $key ] );
+				}
+			}
+
+			// When done with an iteration and events remain, start again from the beginning of the $events array
+			if ( empty( $events ) ) {
+				break;
+			} else {
+				$i++;
+				reset( $events );
+
+				continue;
 			}
 		}
 
-		return $event;
+		/**
+		 * IMPORTANT: DO NOT re-sort the $reduced_queue array from this point forward.
+		 * Doing so defeats the preceding effort.
+		 *
+		 * While the events are now out of order with respect to timestamp, they're ordered
+		 * such that one of each action is run before another of an already-run action.
+		 * The timestamp mis-ordering is trivial given that we're only dealing with events
+		 * for the current JOB_QUEUE_WINDOW_IN_SECONDS.
+		 */
+
+		// Finally, ensure that we don't have more than we need
+		if ( count( $reduced_queue ) > JOB_QUEUE_SIZE ) {
+			$reduced_queue = array_slice( $reduced_queue, 0, JOB_QUEUE_SIZE );
+		}
+
+		return $reduced_queue;
 	}
 
 	/**
@@ -180,6 +253,30 @@ class Events extends Singleton {
 			'success' => true,
 			'message' => sprintf( __( 'Job with action `%1$s` and arguments `%2$s` executed.', 'automattic-cron-control' ), $event['action'], maybe_serialize( $event['args'] ) ),
 		);
+	}
+
+	/**
+	 * Find an event's data using its hashed representations
+	 *
+	 * The `$instance` argument is hashed for us by Core, while we hash the action to avoid information disclosure
+	 */
+	private function get_event( $timestamp, $action_hashed, $instance ) {
+		$events = get_option( 'cron' );
+		$event  = false;
+
+		$filtered_events = collapse_events_array( $events, $timestamp );
+
+		foreach ( $filtered_events as $filtered_event ) {
+			if ( hash_equals( md5( $filtered_event['action'] ), $action_hashed ) && hash_equals( $filtered_event['instance'], $instance ) ) {
+				$event = $filtered_event['args'];
+				$event['timestamp'] = $filtered_event['timestamp'];
+				$event['action']    = $filtered_event['action'];
+				$event['instance']  = $filtered_event['instance'];
+				break;
+			}
+		}
+
+		return $event;
 	}
 
 	/**
@@ -300,103 +397,6 @@ class Events extends Singleton {
 
 		// Either event doesn't recur, or the interval couldn't be determined
 		Cron_Options_CPT::instance()->mark_job_completed( $event['timestamp'], $event['action'], $event['instance'] );
-	}
-
-	/**
-	 * Check that an event has a callback to run, and allow the check to be overridden
-	 * Empty events are, by default, skipped and removed/rescheduled
-	 *
-	 * @param $event  array  Event data
-	 *
-	 * @return bool
-	 */
-	private function action_has_callback_or_should_run_anyway( $event ) {
-		// Event has a callback, so let's get on with it
-		if ( false !== has_action( $event['action'] ) ) {
-			return true;
-		}
-
-		// Run the event anyway, perhaps because callbacks are added using the `all` action
-		if ( apply_filters( 'a8c_cron_control_run_event_with_no_callbacks', false, $event ) ) {
-			return true;
-		}
-
-		// Remove or reschedule the empty event
-		if ( false === $event['args']['schedule'] ) {
-			wp_unschedule_event( $event['timestamp'], $event['action'], $event['args']['args'] );
-		} else {
-			$timestamp = $event['timestamp'] + ( isset( $event['args']['interval'] ) ? $event['args']['interval'] : 0 );
-			wp_reschedule_event( $timestamp, $event['args']['schedule'], $event['action'], $event['args']['args'] );
-			unset( $timestamp );
-		}
-
-		return false;
-	}
-
-	/**
-	 * Trim events queue down to the limit set by JOB_QUEUE_SIZE
-	 *
-	 * @param $events  array  List of events to be run in the current period
-	 *
-	 * @return array
-	 */
-	private function reduce_queue( $events ) {
-		// Loop through events, adding one of each action during each iteration
-		$reduced_queue = array();
-		$action_counts = array();
-
-		$i = 1; // Intentionally not zero-indexed to facilitate comparisons against $action_counts members
-
-		while ( count( $reduced_queue ) < (JOB_QUEUE_SIZE*3) && ! empty( $events ) ) {
-			// Circuit breaker
-			if ( $i > 15 ) {
-				break;
-			}
-
-			// Each time the events array is iterated over, move one instance of an action to the current queue
-			foreach ( $events as $key => $event ) {
-				$action = $event['action'];
-
-				// Prime the count
-				if ( ! isset( $action_counts[ $action ] ) ) {
-					$action_counts[ $action ] = 0;
-				}
-
-				// Check and do the move
-				if ( $action_counts[ $action ] < $i ) {
-					$reduced_queue[] = $event;
-					$action_counts[ $action ]++;
-					unset( $events[ $key ] );
-				}
-			}
-
-			// When done with an iteration and events remain, start again from the beginning of the $events array
-			if ( empty( $events ) ) {
-				break;
-			} else {
-				$i++;
-				reset( $events );
-
-				continue;
-			}
-		}
-
-		/**
-		 * IMPORTANT: DO NOT re-sort the $reduced_queue array from this point forward.
-		 * Doing so defeats the preceding effort.
-		 *
-		 * While the events are now out of order with respect to timestamp, they're ordered
-		 * such that one of each action is run before another of an already-run action.
-		 * The timestamp mis-ordering is trivial given that we're only dealing with events
-		 * for the current JOB_QUEUE_WINDOW_IN_SECONDS.
-		 */
-
-		// Finally, ensure that we don't have more than we need
-		if ( count( $reduced_queue ) > JOB_QUEUE_SIZE ) {
-			$reduced_queue = array_slice( $reduced_queue, 0, JOB_QUEUE_SIZE );
-		}
-
-		return $reduced_queue;
 	}
 }
 
