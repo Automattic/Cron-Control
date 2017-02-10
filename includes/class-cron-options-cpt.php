@@ -20,6 +20,8 @@ class Cron_Options_CPT extends Singleton {
 
 	private $option_before_unscheduling = null;
 
+	private $job_creation_suspended = false;
+
 	/**
 	 * Register hooks
 	 */
@@ -286,6 +288,11 @@ class Cron_Options_CPT extends Singleton {
 	 * Also doesn't call `wp_insert_post()` because this function is needed before post types and capabilities are ready.
 	 */
 	public function create_or_update_job( $timestamp, $action, $args, $update_id = null ) {
+		// Don't create new jobs when manipulating jobs via the plugin's CLI commands
+		if ( $this->job_creation_suspended ) {
+			return;
+		}
+
 		global $wpdb;
 
 		// Build minimum information needed to create a post
@@ -435,6 +442,22 @@ class Cron_Options_CPT extends Singleton {
 	 */
 	private function event_title( $timestamp, $action, $instance ) {
 		return sprintf( '%s | %s | %s', $timestamp, $action, $instance );
+	}
+
+	/**
+	 * Prevent CPT from creating new entries
+	 *
+	 * Should be used sparingly, and followed by a call to resume_event_creation(), during bulk operations
+	 */
+	public function suspend_event_creation() {
+		$this->job_creation_suspended = true;
+	}
+
+	/**
+	 * Stop discarding events, once again storing them in the CPT
+	 */
+	public function resume_event_creation() {
+		$this->job_creation_suspended = false;
 	}
 }
 
