@@ -10,8 +10,6 @@ class Cron_Options_CPT extends Singleton {
 	/**
 	 * Class properties
 	 */
-	const LOCK = 'create-jobs';
-
 	const POST_TYPE             = 'a8c_cron_ctrl_event';
 	const POST_STATUS_PENDING   = 'inherit';
 	const POST_STATUS_COMPLETED = 'trash';
@@ -32,9 +30,6 @@ class Cron_Options_CPT extends Singleton {
 		// Prevent Jetpack from syncing plugin's CPT entries
 		add_filter( 'option_jetpack_sync_settings_post_types_blacklist', array( $this, 'exclude_from_jetpack_sync' ), 999 );
 		add_filter( 'default_option_jetpack_sync_settings_post_types_blacklist', array( $this, 'exclude_from_jetpack_sync' ), 999 );
-
-		// Lock for post insertion, to guard against endless event creation when `wp_next_scheduled()` is misused
-		Lock::prime_lock( self::LOCK );
 
 		// Option interception
 		add_filter( 'pre_option_cron', array( $this, 'get_option' ) );
@@ -291,11 +286,6 @@ class Cron_Options_CPT extends Singleton {
 	 * Also doesn't call `wp_insert_post()` because this function is needed before post types and capabilities are ready.
 	 */
 	public function create_or_update_job( $timestamp, $action, $args, $update_id = null ) {
-		// Limit how many events to insert at once
-		if ( ! Lock::check_lock( self::LOCK, JOB_CREATION_CONCURRENCY_LIMIT ) ) {
-			return false;
-		}
-
 		global $wpdb;
 
 		// Build minimum information needed to create a post
@@ -352,9 +342,6 @@ class Cron_Options_CPT extends Singleton {
 
 		// Delete internal cache
 		wp_cache_delete( self::CACHE_KEY );
-
-		// Allow more events to be created
-		Lock::free_lock( self::LOCK );
 	}
 
 	/**
