@@ -10,8 +10,6 @@ class Cron_Options_CPT extends Singleton {
 	/**
 	 * Class properties
 	 */
-	const LOCK = 'create-jobs';
-
 	const POST_TYPE             = 'a8c_cron_ctrl_event';
 	const POST_STATUS_PENDING   = 'inherit';
 	const POST_STATUS_COMPLETED = 'trash';
@@ -21,6 +19,8 @@ class Cron_Options_CPT extends Singleton {
 	private $posts_to_clean = array();
 
 	private $option_before_unscheduling = null;
+
+	private $job_creation_suspended = false;
 
 	/**
 	 * Register hooks
@@ -32,9 +32,6 @@ class Cron_Options_CPT extends Singleton {
 		// Prevent Jetpack from syncing plugin's CPT entries
 		add_filter( 'option_jetpack_sync_settings_post_types_blacklist', array( $this, 'exclude_from_jetpack_sync' ), 999 );
 		add_filter( 'default_option_jetpack_sync_settings_post_types_blacklist', array( $this, 'exclude_from_jetpack_sync' ), 999 );
-
-		// Lock for post insertion, to guard against endless event creation when `wp_next_scheduled()` is misused
-		Lock::prime_lock( self::LOCK );
 
 		// Option interception
 		add_filter( 'pre_option_cron', array( $this, 'get_option' ) );
@@ -291,9 +288,9 @@ class Cron_Options_CPT extends Singleton {
 	 * Also doesn't call `wp_insert_post()` because this function is needed before post types and capabilities are ready.
 	 */
 	public function create_or_update_job( $timestamp, $action, $args, $update_id = null ) {
-		// Limit how many events to insert at once
-		if ( ! Lock::check_lock( self::LOCK, JOB_CREATION_CONCURRENCY_LIMIT ) ) {
-			return false;
+		// Don't create new jobs when manipulating jobs via the plugin's CLI commands
+		if ( $this->job_creation_suspended ) {
+			return;
 		}
 
 		global $wpdb;
@@ -352,9 +349,6 @@ class Cron_Options_CPT extends Singleton {
 
 		// Delete internal cache
 		wp_cache_delete( self::CACHE_KEY );
-
-		// Allow more events to be created
-		Lock::free_lock( self::LOCK );
 	}
 
 	/**
@@ -448,6 +442,22 @@ class Cron_Options_CPT extends Singleton {
 	 */
 	private function event_title( $timestamp, $action, $instance ) {
 		return sprintf( '%s | %s | %s', $timestamp, $action, $instance );
+	}
+
+	/**
+	 * Prevent CPT from creating new entries
+	 *
+	 * Should be used sparingly, and followed by a call to resume_event_creation(), during bulk operations
+	 */
+	public function suspend_event_creation() {
+		$this->job_creation_suspended = true;
+	}
+
+	/**
+	 * Stop discarding events, once again storing them in the CPT
+	 */
+	public function resume_event_creation() {
+		$this->job_creation_suspended = false;
 	}
 }
 
