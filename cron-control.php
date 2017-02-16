@@ -18,6 +18,7 @@ require __DIR__ . '/includes/class-lock.php';
 
 // For data consistency, ensure alternate data store is always loaded
 require __DIR__ . '/includes/class-cron-options-cpt.php';
+require __DIR__ . '/includes/class-events-store.php';
 
 // Instantiate main plugin class, which checks environment and loads remaining classes when appropriate
 require __DIR__ . '/includes/class-main.php';
