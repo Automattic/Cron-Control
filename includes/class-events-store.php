@@ -326,7 +326,7 @@ class Events_Store extends Singleton {
 		if ( is_int( $update_id ) && $update_id > 0 ) {
 			$wpdb->update( $this->get_table_name(), $job_post, array( 'ID' => $update_id, ) );
 		} else {
-			$job_post['created'] = date( 'Y-m-d H:i:s', $timestamp );
+			$job_post['created'] = current_time( 'mysql', true );
 
 			$wpdb->insert( $this->get_table_name(), $job_post );
 		}
