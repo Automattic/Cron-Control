@@ -30,7 +30,7 @@ class Events_Store extends Singleton {
 	 */
 	protected function class_init() {
 		// Check that the table exists and is the correct version
-		$this->prepare_db();
+		$this->prepare_tables();
 
 		// Option interception
 		add_filter( 'pre_option_cron', array( $this, 'get_option' ) );
@@ -40,7 +40,7 @@ class Events_Store extends Singleton {
 	/**
 	 * Build appropriate table name for this install
 	 */
-	protected function get_table_name() {
+	public function get_table_name() {
 		global $wpdb;
 
 		return $wpdb->base_prefix . self::TABLE_SUFFIX;
@@ -49,12 +49,7 @@ class Events_Store extends Singleton {
 	/**
 	 * Create the plugin's DB table when necessary
 	 */
-	protected function prepare_db() {
-		// Should be in admin context before using dbDelta
-		if ( ! is_admin() ) {
-			return;
-		}
-
+	protected function prepare_tables() {
 		// Nothing to do
 		if ( (int) get_option( self::DB_VERSION_OPTION ) === self::DB_VERSION ) {
 			return;
@@ -165,10 +160,11 @@ class Events_Store extends Singleton {
 					$cron_array[ $timestamp ][ $action ][ $instance ] = array(
 						'schedule' => $jobs_post->schedule,
 						'args'     => maybe_unserialize( $jobs_post->args ),
+						'interval' => 0,
 					);
 
 					if ( isset( $jobs_post->interval ) ) {
-						$cron_array[ $timestamp ][ $action ][ $instance ]['interval'] = $jobs_post->interval;
+						$cron_array[ $timestamp ][ $action ][ $instance ]['interval'] = (int) $jobs_post->interval;
 					}
 
 				}
@@ -258,7 +254,7 @@ class Events_Store extends Singleton {
 			$offset = 0;
 		}
 
-		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE status = %s ORDER BY `timestamp` LIMIT %d,%d;", $args['status'], $offset, $args['quantity'] ), 'OBJECT' );
+		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE status = %s ORDER BY timestamp LIMIT %d,%d;", $args['status'], $offset, $args['quantity'] ), 'OBJECT' );
 	}
 
 	/**
