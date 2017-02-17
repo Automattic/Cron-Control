@@ -85,3 +85,19 @@ function delete_event( $timestamp, $action, $instance ) {
 function event_exists( $timestamp, $action, $instance, $return_id = false ) {
 	return Events_Store::instance()->job_exists( $timestamp, $action, $instance, $return_id );
 }
+
+/**
+ * Prevent event store from creating new entries
+ *
+ * Should be used sparingly, and followed by a call to resume_event_creation(), during bulk operations
+ */
+function suspend_event_creation() {
+	Events_Store::instance()->suspend_event_creation();
+}
+
+/**
+ * Stop discarding events, once again storing them in the table
+ */
+function resume_event_creation() {
+	Events_Store::instance()->resume_event_creation();
+}
