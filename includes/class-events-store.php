@@ -63,24 +63,24 @@ class Events_Store extends Singleton {
 		global $wpdb;
 
 		// Define schema and create the table
-		$schema = "CREATE TABLE IF NOT EXISTS `{$this->get_table_name()}` (
+		$schema = "CREATE TABLE `{$this->get_table_name()}` (
 			`ID` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 
 			`timestamp` bigint(20) unsigned NOT NULL,
 			`action` varchar(255) NOT NULL,
+			`action_hashed` varchar(32) NOT NULL,
 			`instance` varchar(32) NOT NULL,
 
 			`args` longtext NOT NULL,
 			`schedule` varchar(255) DEFAULT NULL,
-			`interval` int unsigned DEFAULT NULL,
-			`status` varchar(255) NOT NULL DEFAULT 'pending',
+			`interval` int unsigned DEFAULT 0,
+			`status` varchar(32) NOT NULL DEFAULT 'pending',
 
 			`created` datetime NOT NULL,
 			`last_modified` datetime NOT NULL,
 
 			PRIMARY KEY (`id`),
-			UNIQUE KEY `ts_action_instance` (`timestamp`, `action`, `instance`),
-			KEY `status` (`status`)
+			UNIQUE KEY `ts_action_instance` (`timestamp`, `action`, `instance`)
 		) ENGINE=InnoDB;\n";
 
 		dbDelta( $schema, true );
@@ -308,6 +308,7 @@ class Events_Store extends Singleton {
 		$job_post = array(
 			'timestamp'     => $timestamp,
 			'action'        => $action,
+			'action_hashed' => md5( $action ),
 			'instance'      => md5( maybe_serialize( $args['args'] ) ),
 			'args'          => maybe_serialize( $args['args'] ),
 			'last_modified' => current_time( 'mysql', true ),
