@@ -11,6 +11,19 @@ class Utils {
 	}
 
 	/**
+	 * Start with a clean events store when running tests
+	 *
+	 * To be called during tests' `setUp` and `tearDown` methods
+	 *
+	 * Follows Core's approach when running cron tests, but `_set_cron_array()` doesn't work for us
+	 */
+	static function reset_events_store() {
+		global $wpdb;
+		$wpdb->delete( Utils::get_table_name(), array( 'status' => \Automattic\WP\Cron_Control\Events_Store::STATUS_PENDING, ) );
+		\Automattic\WP\Cron_Control\_flush_internal_caches();
+	}
+
+	/**
 	 * Build a test event
 	 */
 	static function create_test_event( $allow_multiple = false ) {
