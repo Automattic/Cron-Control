@@ -282,7 +282,7 @@ class Events_Store extends Singleton {
 	public function job_exists( $timestamp, $action, $instance, $return_id = false ) {
 		global $wpdb;
 
-		$exists = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$this->get_table_name()} WHERE timestamp = %d AND action = %s AND instance = %s LIMIT 1;", $timestamp, $action, $instance ) );
+		$exists = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$this->get_table_name()} WHERE timestamp = %d AND action = %s AND instance = %s AND status = %s LIMIT 1;", $timestamp, $action, $instance, self::STATUS_PENDING ) );
 
 		if ( $return_id ) {
 			return empty( $exists ) ? 0 : (int) array_shift( $exists );
