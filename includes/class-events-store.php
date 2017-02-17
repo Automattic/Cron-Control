@@ -253,25 +253,30 @@ class Events_Store extends Singleton {
 		}
 
 		$jobs = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE status = %s ORDER BY timestamp ASC LIMIT %d,%d;", $args['status'], $offset, $args['quantity'] ), 'OBJECT' );
-		return $this->format_jobs( $jobs );
+
+		if ( is_array( $jobs ) ) {
+			$jobs = array_map( array( $this, 'format_job' ), $jobs );
+		} else {
+			$jobs = false;
+		}
+
+		return $jobs;
 	}
 
 	/**
 	 * Standardize formatting and expand serialized data
 	 */
-	private function format_jobs( $jobs ) {
-		if ( ! is_array( $jobs ) ) {
-			return $jobs;
+	private function format_job( $job ) {
+		if ( ! is_object( $job ) || is_wp_error( $job ) ) {
+			return $job;
 		}
 
-		foreach ( $jobs as $job ) {
-			$job->ID        = (int) $job->ID;
-			$job->timestamp = (int) $job->timestamp;
-			$job->interval  = (int) $job->interval;
-			$job->args      = maybe_unserialize( $job->args );
-		}
+		$job->ID        = (int) $job->ID;
+		$job->timestamp = (int) $job->timestamp;
+		$job->interval  = (int) $job->interval;
+		$job->args      = maybe_unserialize( $job->args );
 
-		return $jobs;
+		return $job;
 	}
 
 	/**
