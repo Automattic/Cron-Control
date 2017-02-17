@@ -358,7 +358,7 @@ class Events extends Singleton {
 	private function update_event_record( $event ) {
 		if ( false !== $event['schedule'] ) {
 			// Get the existing ID
-			$job_id = Cron_Options_CPT::instance()->job_exists( $event['timestamp'], $event['action'], $event['instance'], true );
+			$job_id = event_exists( $event['timestamp'], $event['action'], $event['instance'], true );
 
 			// Re-implements much of the logic from `wp_reschedule_event()`
 			$schedules = wp_get_schedules();
@@ -393,8 +393,8 @@ class Events extends Singleton {
 					'interval' => $interval,
 				);
 
-				// Update CPT store
-				Cron_Options_CPT::instance()->create_or_update_job( $new_timestamp, $event['action'], $event_args, $job_id );
+				// Update event store
+				schedule_event( $new_timestamp, $event['action'], $event_args, $job_id );
 
 				// If the event could be rescheduled, don't then delete it :)
 				if ( is_int( $job_id ) && $job_id > 0 ) {
@@ -404,7 +404,7 @@ class Events extends Singleton {
 		}
 
 		// Either event doesn't recur, or the interval couldn't be determined
-		Cron_Options_CPT::instance()->mark_job_completed( $event['timestamp'], $event['action'], $event['instance'] );
+		delete_event( $event['timestamp'], $event['action'], $event['instance'] );
 	}
 }
 

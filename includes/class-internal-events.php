@@ -87,7 +87,7 @@ class Internal_Events extends Singleton {
 					'interval' => $interval,
 				);
 
-				Cron_Options_CPT::instance()->create_or_update_job( $when, $job_args['action'], $args );
+				schedule_event( $when, $job_args['action'], $args );
 			}
 		}
 	}
@@ -171,24 +171,9 @@ class Internal_Events extends Singleton {
 
 	/**
 	 * Delete event objects for events that have run
-	 *
-	 * Given volume of events that can be created, waiting for `wp_scheduled_delete()`, which defaults to a trailing 30-day delete, is unwise
 	 */
 	public function purge_completed_events() {
-		$trashed_posts = get_posts( array(
-			'post_type'        => Cron_Options_CPT::POST_TYPE,
-			'post_status'      => Cron_Options_CPT::POST_STATUS_COMPLETED,
-			'posts_per_page'   => 100,
-			'fields'           => 'ids',
-		) );
-
-		if ( is_array( $trashed_posts ) && ! empty( $trashed_posts ) ) {
-			foreach ( $trashed_posts as $trashed_post_id ) {
-				wp_delete_post( $trashed_post_id, true );
-
-				do_action( 'a8c_cron_control_purged_completed_event', $trashed_post_id );
-			}
-		}
+		Events_Store::instance()->purge_completed_events();
 	}
 }
 
