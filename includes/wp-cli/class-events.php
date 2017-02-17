@@ -161,14 +161,14 @@ class Events extends \WP_CLI_Command {
 		}
 
 		// Convert to post status
-		$post_status = null;
+		$event_status = null;
 		switch ( $status ) {
 			case 'pending' :
-				$post_status = \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_STATUS_PENDING;
+				$event_status = \Automattic\WP\Cron_Control\Events_Store::STATUS_PENDING;
 				break;
 
 			case 'completed' :
-				$post_status = \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_STATUS_COMPLETED;
+				$event_status = \Automattic\WP\Cron_Control\Events_Store::STATUS_COMPLETED;
 				break;
 		}
 
@@ -187,7 +187,11 @@ class Events extends \WP_CLI_Command {
 		$offset = absint( ( $page - 1 ) * $limit );
 
 		// Query
-		$items = $wpdb->get_results( $wpdb->prepare( "SELECT SQL_CALC_FOUND_ROWS ID, post_title, post_content_filtered, post_date_gmt, post_modified_gmt, post_status FROM {$wpdb->posts} WHERE post_type = %s AND post_status = %s ORDER BY post_date ASC LIMIT %d,%d", \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE, $post_status, $offset, $limit ) );
+		$items = \Automattic\WP\Cron_Control\Events_Store::instance()->get_jobs( array(
+			'status'   => $event_status,
+			'quantity' => $limit,
+			'page'     => $page,
+		) );
 
 		// Bail if we don't get results
 		if ( ! is_array( $items ) ) {
@@ -211,11 +215,11 @@ class Events extends \WP_CLI_Command {
 		foreach ( $events as $event ) {
 			$row = array(
 				'ID'                => $event->ID,
-				'action'            => '',
-				'instance'          => '',
-				'next_run_gmt'      => date( TIME_FORMAT, strtotime( $event->post_date_gmt ) ),
+				'action'            => $event->action,
+				'instance'          => $event->instance,
+				'next_run_gmt'      => date( TIME_FORMAT, $event->timestamp ),
 				'next_run_relative' => '',
-				'last_updated_gmt'  => date( TIME_FORMAT, strtotime( $event->post_modified_gmt ) ),
+				'last_updated_gmt'  => date( TIME_FORMAT, strtotime( $event->last_modified ) ),
 				'recurrence'        => __( 'Non-repeating', 'automattic-cron-control' ),
 				'internal_event'    => '',
 				'schedule_name'     => __( 'n/a', 'automattic-cron-control' ),
@@ -223,43 +227,22 @@ class Events extends \WP_CLI_Command {
 			);
 
 			// Provide relative next run only for events that have yet to run
-			if ( $event->post_status === \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_STATUS_PENDING ) {
-				$row['next_run_relative'] = $this->calculate_interval( strtotime( $event->post_date_gmt ) - time() );
+			if ( $event->status === \Automattic\WP\Cron_Control\Events_Store::STATUS_PENDING ) {
+				$row['next_run_relative'] = $this->calculate_interval( $event->timestamp - time() );
 			}
 
-			// Most data serialized in the post
-			$all_args = maybe_unserialize( $event->post_content_filtered );
-			if ( is_array( $all_args ) ) {
-				// Action
-				if ( isset( $all_args['action'] ) ) {
-					$row['action']         = $all_args['action'];
-					$row['internal_event'] = \Automattic\WP\Cron_Control\is_internal_event( $all_args['action'] ) ? __( 'true', 'automattic-cron-control' ) : '';
-				}
+			$row['internal_event'] = \Automattic\WP\Cron_Control\is_internal_event( $event->action ) ? __( 'true', 'automattic-cron-control' ) : '';
 
-				// Instance
-				if ( isset( $all_args['instance'] ) ) {
-					$row['instance'] = $all_args['instance'];
-				}
+			$row['event_args'] = maybe_serialize( $event->args );
 
-				// Additional arguments
-				if ( isset( $all_args['args'] ) ) {
-					$args = $all_args['args'];
+			// Human-readable version of next run
+			if ( isset( $event->interval ) && $event->interval ) {
+				$row['recurrence'] = $this->calculate_interval( $event->interval );
+			}
 
-					// Event arguments themselves
-					if ( isset( $args['args'] ) ) {
-						$row['event_args'] = maybe_serialize( $args['args'] );
-					}
-
-					// Human-readable version of next run
-					if ( isset( $args['interval'] ) && $args['interval'] ) {
-						$row['recurrence'] = $this->calculate_interval( $args['interval'] );
-					}
-
-					// Named schedule
-					if ( isset( $args['schedule'] ) && $args['schedule'] ) {
-						$row['schedule_name'] = $args['schedule'];
-					}
-				}
+			// Named schedule
+			if ( isset( $event->schedule ) && $event->schedule ) {
+				$row['schedule_name'] = $event->schedule;
 			}
 
 			$formatted_events[] = $row;
