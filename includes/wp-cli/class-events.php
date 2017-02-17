@@ -363,9 +363,9 @@ class Events extends \WP_CLI_Command {
 			\WP_CLI::confirm( sprintf( __( 'Are you sure you want to delete this event?', 'automattic-cron-control' ) ) );
 
 			// Try to delete the item and provide some relevant output
-			\Automattic\WP\Cron_Control\Cron_Options_CPT::instance()->suspend_event_creation();
+			\Automattic\WP\Cron_Control\suspend_event_creation();
 			$trashed = wp_delete_post( $event_post->ID, true );
-			\Automattic\WP\Cron_Control\Cron_Options_CPT::instance()->resume_event_creation();
+			\Automattic\WP\Cron_Control\resume_event_creation();
 
 			if ( false === $trashed ) {
 				\WP_CLI::error( sprintf( __( 'Failed to delete event %d', 'automattic-cron-control' ), $jid ) );
@@ -477,7 +477,7 @@ class Events extends \WP_CLI_Command {
 		$events_deleted_count = $events_failed_delete = 0;
 
 		// Don't create new events while deleting events
-		\Automattic\WP\Cron_Control\Cron_Options_CPT::instance()->suspend_event_creation();
+		\Automattic\WP\Cron_Control\suspend_event_creation();
 
 		foreach ( $events_to_delete as $event_to_delete ) {
 			$deleted = wp_delete_post( $event_to_delete['ID'], true );
@@ -504,7 +504,7 @@ class Events extends \WP_CLI_Command {
 		}
 
 		// New events can be created now that removal is complete
-		\Automattic\WP\Cron_Control\Cron_Options_CPT::instance()->resume_event_creation();
+		\Automattic\WP\Cron_Control\resume_event_creation();
 
 		// List the removed items
 		\WP_CLI::line( "\n" . __( 'RESULTS:', 'automattic-cron-control' ) );

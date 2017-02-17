@@ -26,7 +26,7 @@ class One_Time_Fixers extends \WP_CLI_Command {
 		\WP_CLI::line( __( 'CRON CONTROL', 'automattic-cron-control' ) . "\n" );
 
 		// Don't create new events while deleting events
-		\Automattic\WP\Cron_Control\Cron_Options_CPT::instance()->suspend_event_creation();
+		\Automattic\WP\Cron_Control\suspend_event_creation();
 
 		$count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(ID) FROM {$wpdb->posts} WHERE post_type = %s;", 'a8c_cron_ctrl_event' ) );
 
@@ -106,7 +106,7 @@ class One_Time_Fixers extends \WP_CLI_Command {
 		}
 
 		// Let event creation resume
-		\Automattic\WP\Cron_Control\Cron_Options_CPT::instance()->resume_event_creation();
+		\Automattic\WP\Cron_Control\resume_event_creation();
 
 		// Fin
 		\WP_CLI::success( __( 'All done.', 'automattic-cron-control' ) );
