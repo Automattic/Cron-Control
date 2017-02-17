@@ -144,7 +144,7 @@ class Events_Store extends Singleton {
 			if ( ! empty( $jobs_posts ) ) {
 				foreach ( $jobs_posts as $jobs_post ) {
 					// Alias event timestamp
-					$timestamp = (int) $jobs_post->timestamp;
+					$timestamp = $jobs_post->timestamp;
 
 					// If timestamp is invalid, event is removed to let its source fix it
 					if ( $timestamp <= 0 ) {
@@ -159,12 +159,12 @@ class Events_Store extends Singleton {
 					// Populate remaining job data
 					$cron_array[ $timestamp ][ $action ][ $instance ] = array(
 						'schedule' => $jobs_post->schedule,
-						'args'     => maybe_unserialize( $jobs_post->args ),
+						'args'     => $jobs_post->args,
 						'interval' => 0,
 					);
 
 					if ( isset( $jobs_post->interval ) ) {
-						$cron_array[ $timestamp ][ $action ][ $instance ]['interval'] = (int) $jobs_post->interval;
+						$cron_array[ $timestamp ][ $action ][ $instance ]['interval'] = $jobs_post->interval;
 					}
 
 				}
@@ -236,11 +236,9 @@ class Events_Store extends Singleton {
 	 */
 
 	/**
-	 * Retrieve list of jobs, respecting whether or not the CPT is registered
-	 *
-	 * Uses a direct query to avoid stale caches that result in duplicate events
+	 * Retrieve list of jobs
 	 */
-	private function get_jobs( $args ) {
+	public function get_jobs( $args ) {
 		global $wpdb;
 
 		if ( ! isset( $args['quantity'] ) || ! is_numeric( $args['quantity'] ) ) {
@@ -254,7 +252,26 @@ class Events_Store extends Singleton {
 			$offset = 0;
 		}
 
-		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE status = %s ORDER BY timestamp LIMIT %d,%d;", $args['status'], $offset, $args['quantity'] ), 'OBJECT' );
+		$jobs = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE status = %s ORDER BY timestamp ASC LIMIT %d,%d;", $args['status'], $offset, $args['quantity'] ), 'OBJECT' );
+		return $this->format_jobs( $jobs );
+	}
+
+	/**
+	 * Standardize formatting and expand serialized data
+	 */
+	private function format_jobs( $jobs ) {
+		if ( ! is_array( $jobs ) ) {
+			return $jobs;
+		}
+
+		foreach ( $jobs as $job ) {
+			$job->ID        = (int) $job->ID;
+			$job->timestamp = (int) $job->timestamp;
+			$job->interval  = (int) $job->interval;
+			$job->args      = maybe_unserialize( $job->args );
+		}
+
+		return $jobs;
 	}
 
 	/**
@@ -291,7 +308,7 @@ class Events_Store extends Singleton {
 		$job_post = array(
 			'timestamp'     => $timestamp,
 			'action'        => $action,
-			'instance'      => md5( serialize( $args['args'] ) ),
+			'instance'      => md5( maybe_serialize( $args['args'] ) ),
 			'args'          => maybe_serialize( $args['args'] ),
 			'last_modified' => current_time( 'mysql', true ),
 		);
@@ -318,7 +335,7 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Mark an event's CPT entry as completed
+	 * Mark an event's entry as completed
 	 *
 	 * Completed entries will be cleaned up by an internal job
 	 *
@@ -388,7 +405,7 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Prevent CPT from creating new entries
+	 * Prevent event store from creating new entries
 	 *
 	 * Should be used sparingly, and followed by a call to resume_event_creation(), during bulk operations
 	 */
@@ -397,7 +414,7 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Stop discarding events, once again storing them in the CPT
+	 * Stop discarding events, once again storing them in the table
 	 */
 	public function resume_event_creation() {
 		$this->job_creation_suspended = false;
