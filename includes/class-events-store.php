@@ -10,7 +10,7 @@ class Events_Store extends Singleton {
 	/**
 	 * Class properties
 	 */
-	const TABLE_SUFFIX = 'a8c_cron_ctrl_jobs';
+	const TABLE_SUFFIX = 'a8c_cron_control_jobs';
 
 	const DB_VERSION        = 1;
 	const DB_VERSION_OPTION = 'a8c_cron_control_db_version';
