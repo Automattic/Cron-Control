@@ -211,12 +211,12 @@ class Events_Store extends Singleton {
 	 * By returning $old_value, `cron` option won't be updated
 	 */
 	public function update_option( $new_value, $old_value ) {
-		if ( $this->is_unscheduling() ) {
-			$this->unschedule_job( $new_value, $this->option_before_unscheduling );
-		} elseif ( $this->is_direct_update() ) {
-			$this->force_update( $new_value );
-		} else {
+		if ( $this->is_scheduling() ) {
 			$this->convert_option( $new_value );
+		} elseif ( $this->is_unscheduling() ) {
+			$this->unschedule_job( $new_value, $this->option_before_unscheduling );
+		} else {
+			$this->force_update( $new_value );
 		}
 
 		return $old_value;
@@ -228,13 +228,18 @@ class Events_Store extends Singleton {
 	private function force_update( $new_value ) {
 		global $wpdb;
 
+		// Remove all existing data
 		$this->suspend_event_creation();
+
 		$wpdb->update( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED, ), array( 'status' => self::STATUS_PENDING, ) );
 		$wpdb->update( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED, ), array( 'status' => self::STATUS_RUNNING, ) );
 		$this->option_before_unscheduling = null;
+
 		$this->flush_internal_caches();
+
 		$this->resume_event_creation();
 
+		// Write new events to store
 		$this->convert_option( $new_value );
 	}
 
@@ -487,31 +492,28 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Check if the cron option was updated using one of Core's cron callbacks
-	 *
-	 * If updated using `update_option()` or `_set_cron_array()`, without using a Core cron callback, it's considered direct
+	 * Determine if current request is a call to one of Core's functions for scheduling events
 	 *
 	 * @return bool
 	 */
-	private function is_direct_update() {
+	private function is_scheduling() {
 		$trace = wp_debug_backtrace_summary( __CLASS__, null, false );
 
-		$cron_callbacks = array(
+		$scheduling_callbacks = array(
 			'wp_schedule_single_event',
 			'wp_schedule_event',
-			'wp_unschedule_event',
 		);
 
-		$called_by_cron = false;
+		$is_scheduling = false;
 
-		foreach ( $cron_callbacks as $cb ) {
+		foreach ( $scheduling_callbacks as $cb ) {
 			if ( false !== array_search( $cb, $trace ) ) {
-				$called_by_cron = true;
+				$is_scheduling = true;
 				break;
 			}
 		}
 
-		return ! $called_by_cron;
+		return $is_scheduling;
 	}
 
 	/**
