@@ -18,7 +18,7 @@ class Misc_Tests extends \WP_UnitTestCase {
 		parent::setUp();
 
 		// make sure the schedule is clear
-		Utils::reset_events_store();
+		_set_cron_array( array() );
 	}
 
 	/**
@@ -26,7 +26,7 @@ class Misc_Tests extends \WP_UnitTestCase {
 	 */
 	function tearDown() {
 		// make sure the schedule is clear
-		Utils::reset_events_store();
+		_set_cron_array( array() );
 
 		parent::tearDown();
 	}

@@ -22,7 +22,7 @@ class REST_API_Tests extends \WP_UnitTestCase {
 		do_action( 'rest_api_init' );
 
 		// make sure the schedule is clear
-		Utils::reset_events_store();
+		_set_cron_array( array() );
 	}
 
 	/**
@@ -33,7 +33,7 @@ class REST_API_Tests extends \WP_UnitTestCase {
 		$wp_rest_server = null;
 
 		// make sure the schedule is clear
-		Utils::reset_events_store();
+		_set_cron_array( array() );
 
 		parent::tearDown();
 	}

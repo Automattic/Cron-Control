@@ -213,11 +213,29 @@ class Events_Store extends Singleton {
 	public function update_option( $new_value, $old_value ) {
 		if ( $this->is_unscheduling() ) {
 			$this->unschedule_job( $new_value, $this->option_before_unscheduling );
+		} elseif ( $this->is_direct_update() ) {
+			$this->force_update( $new_value );
 		} else {
 			$this->convert_option( $new_value );
 		}
 
 		return $old_value;
+	}
+
+	/**
+	 * Overwrite all existing data with a new value
+	 */
+	private function force_update( $new_value ) {
+		global $wpdb;
+
+		$this->suspend_event_creation();
+		$wpdb->update( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED, ), array( 'status' => self::STATUS_PENDING, ) );
+		$wpdb->update( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED, ), array( 'status' => self::STATUS_RUNNING, ) );
+		$this->option_before_unscheduling = null;
+		$this->flush_internal_caches();
+		$this->resume_event_creation();
+
+		$this->convert_option( $new_value );
 	}
 
 	/**
@@ -469,7 +487,37 @@ class Events_Store extends Singleton {
 	}
 
 	/**
+	 * Check if the cron option was updated using one of Core's cron callbacks
+	 *
+	 * If updated using `update_option()` or `_set_cron_array()`, without using a Core cron callback, it's considered direct
+	 *
+	 * @return bool
+	 */
+	private function is_direct_update() {
+		$trace = wp_debug_backtrace_summary( __CLASS__, null, false );
+
+		$cron_callbacks = array(
+			'wp_schedule_single_event',
+			'wp_schedule_event',
+			'wp_unschedule_event',
+		);
+
+		$called_by_cron = false;
+
+		foreach ( $cron_callbacks as $cb ) {
+			if ( false !== array_search( $cb, $trace ) ) {
+				$called_by_cron = true;
+				break;
+			}
+		}
+
+		return ! $called_by_cron;
+	}
+
+	/**
 	 * Determine if current request is a call to `wp_unschedule_event()`
+	 *
+	 * @return bool
 	 */
 	private function is_unscheduling() {
 		return false !== array_search( 'wp_unschedule_event', wp_debug_backtrace_summary( __CLASS__, null, false ) );
