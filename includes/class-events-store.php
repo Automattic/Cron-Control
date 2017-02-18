@@ -315,7 +315,8 @@ class Events_Store extends Singleton {
 			$offset = 0;
 		}
 
-		$jobs = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE status = %s ORDER BY timestamp ASC LIMIT %d,%d;", $args['status'], $offset, $args['quantity'] ), 'OBJECT' );
+		// Do not sort, otherwise index isn't used
+		$jobs = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE status = %s LIMIT %d,%d;", $args['status'], $offset, $args['quantity'] ), 'OBJECT' );
 
 		if ( is_array( $jobs ) ) {
 			$jobs = array_map( array( $this, 'format_job' ), $jobs );
@@ -368,6 +369,7 @@ class Events_Store extends Singleton {
 				$action_value  = $attrs['action_hashed'];
 			}
 
+			// Do not sort, otherwise index isn't used
 			$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE timestamp = %d AND {$action_column} = %s AND instance = %s", $attrs['timestamp'], $action_value, $attrs['instance'] );
 		}
 
