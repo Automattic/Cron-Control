@@ -265,6 +265,9 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Standardize formatting and expand serialized data
+	 *
+	 * @param  object $job Job row from DB, in object form
+	 * @return object
 	 */
 	private function format_job( $job ) {
 		if ( ! is_object( $job ) || is_wp_error( $job ) ) {
