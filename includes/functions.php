@@ -135,10 +135,10 @@ function count_events_by_status( $status ) {
 /**
  * Flush plugin's internal caches
  *
- * FOR INTERNAL USE ONLY - see WP-CLI; all other cache clearance should happen through the `Events_Store` class
+ * FOR INTERNAL USE ONLY - see WP-CLI; all other cache clearance should happen automatically through the `Events_Store` class
  */
 function _flush_internal_caches() {
-	return wp_cache_delete( Events_Store::CACHE_KEY );
+	return Events_Store::instance()->flush_internal_caches();
 }
 
 /**

@@ -427,8 +427,7 @@ class Events_Store extends Singleton {
 			$wpdb->insert( $this->get_table_name(), $job_post );
 		}
 
-		// Delete internal cache
-		wp_cache_delete( self::CACHE_KEY );
+		$this->flush_internal_caches();
 	}
 
 	/**
@@ -463,7 +462,7 @@ class Events_Store extends Singleton {
 		// Delete internal cache
 		// Should only be skipped when deleting duplicates, as they are excluded from the cache
 		if ( $flush_cache ) {
-			wp_cache_delete( self::CACHE_KEY );
+			$this->flush_internal_caches();
 		}
 
 		return (bool) $success;
@@ -499,6 +498,13 @@ class Events_Store extends Singleton {
 		}
 
 		return $differences;
+	}
+
+	/**
+	 * Delete the cached representation of the cron option
+	 */
+	public function flush_internal_caches() {
+		return wp_cache_delete( self::CACHE_KEY );
 	}
 
 	/**
