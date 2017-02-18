@@ -223,6 +223,9 @@ class Events_Store extends Singleton {
 			$this->convert_option( $new_value );
 		} elseif ( $this->is_unscheduling() ) {
 			$this->unschedule_job( $new_value, $this->option_before_unscheduling );
+
+			// Free "completed" events due to DB locks
+			$this->purge_completed_events();
 		} else {
 			$this->force_update( $new_value );
 		}
