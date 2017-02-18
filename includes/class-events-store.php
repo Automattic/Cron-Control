@@ -36,6 +36,9 @@ class Events_Store extends Singleton {
 		// Option interception
 		add_filter( 'pre_option_cron', array( $this, 'get_option' ) );
 		add_filter( 'pre_update_option_cron', array( $this, 'update_option' ), 10, 2 );
+
+		// Disallow duplicates
+		add_filter( 'schedule_event', array( $this, 'block_creation_if_job_exists' ) );
 	}
 
 	/**
@@ -269,6 +272,18 @@ class Events_Store extends Singleton {
 				}
 			}
 		}
+	}
+
+	/**
+	 * When an entry exists, don't try to create it again
+	 */
+	public function block_creation_if_job_exists( $job ) {
+		$instance = md5( maybe_serialize( $job->args ) );
+		if ( $this->job_exists( $job->timestamp, $job->hook, $instance ) ) {
+			return false;
+		}
+
+		return $job;
 	}
 
 	/**
