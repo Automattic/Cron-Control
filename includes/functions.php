@@ -37,7 +37,7 @@ function is_rest_endpoint_request( $type = 'list' ) {
 	// Build the full endpoint and check against the current request
 	$run_endpoint = sprintf( '%s/%s/%s', rest_get_url_prefix(), REST_API::API_NAMESPACE, $endpoint );
 
-	return in_array( $run_endpoint, parse_request() );
+	return in_array( $run_endpoint, parse_request(), true );
 }
 
 /**

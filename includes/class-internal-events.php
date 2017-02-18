@@ -100,7 +100,7 @@ class Internal_Events extends Singleton {
 	 * Events that are always run, regardless of how many jobs are queued
 	 */
 	public function is_internal_event( $action ) {
-		return in_array( $action, wp_list_pluck( $this->internal_jobs, 'action' ) );
+		return in_array( $action, wp_list_pluck( $this->internal_jobs, 'action' ), true );
 	}
 
 	/**
