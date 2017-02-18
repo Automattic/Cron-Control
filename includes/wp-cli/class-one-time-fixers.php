@@ -7,6 +7,66 @@ namespace Automattic\WP\Cron_Control\CLI;
  */
 class One_Time_Fixers extends \WP_CLI_Command {
 	/**
+	 * Remove all data stored in the plugin's table
+	 *
+	 * @subcommand remove-all-plugin-data
+	 * @synopsis [--dry-run=<dry-run>]
+	 */
+	public function purge( $args, $assoc_args ) {
+		global $wpdb;
+
+		// Are we actually destroying any data?
+		$dry_run = true;
+
+		if ( isset( $assoc_args['dry-run'] ) && 'false' === $assoc_args['dry-run'] ) {
+			$dry_run = false;
+		}
+
+		// Provide some idea of what's going on
+		\WP_CLI::line( __( 'CRON CONTROL', 'automattic-cron-control' ) . "\n" );
+
+		$table_name = \Automattic\WP\Cron_Control\Events_Store::instance()->get_table_name();
+		$count = (int) $wpdb->get_var( "SELECT COUNT(ID) FROM {$table_name}" );
+
+		if ( $count > 1 ) {
+			\WP_CLI::line( sprintf( __( 'Found %s total items', 'automattic-cron-control' ), number_format_i18n( $count ) ) . "\n\n" );
+
+			if ( $dry_run ) {
+				\WP_CLI::error( __( 'Stopping as this is a dry run!', 'automattic-cron-control' ) );
+			}
+		} else {
+			\WP_CLI::error( __( 'No entries found...aborting!', 'automattic-cron-control' ) );
+		}
+
+		// Should we really destroy all this data?
+		if ( ! $dry_run ) {
+			\WP_CLI::line( __( 'This process will remove all data for the Cron Control plugin', 'automattic-cron-control' ) );
+			\WP_CLI::confirm( __( 'Proceed?', 'automattic-cron-control' ) );
+			\WP_CLI::line( "\n" . __( 'Starting...', 'automattic-cron-control' ) . "\n" );
+		}
+
+		// Don't create new events while deleting events
+		\Automattic\WP\Cron_Control\_suspend_event_creation();
+
+		// Don't truncate as it requires DROP and resets auto-increment value
+		if ( ! $dry_run ) {
+			$wpdb->query( "DELETE FROM {$table_name}" );
+		}
+
+		// Remove the now-stale cache when actively run
+		if ( ! $dry_run ) {
+			\Automattic\WP\Cron_Control\_flush_internal_caches();
+			\WP_CLI::line( "\n" . sprintf( __( 'Cleared the %s cache', 'automattic-cron-control' ), 'Cron Control' ) );
+		}
+
+		// Let event creation resume
+		\Automattic\WP\Cron_Control\_resume_event_creation();
+
+		// Fin
+		\WP_CLI::success( __( 'All done.', 'automattic-cron-control' ) );
+	}
+
+	/**
 	 * Remove Cron Control data previously stored in a CPT
 	 *
 	 * @subcommand purge-legacy-cpt-entries
