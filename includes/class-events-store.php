@@ -47,6 +47,17 @@ class Events_Store extends Singleton {
 	}
 
 	/**
+	 * Build array of valid event statuses
+	 */
+	public function get_allowed_statuses() {
+		return array(
+			self::STATUS_PENDING,
+			self::STATUS_RUNNING,
+			self::STATUS_COMPLETED,
+		);
+	}
+
+	/**
 	 * Create the plugin's DB table when necessary
 	 */
 	protected function prepare_tables() {
@@ -281,12 +292,8 @@ class Events_Store extends Singleton {
 		}
 
 		// Validate requested status
-		$allowed_status = array(
-			self::STATUS_PENDING,
-			self::STATUS_RUNNING,
-			self::STATUS_COMPLETED,
-			'any',
-		);
+		$allowed_status = $this->get_allowed_statuses();
+		$allowed_status[] = 'any';
 
 		if ( ! isset( $attrs['status'] ) || ! in_array( $attrs['status'], $allowed_status, true ) ) {
 			$attrs['status'] = self::STATUS_PENDING;
@@ -526,7 +533,7 @@ class Events_Store extends Singleton {
 	public function count_events_by_status( $status ) {
 		global $wpdb;
 
-		if ( ! in_array( $status, array( self::STATUS_PENDING, self::STATUS_RUNNING, self::STATUS_COMPLETED ), true ) ) {
+		if ( ! in_array( $status, $this->get_allowed_statuses(), true ) ) {
 			return false;
 		}
 
