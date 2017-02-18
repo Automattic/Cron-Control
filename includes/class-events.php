@@ -213,10 +213,15 @@ class Events extends Singleton {
 		}
 
 		// Find the event to retrieve the full arguments
-		$event = $this->get_event( $timestamp, $action, $instance );
+		$event = get_event_by_attributes( array(
+			'timestamp'     => $timestamp,
+			'action_hashed' => $action,
+			'instance'      => $instance,
+			'status'        => Events_Store::STATUS_PENDING,
+		) );
 
 		// Nothing to do...
-		if ( ! is_array( $event ) ) {
+		if ( ! is_object( $event ) ) {
 			return new \WP_Error( 'no-event', sprintf( __( 'Job with identifier `%1$s` could not be found.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ), array( 'status' => 404, ) );
 		}
 
@@ -228,7 +233,7 @@ class Events extends Singleton {
 			$this->prime_event_action_lock( $event );
 
 			if ( ! $this->can_run_event( $event ) ) {
-				return new \WP_Error( 'no-free-threads', sprintf( __( 'No resources available to run the job with action action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event[ 'action' ], maybe_serialize( $event[ 'args' ] ) ), array( 'status' => 429, ) );
+				return new \WP_Error( 'no-free-threads', sprintf( __( 'No resources available to run the job with action action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event->action, maybe_serialize( $event->args ) ), array( 'status' => 429, ) );
 			}
 		}
 
@@ -237,7 +242,7 @@ class Events extends Singleton {
 		$this->update_event_record( $event );
 
 		// Run the event
-		do_action_ref_array( $event['action'], $event['args'] );
+		do_action_ref_array( $event->action, $event->args );
 
 		// Free process for the next event, unless it wasn't set to begin with
 		if ( ! $force ) {
@@ -246,32 +251,8 @@ class Events extends Singleton {
 
 		return array(
 			'success' => true,
-			'message' => sprintf( __( 'Job with action `%1$s` and arguments `%2$s` executed.', 'automattic-cron-control' ), $event['action'], maybe_serialize( $event['args'] ) ),
+			'message' => sprintf( __( 'Job with action `%1$s` and arguments `%2$s` executed.', 'automattic-cron-control' ), $event->action, maybe_serialize( $event->args ) ),
 		);
-	}
-
-	/**
-	 * Find an event's data using its hashed representations
-	 *
-	 * The `$instance` argument is hashed for us by Core, while we hash the action to avoid information disclosure
-	 */
-	public function get_event( $timestamp, $action_hashed, $instance ) {
-		$events = get_option( 'cron' );
-		$event  = false;
-
-		$filtered_events = collapse_events_array( $events, $timestamp );
-
-		foreach ( $filtered_events as $filtered_event ) {
-			if ( hash_equals( md5( $filtered_event['action'] ), $action_hashed ) && hash_equals( $filtered_event['instance'], $instance ) ) {
-				$event = $filtered_event['args'];
-				$event['timestamp'] = $filtered_event['timestamp'];
-				$event['action']    = $filtered_event['action'];
-				$event['instance']  = $filtered_event['instance'];
-				break;
-			}
-		}
-
-		return $event;
 	}
 
 	/**
@@ -288,7 +269,7 @@ class Events extends Singleton {
 	/**
 	 * Are resources available to run this event?
 	 *
-	 * @param $event array Event data
+	 * @param object $event Event data
 	 *
 	 * @return bool
 	 */
@@ -299,7 +280,7 @@ class Events extends Singleton {
 		}
 
 		// Internal Events aren't subject to the global lock
-		if ( is_internal_event( $event['action'] ) ) {
+		if ( is_internal_event( $event->action ) ) {
 			return true;
 		}
 
@@ -317,11 +298,11 @@ class Events extends Singleton {
 	/**
 	 * Free locks after event completes
 	 *
-	 * @param $event array Event data
+	 * @param object $event Event data
 	 */
 	private function do_lock_cleanup( $event ) {
 		// Lock isn't set when event is Internal, so we don't want to alter it
-		if ( ! is_internal_event( $event['action'] ) ) {
+		if ( ! is_internal_event( $event->action ) ) {
 			Lock::free_lock( self::LOCK );
 		}
 
@@ -332,7 +313,7 @@ class Events extends Singleton {
 	/**
 	 * Frees the lock for an individual event
 	 *
-	 * @param $event array Event data
+	 * @param object $event Event data
 	 *
 	 * @return bool
 	 */
@@ -343,42 +324,39 @@ class Events extends Singleton {
 	/**
 	 * Turn the event action into a string that can be used with a lock
 	 *
-	 * @param $event array Event data
+	 * @param object $event Event data
 	 *
 	 * @return string
 	 */
 	public function get_lock_key_for_event_action( $event ) {
 		// Hashed solely to constrain overall length
-		return md5( 'ev-' . $event['action'] );
+		return md5( 'ev-' . $event->action );
 	}
 
 	/**
 	 * Mark an event completed, and reschedule when requested
 	 */
 	private function update_event_record( $event ) {
-		if ( false !== $event['schedule'] ) {
-			// Get the existing ID
-			$job_id = event_exists( $event['timestamp'], $event['action'], $event['instance'], true );
-
+		if ( false !== $event->schedule ) {
 			// Re-implements much of the logic from `wp_reschedule_event()`
 			$schedules = wp_get_schedules();
 			$interval  = 0;
 
 			// First, we try to get it from the schedule
-			if ( isset( $schedules[ $event['schedule'] ] ) ) {
-				$interval = $schedules[ $event['schedule'] ]['interval'];
+			if ( isset( $schedules[ $event->schedule ] ) ) {
+				$interval = $schedules[ $event->schedule ]['interval'];
 			}
 
 			// Now we try to get it from the saved interval, in case the schedule disappears
 			if ( 0 == $interval ) {
-				$interval = $event['interval'];
+				$interval = $event->interval;
 			}
 
 			// If we have an interval, update the existing event entry
 			if ( 0 != $interval ) {
 				// Determine new timestamp, according to how `wp_reschedule_event()` does
 				$now           = time();
-				$new_timestamp = $event['timestamp'];
+				$new_timestamp = $event->timestamp;
 
 				if ( $new_timestamp >= $now ) {
 					$new_timestamp = $now + $interval;
@@ -388,23 +366,21 @@ class Events extends Singleton {
 
 				// Build the expected arguments format
 				$event_args = array(
-					'schedule' => $event['schedule'],
-					'args'     => $event['args'],
+					'schedule' => $event->schedule,
+					'args'     => $event->args,
 					'interval' => $interval,
 				);
 
 				// Update event store
-				schedule_event( $new_timestamp, $event['action'], $event_args, $job_id );
+				schedule_event( $new_timestamp, $event->action, $event_args, $event->ID );
 
 				// If the event could be rescheduled, don't then delete it :)
-				if ( is_int( $job_id ) && $job_id > 0 ) {
-					return;
-				}
+				return;
 			}
 		}
 
 		// Either event doesn't recur, or the interval couldn't be determined
-		delete_event( $event['timestamp'], $event['action'], $event['instance'] );
+		delete_event( $event->timestamp, $event->action, $event->instance );
 	}
 }
 
