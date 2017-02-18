@@ -194,7 +194,7 @@ class Events extends \WP_CLI_Command {
 		}
 
 		// Include totals for pagination etc
-		$total_items = \Automattic\WP\Cron_Control\count_events_by_status( \Automattic\WP\Cron_Control\Events_Store::STATUS_PENDING );
+		$total_items = \Automattic\WP\Cron_Control\count_events_by_status( $event_status );
 		$total_pages = ceil( $total_items / $limit );
 
 		return compact( 'status', 'limit', 'page', 'offset', 'items', 'total_items', 'total_pages' );
