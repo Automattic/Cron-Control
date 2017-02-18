@@ -35,7 +35,7 @@ class Internal_Events extends Singleton {
 				'callback' => 'clean_legacy_data',
 			),
 			array(
-				'schedule' => 'a8c_cron_control_ten_minutes',
+				'schedule' => 'a8c_cron_control_minute',
 				'action'   => 'a8c_cron_control_purge_completed_events',
 				'callback' => 'purge_completed_events',
 			),
