@@ -264,6 +264,74 @@ class Events_Store extends Singleton {
 	}
 
 	/**
+	 * Retrieve a single event by ID, or by a combination of its timestamp, instance identifier, and either action or the action's hashed representation
+	 *
+	 * @param  array $attrs Array of event attributes to query by
+	 * @return object|false
+	 */
+	public function get_job( $attrs ) {
+		global $wpdb;
+
+		// Validate basic inputs
+		if ( ! is_array( $attrs ) || empty( $attrs ) ) {
+			return false;
+		}
+
+		// Validate requested status
+		$allowed_status = array(
+			self::STATUS_PENDING,
+			self::STATUS_RUNNING,
+			self::STATUS_COMPLETED,
+			'any',
+		);
+
+		if ( ! isset( $attrs['status'] ) || ! in_array( $attrs['status'], $allowed_status, true ) ) {
+			$attrs['status'] = self::STATUS_PENDING;
+		}
+
+		// Validate attributes provided to query for a post
+		if ( isset( $attrs['ID'] ) ) {
+			$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE ID = %d", $attrs['ID'] );
+		} else {
+			// Need a timestamp, an instance, and either an action or its hashed representation
+			if ( ! isset( $attrs['timestamp'] ) || ! isset( $attrs['instance'] ) ) {
+				return false;
+			} elseif ( ! isset( $attrs['action'] ) && ! isset( $attrs['action_hashed'] ) ) {
+				return false;
+			}
+
+			// Build query
+			if ( isset( $attrs['action'] ) ) {
+				$action_column = 'action';
+				$action_value  = $attrs['action'];
+			} else {
+				$action_column = 'action_hashed';
+				$action_value  = $attrs['action_hashed'];
+			}
+
+			$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE timestamp = %d AND {$action_column} = %s AND instance = %s", $attrs['timestamp'], $action_value, $attrs['instance'] );
+		}
+
+		// Final query preparations
+		if ( 'any' !== $attrs['status'] ) {
+			$query .= " AND status = '{$attrs['status']}'";
+		}
+
+		$query .= ' LIMIT 1';
+
+		// Query and format results
+		$job = $wpdb->get_row( $query );
+
+		if ( is_object( $job ) && ! is_wp_error( $job ) ) {
+			$job = $this->format_job( $job );
+		} else {
+			$job = false;
+		}
+
+		return $job;
+	}
+
+	/**
 	 * Standardize formatting and expand serialized data
 	 *
 	 * @param  object $job Job row from DB, in object form
@@ -278,6 +346,10 @@ class Events_Store extends Singleton {
 		$job->timestamp = (int) $job->timestamp;
 		$job->interval  = (int) $job->interval;
 		$job->args      = maybe_unserialize( $job->args );
+
+		if ( empty( $job->schedule ) ) {
+			$job->schedule = false;
+		}
 
 		return $job;
 	}
