@@ -138,13 +138,14 @@ class Events_Store extends Singleton {
 		);
 
 		// Get events to re-render as the cron option
-		$page = 1;
+		$page     = 1;
+		$quantity = 100;
 
 		do {
 			$jobs_posts = $this->get_jobs( array(
 				'status'   => self::STATUS_PENDING,
-				'quantity' => 100,
-				'page'     => 1,
+				'quantity' => $quantity,
+				'page'     => $page,
 			) );
 
 			// Nothing more to add
@@ -186,7 +187,11 @@ class Events_Store extends Singleton {
 					if ( isset( $jobs_post->interval ) ) {
 						$cron_array[ $timestamp ][ $action ][ $instance ]['interval'] = $jobs_post->interval;
 					}
+				}
 
+				// No need to keep looping if there were fewer events than we asked for
+				if ( count( $jobs_posts ) < $quantity ) {
+					break;
 				}
 			}
 		} while( true );
