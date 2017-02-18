@@ -145,27 +145,33 @@ class Events extends \WP_CLI_Command {
 	private function get_events( $args, $assoc_args ) {
 		global $wpdb;
 
-		// Validate status, with a default
+		// Accept a status argument, with a default
 		$status = 'pending';
 		if ( isset( $assoc_args['status'] ) ) {
 			$status = $assoc_args['status'];
 		}
 
-		if ( 'pending' !== $status && 'completed' !== $status ) {
-			\WP_CLI::error( __( 'Invalid status requested', 'automattic-cron-control' ) );
-		}
-
-		// Convert to post status
+		// Convert to status used by Event Store
 		$event_status = null;
 		switch ( $status ) {
 			case 'pending' :
 				$event_status = \Automattic\WP\Cron_Control\Events_Store::STATUS_PENDING;
 				break;
 
+			case 'running' :
+				$event_status = \Automattic\WP\Cron_Control\Events_Store::STATUS_RUNNING;
+				break;
+
 			case 'completed' :
 				$event_status = \Automattic\WP\Cron_Control\Events_Store::STATUS_COMPLETED;
 				break;
 		}
+
+		if ( is_null( $event_status ) ) {
+			\WP_CLI::error( __( 'Invalid status specified', 'automattic-cron-control' ) );
+		}
+
+		unset( $status );
 
 		// Total to show
 		$limit = 25;
