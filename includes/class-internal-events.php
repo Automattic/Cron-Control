@@ -155,7 +155,9 @@ class Internal_Events extends Singleton {
 	}
 
 	/**
-	 * Remove data related to how Core manages cron in the absence of this plugin
+	 * Remove unnecessary data and scheduled events
+	 *
+	 * Some of this data relates to how Core manages Cron when this plugin isn't active
 	 */
 	public function clean_legacy_data() {
 		// Cron option can be very large, so it shouldn't linger
@@ -166,6 +168,38 @@ class Internal_Events extends Singleton {
 			wp_cache_delete( 'doing_cron', 'transient' );
 		} else {
 			delete_transient( 'doing_cron' );
+		}
+
+		// Confirm internal events are scheduled for when they're expected
+		$schedules = wp_get_schedules();
+
+		foreach ( $this->internal_jobs as $internal_job ) {
+			$timestamp = wp_next_scheduled( $internal_job['action'] );
+
+			// Will reschedule on its own
+			if ( false === $timestamp ) {
+				continue;
+			}
+
+			$job_details = get_event_by_attributes( array(
+				'timestamp' => $timestamp,
+				'action'    => $internal_job['action'],
+				'instance'  => md5( maybe_serialize( array() ) ),
+			) );
+
+			if ( $job_details->schedule !== $internal_job['schedule'] ) {
+				if ( $timestamp <= time() ) {
+					$timestamp = time() + ( 1 * \MINUTE_IN_SECONDS );
+				}
+
+				$args = array(
+					'schedule' => $internal_job['schedule'],
+					'args'     => $job_details->args,
+					'interval' => $schedules[ $internal_job['schedule'] ]['interval'],
+				);
+
+				schedule_event( $timestamp, $job_details->action, $args, $job_details->ID );
+			}
 		}
 	}
 
