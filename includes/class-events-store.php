@@ -79,7 +79,7 @@ class Events_Store extends Singleton {
 			`created` datetime NOT NULL,
 			`last_modified` datetime NOT NULL,
 
-			PRIMARY KEY (`id`),
+			PRIMARY KEY (`ID`),
 			UNIQUE KEY `ts_action_instance` (`timestamp`, `action`, `instance`)
 		) ENGINE=InnoDB;\n";
 
@@ -236,7 +236,10 @@ class Events_Store extends Singleton {
 	 */
 
 	/**
-	 * Retrieve list of jobs
+	 * Retrieve jobs given a set of parameters
+	 *
+	 * @param array $args
+	 * @return array|false
 	 */
 	public function get_jobs( $args ) {
 		global $wpdb;
@@ -439,10 +442,10 @@ class Events_Store extends Singleton {
 	/**
 	 * Set a job post to the "completed" status
 	 */
-	private function mark_job_record_completed( $job_id, $flush_cache = true ) {
+	public function mark_job_record_completed( $job_id, $flush_cache = true ) {
 		global $wpdb;
 
-		$wpdb->update( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED, ), array( 'ID' => $job_id, ) );
+		$success = $wpdb->update( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED, ), array( 'ID' => $job_id, ) );
 
 		// Delete internal cache
 		// Should only be skipped when deleting duplicates, as they are excluded from the cache
@@ -450,7 +453,7 @@ class Events_Store extends Singleton {
 			wp_cache_delete( self::CACHE_KEY );
 		}
 
-		return true;
+		return (bool) $success;
 	}
 
 	/**
@@ -496,8 +499,12 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Stop discarding events, once again storing them in the table
+	 *
+	 * First clears any completed events to free unique timestamp-action-instance key
 	 */
 	public function resume_event_creation() {
+		$this->purge_completed_events();
+
 		$this->job_creation_suspended = false;
 	}
 
@@ -508,6 +515,22 @@ class Events_Store extends Singleton {
 		global $wpdb;
 
 		$wpdb->delete( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED, ) );
+	}
+
+	/**
+	 * Count number of events with a given status
+	 *
+	 * @param string $status
+	 * @return int|false
+	 */
+	public function count_events_by_status( $status ) {
+		global $wpdb;
+
+		if ( ! in_array( $status, array( self::STATUS_PENDING, self::STATUS_RUNNING, self::STATUS_COMPLETED ), true ) ) {
+			return false;
+		}
+
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(action) FROM {$this->get_table_name()} WHERE status = %s", $status ) );
 	}
 }
 
