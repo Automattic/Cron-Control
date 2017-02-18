@@ -22,8 +22,6 @@ class Events_Store extends Singleton {
 
 	const CACHE_KEY = 'a8c_cron_ctrl_option';
 
-	private $option_before_unscheduling = null;
-
 	private $job_creation_suspended = false;
 
 	/**
@@ -123,13 +121,11 @@ class Events_Store extends Singleton {
 	 * Override cron option requests with data from custom table
 	 */
 	public function get_option() {
-		// Use cached value for reads, except when we're unscheduling and state is important
-		if ( ! $this->is_unscheduling() ) {
-			$cached_option = wp_cache_get( self::CACHE_KEY, null, true );
+		// Use cached value when available
+		$cached_option = wp_cache_get( self::CACHE_KEY, null, true );
 
-			if ( false !== $cached_option ) {
-				return $cached_option;
-			}
+		if ( false !== $cached_option ) {
+			return $cached_option;
 		}
 
 		// Start building a new cron option
@@ -200,13 +196,6 @@ class Events_Store extends Singleton {
 		// Ensures events are sorted chronologically
 		uksort( $cron_array, 'strnatcasecmp' );
 
-		// If we're unscheduling an event, hold onto the previous value so we can identify what's unscheduled
-		if ( $this->is_unscheduling() ) {
-			$this->option_before_unscheduling = $cron_array;
-		} else {
-			$this->option_before_unscheduling = null;
-		}
-
 		// Cache the results, bearing in mind that they won't be used during unscheduling events
 		wp_cache_set( self::CACHE_KEY, $cron_array, null, 1 * \HOUR_IN_SECONDS );
 
@@ -219,67 +208,27 @@ class Events_Store extends Singleton {
 	 * By returning $old_value, `cron` option won't be updated
 	 */
 	public function update_option( $new_value, $old_value ) {
-		if ( $this->is_scheduling() ) {
-			$this->convert_option( $new_value );
-		} elseif ( $this->is_unscheduling() ) {
-			$this->unschedule_job( $new_value, $this->option_before_unscheduling );
+		// Find changes to record
+		$new_events     = $this->find_cron_array_differences( $new_value, $old_value );
+		$deleted_events = $this->find_cron_array_differences( $old_value, $new_value );
 
-			// Free "completed" events due to DB locks
-			$this->purge_completed_events();
-		} else {
-			$this->force_update( $new_value );
+		// Add/update new events
+		foreach ( $new_events as $new_event ) {
+			$job_id = $this->job_exists( $new_event['timestamp'], $new_event['action'], $new_event['instance'] );
+
+			if ( 0 === $job_id ) {
+				$job_id = null;
+			}
+
+			$this->create_or_update_job( $new_event['timestamp'], $new_event['action'], $new_event['args'], $job_id );
+		}
+
+		// Mark deleted entries for removal
+		foreach ( $deleted_events as $deleted_event ) {
+			$this->mark_job_completed( $deleted_event['timestamp'], $deleted_event['action'], $deleted_event['instance'] );
 		}
 
 		return $old_value;
-	}
-
-	/**
-	 * Overwrite all existing data with a new value
-	 */
-	private function force_update( $new_value ) {
-		global $wpdb;
-
-		// Remove all existing data
-		$this->suspend_event_creation();
-
-		$wpdb->update( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED, ), array( 'status' => self::STATUS_PENDING, ) );
-		$wpdb->update( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED, ), array( 'status' => self::STATUS_RUNNING, ) );
-		$this->option_before_unscheduling = null;
-
-		$this->flush_internal_caches();
-
-		$this->resume_event_creation();
-
-		// Write new events to store
-		$this->convert_option( $new_value );
-	}
-
-	/**
-	 * Delete jobs that are unscheduled using `wp_unschedule_event()`
-	 */
-	private function unschedule_job( $new_value, $old_value ) {
-		$jobs = $this->find_unscheduled_jobs( $new_value, $old_value );
-
-		foreach ( $jobs as $job ) {
-			$this->mark_job_completed( $job['timestamp'], $job['action'], $job['instance'] );
-		}
-	}
-
-	/**
-	 * Save cron events in custom table
-	 */
-	private function convert_option( $new_value ) {
-		if ( is_array( $new_value ) && ! empty( $new_value ) ) {
-			$events = collapse_events_array( $new_value );
-
-			foreach ( $events as $event ) {
-				$job_exists = $this->job_exists( $event['timestamp'], $event['action'], $event['instance'] );
-
-				if ( ! $job_exists ) {
-					$this->create_or_update_job( $event['timestamp'], $event['action'], $event['args'] );
-				}
-			}
-		}
 	}
 
 	/**
@@ -436,10 +385,7 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Create a post object for a given event
-	 *
-	 * Can't call `wp_insert_post()` because `wp_unique_post_slug()` breaks the plugin's expectations
-	 * Also doesn't call `wp_insert_post()` because this function is needed before post types and capabilities are ready.
+	 * Create or update entry for a given job
 	 */
 	public function create_or_update_job( $timestamp, $action, $args, $update_id = null ) {
 		// Don't create new jobs when manipulating jobs via the plugin's CLI commands
@@ -517,57 +463,27 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Determine if current request is a call to one of Core's functions for scheduling events
+	 * Compare two arrays and return collapsed representation of their differences
 	 *
-	 * @return bool
-	 */
-	private function is_scheduling() {
-		$trace = wp_debug_backtrace_summary( __CLASS__, null, false );
-
-		$scheduling_callbacks = array(
-			'wp_schedule_single_event',
-			'wp_schedule_event',
-		);
-
-		$is_scheduling = false;
-
-		foreach ( $scheduling_callbacks as $cb ) {
-			if ( false !== array_search( $cb, $trace ) ) {
-				$is_scheduling = true;
-				break;
-			}
-		}
-
-		return $is_scheduling;
-	}
-
-	/**
-	 * Determine if current request is a call to `wp_unschedule_event()`
+	 * @param array $new New cron array
+	 * @param array $old Old cron array
 	 *
-	 * @return bool
+	 * @return array
 	 */
-	private function is_unscheduling() {
-		return false !== array_search( 'wp_unschedule_event', wp_debug_backtrace_summary( __CLASS__, null, false ) );
-	}
-
-	/**
-	 * Identify jobs unscheduled using `wp_unschedule_event()` by comparing current value with previous
-	 */
-	private function find_unscheduled_jobs( $new, $old ) {
+	private function find_cron_array_differences( $new, $old ) {
 		$differences = array();
 
-		$old = collapse_events_array( $old );
+		$new = collapse_events_array( $new );
 
-		foreach ( $old as $event ) {
-			$timestamp = $event['timestamp'];
-			$action    = $event['action'];
-			$instance  = $event['instance'];
+		foreach ( $new as $event ) {
+			$event = (object) $event;
 
-			if ( ! isset( $new[ $timestamp ][ $action ][ $instance ] ) ) {
+			if ( ! isset( $old[ $event->timestamp ][ $event->action ][ $event->instance ] ) ) {
 				$differences[] = array(
-					'timestamp' => $timestamp,
-					'action'    => $action,
-					'instance'  => $instance,
+					'timestamp' => $event->timestamp,
+					'action'    => $event->action,
+					'instance'  => $event->instance,
+					'args'      => $event->args,
 				);
 			}
 		}
