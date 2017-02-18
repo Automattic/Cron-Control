@@ -87,6 +87,16 @@ function event_exists( $timestamp, $action, $instance, $return_id = false ) {
 }
 
 /**
+ * Retrieve a single event by ID, or by a combination of its timestamp, instance identifier, and either action or the action's hashed representation
+ *
+ * @param  array $attributes Array of event attributes to query by
+ * @return object|false
+ */
+function get_event_by_attributes( $attributes ) {
+	return Events_Store::instance()->get_job( $attributes );
+}
+
+/**
  * Prevent event store from creating new entries
  *
  * Should be used sparingly, and followed by a call to resume_event_creation(), during bulk operations
