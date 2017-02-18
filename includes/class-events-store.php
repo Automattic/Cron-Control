@@ -214,19 +214,21 @@ class Events_Store extends Singleton {
 
 		// Add/update new events
 		foreach ( $new_events as $new_event ) {
-			$job_id = $this->job_exists( $new_event['timestamp'], $new_event['action'], $new_event['instance'] );
+			$job_id = $this->job_exists( $new_event['timestamp'], $new_event['action'], $new_event['instance'], true );
 
 			if ( 0 === $job_id ) {
 				$job_id = null;
 			}
 
-			$this->create_or_update_job( $new_event['timestamp'], $new_event['action'], $new_event['args'], $job_id );
+			$this->create_or_update_job( $new_event['timestamp'], $new_event['action'], $new_event['args'], $job_id, false );
 		}
 
 		// Mark deleted entries for removal
 		foreach ( $deleted_events as $deleted_event ) {
-			$this->mark_job_completed( $deleted_event['timestamp'], $deleted_event['action'], $deleted_event['instance'] );
+			$this->mark_job_completed( $deleted_event['timestamp'], $deleted_event['action'], $deleted_event['instance'], false );
 		}
+
+		$this->flush_internal_caches();
 
 		return $old_value;
 	}
@@ -386,8 +388,14 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Create or update entry for a given job
+	 *
+	 * @param int    $timestamp    Unix timestamp event executes at
+	 * @param string $action       Hook event fires
+	 * @param array  $args         Array of event's schedule, arguments, and interval
+	 * @param bool   $update_id    ID of existing entry to update, rather than creating a new entry
+	 * @param bool   $flush_cache  Whether or not to flush internal caches after creating/updating the event
 	 */
-	public function create_or_update_job( $timestamp, $action, $args, $update_id = null ) {
+	public function create_or_update_job( $timestamp, $action, $args, $update_id = null, $flush_cache = true ) {
 		// Don't create new jobs when manipulating jobs via the plugin's CLI commands
 		if ( $this->job_creation_suspended ) {
 			return;
@@ -421,7 +429,11 @@ class Events_Store extends Singleton {
 			$wpdb->insert( $this->get_table_name(), $job_post );
 		}
 
-		$this->flush_internal_caches();
+		// Delete internal cache
+		// Should only be skipped during bulk operations
+		if ( $flush_cache ) {
+			$this->flush_internal_caches();
+		}
 	}
 
 	/**
@@ -429,24 +441,28 @@ class Events_Store extends Singleton {
 	 *
 	 * Completed entries will be cleaned up by an internal job
 	 *
-	 * @param $timestamp  int     Unix timestamp
-	 * @param $action     string  name of action used when the event is registered (unhashed)
-	 * @param $instance   string  md5 hash of the event's arguments array, which Core uses to index the `cron` option
-	 *
+	 * @param int    $timestamp    Unix timestamp event executes at
+	 * @param string $action       Name of action used when the event is registered (unhashed)
+	 * @param string $instance     md5 hash of the event's arguments array, which Core uses to index the `cron` option
+	 * @param bool   $flush_cache  Whether or not to flush internal caches after creating/updating the event
 	 * @return bool
 	 */
-	public function mark_job_completed( $timestamp, $action, $instance ) {
+	public function mark_job_completed( $timestamp, $action, $instance, $flush_cache = true ) {
 		$job_id = $this->job_exists( $timestamp, $action, $instance, true );
 
 		if ( ! $job_id ) {
 			return false;
 		}
 
-		return $this->mark_job_record_completed( $job_id );
+		return $this->mark_job_record_completed( $job_id, $flush_cache );
 	}
 
 	/**
 	 * Set a job post to the "completed" status
+	 *
+	 * @param int $job_id        ID of job's record
+	 * @param bool $flush_cache  Whether or not to flush internal caches after creating/updating the event
+	 * @return bool
 	 */
 	public function mark_job_record_completed( $job_id, $flush_cache = true ) {
 		global $wpdb;
@@ -454,7 +470,7 @@ class Events_Store extends Singleton {
 		$success = $wpdb->update( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED, ), array( 'ID' => $job_id, ) );
 
 		// Delete internal cache
-		// Should only be skipped when deleting duplicates, as they are excluded from the cache
+		// Should only be skipped during bulk operations
 		if ( $flush_cache ) {
 			$this->flush_internal_caches();
 		}
