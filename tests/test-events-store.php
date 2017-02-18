@@ -1,6 +1,6 @@
 <?php
 /**
- * Class Cron_Options_CPT_Tests
+ * Class Events_Store_Tests
  *
  * @package Automattic_Cron_Control
  */
@@ -43,7 +43,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Check that an event is stored properly in a CPT entry
+	 * Check that an event is stored properly in table
 	 */
 	function test_events_exist() {
 		global $wpdb;
@@ -63,7 +63,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Check format of filtered array returned from CPT
+	 * Check format of filtered array returned from table
 	 */
 	function test_filter_cron_option_get() {
 		$event = Utils::create_test_event();
@@ -115,7 +115,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that events are unscheduled correctly by checking the CPT
+	 * Test that events are unscheduled correctly by checking the table
 	 */
 	function test_event_unscheduling_against_event_store() {
 		// Schedule two events and prepare their data a bit for further testing

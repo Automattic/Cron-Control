@@ -320,7 +320,7 @@ class Events extends \WP_CLI_Command {
 
 		\WP_CLI::line( __( 'Locating event...', 'automattic-cron-control' ) . "\n" );
 
-		// Look up full object and confirm that the entry belongs to this plugin's CPT
+		// Look up full event object
 		$event = \Automattic\WP\Cron_Control\get_event_by_attributes( array( 'ID' => $jid, ) );
 
 		if ( is_object( $event ) ) {

@@ -100,7 +100,7 @@ class Events_Store extends Singleton {
 	 */
 
 	/**
-	 * Override cron option requests with data from CPT
+	 * Override cron option requests with data from custom table
 	 */
 	public function get_option() {
 		// Use cached value for reads, except when we're unscheduling and state is important
@@ -215,7 +215,7 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Save cron events in CPT
+	 * Save cron events in custom table
 	 */
 	private function convert_option( $new_value ) {
 		if ( is_array( $new_value ) && ! empty( $new_value ) ) {
