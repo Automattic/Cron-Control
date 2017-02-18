@@ -14,6 +14,7 @@ class Events_Store extends Singleton {
 
 	const DB_VERSION        = 1;
 	const DB_VERSION_OPTION = 'a8c_cron_control_db_version';
+	const TABLE_CREATE_LOCK = 'a8c_cron_control_creating_table';
 
 	const STATUS_PENDING   = 'pending';
 	const STATUS_RUNNING   = 'running';
@@ -63,6 +64,11 @@ class Events_Store extends Singleton {
 	protected function prepare_tables() {
 		// Nothing to do
 		if ( (int) get_option( self::DB_VERSION_OPTION ) === self::DB_VERSION ) {
+			return;
+		}
+
+		// Limit chance of race conditions when creating table
+		if ( false === wp_cache_add( self::TABLE_CREATE_LOCK, 1, null, 1 * \MINUTE_IN_SECONDS ) ) {
 			return;
 		}
 
