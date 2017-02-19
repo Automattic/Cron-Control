@@ -249,7 +249,55 @@ class Events extends \WP_CLI_Command {
 			$formatted_events[] = $row;
 		}
 
+		// Sort results
+		if ( ! empty( $formatted_events ) ) {
+			usort( $formatted_events, array( $this, 'sort_events' ) );
+		}
+
 		return $formatted_events;
+	}
+
+	/**
+	 * Sort events by timestamp, then action name
+	 */
+	private function sort_events( $first, $second ) {
+		// Timestamp is usually sufficient
+		if ( isset( $first['next_run_gmt'] ) ) {
+			$first_timestamp = strtotime( $first['next_run_gmt'] );
+			$second_timestamp = strtotime( $second['next_run_gmt'] );
+		} elseif ( isset( $first['timestamp'] ) ) {
+			$first_timestamp = $first['timestamp'];
+			$second_timestamp = $second['timestamp'];
+		} else {
+			return 0;
+		}
+
+		if ( $first_timestamp < $second_timestamp ) {
+			return -1;
+		}
+
+		if ( $first_timestamp > $second_timestamp ) {
+			return 1;
+		}
+
+		// If timestamps are equal, consider action
+		if ( $first['action'] === $second['action'] ) {
+			return 0;
+		}
+
+		$sort_test = array( $first['action'], $second['action'] );
+		natcasesort( $sort_test );
+
+		if ( $sort_test[0] === $first['action'] ) {
+			return 1;
+		}
+
+		if ( $sort_test[1] === $first['action'] ) {
+			return -1;
+		}
+
+		// ¯\_(ツ)_/¯ Let's call them equal
+		return 0;
 	}
 
 	/**
@@ -429,6 +477,12 @@ class Events extends \WP_CLI_Command {
 		\WP_CLI::line( sprintf( _n( 'Found one event with action `%2$s`:', 'Found %1$s events with action `%2$s`:', $total_to_delete, 'automattic-cron-control' ), number_format_i18n( $total_to_delete ), $action ) );
 
 		if ( $total_to_delete <= $assoc_args['limit'] ) {
+			// Sort results
+			if ( ! empty( $events_to_delete ) ) {
+				usort( $events_to_delete, array( $this, 'sort_events' ) );
+			}
+
+
 			\WP_CLI\Utils\format_items( 'table', $events_to_delete, array(
 				'ID',
 				'created',
