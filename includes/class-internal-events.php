@@ -131,10 +131,10 @@ class Internal_Events extends Singleton {
 				}
 			}
 
-			if ( count( $missed_posts ) < $quantity ) {
+			$page++;
+
+			if ( count( $missed_posts ) < $quantity || $page > 5 ) {
 				break;
-			} else {
-				$page++;
 			}
 		} while ( ! empty( $missed_posts ) );
 	}
@@ -174,10 +174,10 @@ class Internal_Events extends Singleton {
 				}
 			}
 
-			if ( count( $future_posts ) < $quantity ) {
+			$page++;
+
+			if ( count( $future_posts ) < $quantity || $page > 5 ) {
 				break;
-			} else {
-				$page++;
 			}
 		} while ( ! empty( $future_posts ) );
 	}
