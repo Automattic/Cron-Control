@@ -543,10 +543,16 @@ class Events_Store extends Singleton {
 
 		// Skip count if already performed
 		if ( $count_first ) {
-			$srtm = $wpdb->srtm;
-			$wpdb->srtm = true;
+			if ( property_exists( $wpdb, 'srtm' ) ) {
+				$srtm = $wpdb->srtm;
+				$wpdb->srtm = true;
+			}
+
 			$count = $this->count_events_by_status( self::STATUS_COMPLETED );
-			$wpdb->srtm = $srtm;
+
+			if ( isset( $srtm ) ) {
+				$wpdb->srtm = $srtm;
+			}
 		} else {
 			$count = 1;
 		}
