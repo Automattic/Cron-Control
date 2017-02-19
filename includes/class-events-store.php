@@ -45,7 +45,7 @@ class Events_Store extends Singleton {
 	public function get_table_name() {
 		global $wpdb;
 
-		return $wpdb->base_prefix . self::TABLE_SUFFIX;
+		return $wpdb->prefix . self::TABLE_SUFFIX;
 	}
 
 	/**
