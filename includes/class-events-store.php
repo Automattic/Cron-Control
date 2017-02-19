@@ -538,10 +538,22 @@ class Events_Store extends Singleton {
 	/**
 	 * Remove entries for non-recurring events that have been run
 	 */
-	public function purge_completed_events() {
+	public function purge_completed_events( $count_first = true ) {
 		global $wpdb;
 
-		$wpdb->delete( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED, ) );
+		// Skip count if already performed
+		if ( $count_first ) {
+			$srtm = $wpdb->srtm;
+			$wpdb->srtm = true;
+			$count = $this->count_events_by_status( self::STATUS_COMPLETED );
+			$wpdb->srtm = $srtm;
+		} else {
+			$count = 1;
+		}
+
+		if ( $count > 0 ) {
+			$wpdb->delete( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED, ) );
+		}
 	}
 
 	/**

@@ -91,9 +91,7 @@ class Events extends \WP_CLI_Command {
 
 		// Remove all completed events
 		if ( isset( $assoc_args['completed'] ) ) {
-			\WP_CLI::confirm( sprintf( __( 'Remove all completed events?', 'automattic-cron-control' ) ) );
-			\Automattic\WP\Cron_Control\Events_Store::instance()->purge_completed_events();
-			\WP_CLI::success( __( 'Entries removed', 'automattic-cron-control' ) );
+			$this->delete_completed_events( $args, $assoc_args );
 			return;
 		}
 
@@ -582,6 +580,19 @@ class Events extends \WP_CLI_Command {
 		}
 
 		return;
+	}
+
+	/**
+	 * Delete all completed events
+	 */
+	private function delete_completed_events( $args, $assoc_args ) {
+		$count = \Automattic\WP\Cron_Control\count_events_by_status( \Automattic\WP\Cron_Control\Events_Store::STATUS_COMPLETED );
+
+		\WP_CLI::confirm( sprintf( _n( 'Found one completed event to remove. Continue?', 'Found %s completed events to remove. Continue?', $count, 'automattic-cron-control' ), number_format_i18n( $count ) ) );
+
+		\Automattic\WP\Cron_Control\Events_Store::instance()->purge_completed_events( false );
+
+		\WP_CLI::success( __( 'Entries removed', 'automattic-cron-control' ) );
 	}
 }
 
