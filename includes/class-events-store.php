@@ -467,7 +467,12 @@ class Events_Store extends Singleton {
 	public function mark_job_record_completed( $job_id, $flush_cache = true ) {
 		global $wpdb;
 
-		$success = $wpdb->update( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED, ), array( 'ID' => $job_id, ) );
+		$updates = array(
+			'status'   => self::STATUS_COMPLETED,
+			'instance' => wp_rand( 1000000, 999999999 ), // Breaks unique constraint, and can be recreated from entry's remaining data
+		);
+
+		$success = $wpdb->update( $this->get_table_name(), $updates, array( 'ID' => $job_id, ) );
 
 		// Delete internal cache
 		// Should only be skipped during bulk operations
@@ -525,12 +530,8 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Stop discarding events, once again storing them in the table
-	 *
-	 * First clears any completed events to free unique timestamp-action-instance key
 	 */
 	public function resume_event_creation() {
-		$this->purge_completed_events();
-
 		$this->job_creation_suspended = false;
 	}
 

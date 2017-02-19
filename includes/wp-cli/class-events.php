@@ -235,7 +235,6 @@ class Events extends \WP_CLI_Command {
 				'event_args'        => '',
 			);
 
-			// Provide relative next run only for events that have yet to run
 			if ( $event->status === \Automattic\WP\Cron_Control\Events_Store::STATUS_PENDING ) {
 				$row['next_run_relative'] = $this->calculate_interval( $event->timestamp - time() );
 			}
@@ -244,12 +243,15 @@ class Events extends \WP_CLI_Command {
 
 			$row['event_args'] = maybe_serialize( $event->args );
 
-			// Human-readable version of next run
+			if ( \Automattic\WP\Cron_Control\Events_Store::STATUS_COMPLETED === $event->status ) {
+				$instance = md5( $row['event_args'] );
+				$row['instance'] = "{$instance} - {$row['instance']}";
+			}
+
 			if ( isset( $event->interval ) && $event->interval ) {
 				$row['recurrence'] = $this->calculate_interval( $event->interval );
 			}
 
-			// Named schedule
 			if ( isset( $event->schedule ) && $event->schedule ) {
 				$row['schedule_name'] = $event->schedule;
 			}
