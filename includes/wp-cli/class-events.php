@@ -71,10 +71,10 @@ class Events extends \WP_CLI_Command {
 	}
 
 	/**
-	 * Remove events by ID or action
+	 * Remove events
 	 *
 	 * @subcommand delete
-	 * @synopsis [--event_id=<event_id>] [--action=<action>]
+	 * @synopsis [--event_id=<event_id>] [--action=<action>] [--completed]
 	 */
 	public function delete_events( $args, $assoc_args ) {
 		// Remove a specific event
@@ -86,6 +86,14 @@ class Events extends \WP_CLI_Command {
 		// Remove all events with a given action
 		if ( isset( $assoc_args['action'] ) ) {
 			$this->delete_event_by_action( $args, $assoc_args );
+			return;
+		}
+
+		// Remove all completed events
+		if ( isset( $assoc_args['completed'] ) ) {
+			\WP_CLI::confirm( sprintf( __( 'Remove all completed events?', 'automattic-cron-control' ) ) );
+			\Automattic\WP\Cron_Control\Events_Store::instance()->purge_completed_events();
+			\WP_CLI::success( __( 'Entries removed', 'automattic-cron-control' ) );
 			return;
 		}
 
