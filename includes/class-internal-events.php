@@ -113,17 +113,30 @@ class Internal_Events extends Singleton {
 	public function force_publish_missed_schedules() {
 		global $wpdb;
 
-		$missed_posts = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_status = 'future' AND post_date <= %s LIMIT 25;", current_time( 'mysql', false ) ) );
+		$page     = 1;
+		$quantity = 25;
 
-		if ( ! empty( $missed_posts ) ) {
-			foreach ( $missed_posts as $missed_post ) {
-				$missed_post = absint( $missed_post );
-				wp_publish_post( $missed_post );
-				wp_clear_scheduled_hook( 'publish_future_post', array( $missed_post ) );
+		do {
+			$offset       = max( 0, $page - 1 ) * $quantity;
+			$query        = $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_status = 'future' AND post_date <= %s LIMIT %d,%d;", current_time( 'mysql', false ), $offset, $quantity );
+			$missed_posts = $wpdb->get_col( $query );
 
-				do_action( 'a8c_cron_control_published_post_that_missed_schedule', $missed_post );
+			if ( ! empty( $missed_posts ) ) {
+				foreach ( $missed_posts as $missed_post ) {
+					$missed_post = absint( $missed_post );
+					wp_publish_post( $missed_post );
+					wp_clear_scheduled_hook( 'publish_future_post', array( $missed_post ) );
+
+					do_action( 'a8c_cron_control_published_post_that_missed_schedule', $missed_post );
+				}
 			}
-		}
+
+			if ( count( $missed_posts ) < $quantity ) {
+				break;
+			} else {
+				$page++;
+			}
+		} while ( ! empty( $missed_posts ) );
 	}
 
 	/**
