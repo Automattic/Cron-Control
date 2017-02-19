@@ -132,26 +132,41 @@ class Internal_Events extends Singleton {
 	public function confirm_scheduled_posts() {
 		global $wpdb;
 
-		$future_posts = $wpdb->get_results( $wpdb->prepare( "SELECT ID, post_date FROM {$wpdb->posts} WHERE post_status = 'future' AND post_date > %s LIMIT 25;", current_time( 'mysql', false ) ) );
+		$page     = 1;
+		$quantity = 25;
 
-		if ( ! empty( $future_posts ) ) {
-			foreach ( $future_posts as $future_post ) {
-				$future_post->ID = absint( $future_post->ID );
-				$gmt_time        = strtotime( get_gmt_from_date( $future_post->post_date ) . ' GMT' );
-				$timestamp       = wp_next_scheduled( 'publish_future_post', array( $future_post->ID ) );
+		do {
+			$offset       = max( 0, $page - 1 ) * $quantity;
+			$query        = $wpdb->prepare( "SELECT ID, post_date FROM {$wpdb->posts} WHERE post_status = 'future' AND post_date > %s LIMIT %d,%d", current_time( 'mysql', false ), $offset, $quantity );
+			$future_posts = $wpdb->get_results( $query );
 
-				if ( false === $timestamp ) {
-					wp_schedule_single_event( $gmt_time, 'publish_future_post', array( $future_post->ID ) );
+			if ( empty( $future_posts ) ) {
+				break;
+			} else {
+				foreach ( $future_posts as $future_post ) {
+					$future_post->ID = absint( $future_post->ID );
+					$gmt_time        = strtotime( get_gmt_from_date( $future_post->post_date ) . ' GMT' );
+					$timestamp       = wp_next_scheduled( 'publish_future_post', array( $future_post->ID ) );
 
-					do_action( 'a8c_cron_control_publish_scheduled', $future_post->ID );
-				} elseif ( (int) $timestamp !== $gmt_time ) {
-					wp_clear_scheduled_hook( 'publish_future_post', array( $future_post->ID ) );
-					wp_schedule_single_event( $gmt_time, 'publish_future_post', array( $future_post->ID ) );
+					if ( false === $timestamp ) {
+						wp_schedule_single_event( $gmt_time, 'publish_future_post', array( $future_post->ID ) );
 
-					do_action( 'a8c_cron_control_publish_rescheduled', $future_post->ID );
+						do_action( 'a8c_cron_control_publish_scheduled', $future_post->ID );
+					} elseif ( (int) $timestamp !== $gmt_time ) {
+						wp_clear_scheduled_hook( 'publish_future_post', array( $future_post->ID ) );
+						wp_schedule_single_event( $gmt_time, 'publish_future_post', array( $future_post->ID ) );
+
+						do_action( 'a8c_cron_control_publish_rescheduled', $future_post->ID );
+					}
 				}
 			}
-		}
+
+			if ( count( $future_posts ) < $quantity ) {
+				break;
+			} else {
+				$page++;
+			}
+		} while ( ! empty( $future_posts ) );
 	}
 
 	/**
