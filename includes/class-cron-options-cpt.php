@@ -29,10 +29,6 @@ class Cron_Options_CPT extends Singleton {
 		// Data storage
 		add_action( 'init', array( $this, 'register_post_type' ) );
 
-		// Prevent Jetpack from syncing plugin's CPT entries
-		add_filter( 'option_jetpack_sync_settings_post_types_blacklist', array( $this, 'exclude_from_jetpack_sync' ), 999 );
-		add_filter( 'default_option_jetpack_sync_settings_post_types_blacklist', array( $this, 'exclude_from_jetpack_sync' ), 999 );
-
 		// Option interception
 		add_filter( 'pre_option_cron', array( $this, 'get_option' ) );
 		add_filter( 'pre_update_option_cron', array( $this, 'update_option' ), 10, 2 );
@@ -57,23 +53,6 @@ class Cron_Options_CPT extends Singleton {
 				unset( $this->posts_to_clean[ $index ] );
 			}
 		}
-	}
-
-	/**
-	 * Block Jetpack Sync from capturing plugin's data
-	 *
-	 * Data changes frequently and is of no value in any remote context
-	 */
-	public function exclude_from_jetpack_sync( $option_value ) {
-		if ( ! is_array( $option_value ) ) {
-			$option_value = array();
-		}
-
-		if ( ! in_array( self::POST_TYPE, $option_value ) ) {
-			$option_value[] = self::POST_TYPE;
-		}
-
-		return $option_value;
 	}
 
 	/**
