@@ -304,8 +304,12 @@ class Events_Store extends Singleton {
 		}
 
 		// Validate attributes provided to query for a post
+		$query              = null;
+		$query_replacements = array();
+
 		if ( isset( $attrs['ID'] ) ) {
-			$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE ID = %d", $attrs['ID'] );
+			$query                = "SELECT * FROM {$this->get_table_name()} WHERE ID = %d";
+			$query_replacements[] = $attrs['ID'];
 		} else {
 			// Need a timestamp, an instance, and either an action or its hashed representation
 			if ( ! isset( $attrs['timestamp'] ) || ! isset( $attrs['instance'] ) ) {
@@ -324,15 +328,21 @@ class Events_Store extends Singleton {
 			}
 
 			// Do not sort, otherwise index isn't used
-			$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE timestamp = %d AND {$action_column} = %s AND instance = %s", $attrs['timestamp'], $action_value, $attrs['instance'] );
+			$query                = "SELECT * FROM {$this->get_table_name()} WHERE timestamp = %d AND {$action_column} = %s AND instance = %s";
+			$query_replacements[] = $attrs['timestamp'];
+			$query_replacements[] = $action_value;
+			$query_replacements[] = $attrs['instance'];
 		}
 
 		// Final query preparations
 		if ( 'any' !== $attrs['status'] ) {
-			$query .= " AND status = '{$attrs['status']}'";
+			$query                .= ' AND status = %s';
+			$query_replacements[]  = $attrs['status'];
 		}
 
 		$query .= ' LIMIT 1';
+
+		$query = $wpdb->prepare( $query, $query_replacements );
 
 		// Query and format results
 		$job = $wpdb->get_row( $query );
