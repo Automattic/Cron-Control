@@ -73,9 +73,9 @@ class REST_API extends \WP_CLI_Command {
 
 		foreach ( $events as $event ) {
 			$event_data = \Automattic\WP\Cron_Control\get_event_by_attributes( array(
-				'timestamp' => $event['timestamp'],
-				'action_hashed'    => $event['action'],
-				'instance'  => $event['instance'],
+				'timestamp'     => $event['timestamp'],
+				'action_hashed' => $event['action'],
+				'instance'      => $event['instance'],
 			) );
 
 			$formatted_events[] = array(
