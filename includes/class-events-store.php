@@ -141,15 +141,13 @@ class Events_Store extends Singleton {
 			$jobs_posts = $this->get_jobs( array(
 				'status'   => self::STATUS_PENDING,
 				'quantity' => $quantity,
-				'page'     => $page,
+				'page'     => $page++,
 			) );
 
 			// Nothing more to add
 			if ( empty( $jobs_posts ) ) {
 				break;
 			}
-
-			$page++;
 
 			// Something's probably wrong if a site has more than 1,500 pending cron actions
 			if ( $page > 15 ) {
@@ -184,13 +182,8 @@ class Events_Store extends Singleton {
 						$cron_array[ $timestamp ][ $action ][ $instance ]['interval'] = $jobs_post->interval;
 					}
 				}
-
-				// No need to keep looping if there were fewer events than we asked for
-				if ( count( $jobs_posts ) < $quantity ) {
-					break;
-				}
 			}
-		} while( true );
+		} while( count( $jobs_posts ) >= $quantity );
 
 		// Re-sort the array just as Core does when events are scheduled
 		// Ensures events are sorted chronologically
