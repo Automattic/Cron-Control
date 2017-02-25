@@ -280,32 +280,12 @@ class Events extends \WP_CLI_Command {
 			return 0;
 		}
 
-		if ( $first_timestamp < $second_timestamp ) {
-			return -1;
-		}
-
-		if ( $first_timestamp > $second_timestamp ) {
-			return 1;
+		if ( $first_timestamp !== $second_timestamp ) {
+			return $first_timestamp - $second_timestamp;
 		}
 
 		// If timestamps are equal, consider action
-		if ( $first['action'] === $second['action'] ) {
-			return 0;
-		}
-
-		$sort_test = array( $first['action'], $second['action'] );
-		natcasesort( $sort_test );
-
-		if ( $sort_test[0] === $first['action'] ) {
-			return 1;
-		}
-
-		if ( $sort_test[1] === $first['action'] ) {
-			return -1;
-		}
-
-		// ¯\_(ツ)_/¯ Let's call them equal
-		return 0;
+		return strnatcasecmp( $first['action'], $second['action'] );
 	}
 
 	/**
