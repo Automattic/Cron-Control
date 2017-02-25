@@ -207,7 +207,7 @@ class Events_Store extends Singleton {
 
 		// Add/update new events
 		foreach ( $new_events as $new_event ) {
-			$job_id = $this->job_exists( $new_event['timestamp'], $new_event['action'], $new_event['instance'], true );
+			$job_id = $this->get_job_id( $new_event['timestamp'], $new_event['action'], $new_event['instance'] );
 
 			if ( 0 === $job_id ) {
 				$job_id = null;
@@ -231,7 +231,7 @@ class Events_Store extends Singleton {
 	 */
 	public function block_creation_if_job_exists( $job ) {
 		$instance = md5( maybe_serialize( $job->args ) );
-		if ( $this->job_exists( $job->timestamp, $job->hook, $instance ) ) {
+		if ( 0 !== $this->get_job_id( $job->timestamp, $job->hook, $instance ) ) {
 			return false;
 		}
 
@@ -350,6 +350,25 @@ class Events_Store extends Singleton {
 	}
 
 	/**
+	 * Get ID for given event details
+	 *
+	 * Used in situations where performance matters, which is why it exists despite duplicating `get_job()`
+	 * Queries outside of this class should use `get_job()`
+	 *
+	 * @param  int    $timestamp    Unix timestamp event executes at
+	 * @param  string $action       Name of action used when the event is registered (unhashed)
+	 * @param  string $instance     md5 hash of the event's arguments array, which Core uses to index the `cron` option
+	 * @return int
+	 */
+	private function get_job_id( $timestamp, $action, $instance ) {
+		global $wpdb;
+
+		$job = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$this->get_table_name()} WHERE timestamp = %d AND action = %s AND instance = %s AND status = %s LIMIT 1;", $timestamp, $action, $instance, self::STATUS_PENDING ) );
+
+		return empty( $job ) ? 0 : (int) array_shift( $job );
+	}
+
+	/**
 	 * Standardize formatting and expand serialized data
 	 *
 	 * @param  object $job Job row from DB, in object form
@@ -370,23 +389,6 @@ class Events_Store extends Singleton {
 		}
 
 		return $job;
-	}
-
-	/**
-	 * Check if a job post exists
-	 *
-	 * Uses a direct query to avoid stale caches that result in duplicate events
-	 */
-	public function job_exists( $timestamp, $action, $instance, $return_id = false ) {
-		global $wpdb;
-
-		$exists = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$this->get_table_name()} WHERE timestamp = %d AND action = %s AND instance = %s AND status = %s LIMIT 1;", $timestamp, $action, $instance, self::STATUS_PENDING ) );
-
-		if ( $return_id ) {
-			return empty( $exists ) ? 0 : (int) array_shift( $exists );
-		} else {
-			return ! empty( $exists );
-		}
 	}
 
 	/**
@@ -451,7 +453,7 @@ class Events_Store extends Singleton {
 	 * @return bool
 	 */
 	public function mark_job_completed( $timestamp, $action, $instance, $flush_cache = true ) {
-		$job_id = $this->job_exists( $timestamp, $action, $instance, true );
+		$job_id = $this->get_job_id( $timestamp, $action, $instance );
 
 		if ( ! $job_id ) {
 			return false;

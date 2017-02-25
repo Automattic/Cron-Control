@@ -89,20 +89,6 @@ function delete_event_by_id( $id, $flush_cache = false ) {
 }
 
 /**
- * Check if an entry exists for a particular job, and return its ID if requested
- *
- * @param int    $timestamp Time event should run
- * @param string $action    Hook to fire
- * @param string $instance  Hashed version of event's arguments
- * @param bool   $return_id Return job ID instead of boolean indicating job's existence
- *
- * @return bool|int Boolean when fourth parameter is false, integer when true
- */
-function event_exists( $timestamp, $action, $instance, $return_id = false ) {
-	return Events_Store::instance()->job_exists( $timestamp, $action, $instance, $return_id );
-}
-
-/**
  * Retrieve jobs given a set of parameters
  *
  * @param array $args
