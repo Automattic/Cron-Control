@@ -472,9 +472,17 @@ class Events_Store extends Singleton {
 	public function mark_job_record_completed( $job_id, $flush_cache = true ) {
 		global $wpdb;
 
+		/**
+		 * Constraint is broken to accommodate the following situation:
+		 * 1. Event with specific timestamp is scheduled.
+		 * 2. Event is unscheduled.
+		 * 3. Event is rescheduled.
+		 * 4. Event runs, or is unscheduled, but unique constraint prevents query from succeeding.
+		 * 5. Event retains `pending` status and runs again. Repeat steps 4 and 5 until `a8c_cron_control_purge_completed_events` runs and removes the entry from step 2.
+		 */
 		$updates = array(
 			'status'   => self::STATUS_COMPLETED,
-			'instance' => wp_rand( 1000000, 999999999 ), // Breaks unique constraint, and can be recreated from entry's remaining data
+			'instance' => mt_rand( 1000000, 999999999 ), // Breaks unique constraint, and can be recreated from entry's remaining data
 		);
 
 		$success = $wpdb->update( $this->get_table_name(), $updates, array( 'ID' => $job_id, ) );
