@@ -98,7 +98,7 @@ class Events_Store extends Singleton {
 			`last_modified` datetime NOT NULL,
 
 			PRIMARY KEY (`ID`),
-			UNIQUE KEY `ts_action_instance` (`timestamp`, `action` (191), `instance`, `status`)
+			UNIQUE KEY `ts_action_instance_status` (`timestamp`, `action` (191), `instance`, `status`)
 		) ENGINE=InnoDB;\n";
 
 		dbDelta( $schema, true );
