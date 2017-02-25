@@ -578,7 +578,7 @@ class Events_Store extends Singleton {
 			return false;
 		}
 
-		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(action) FROM {$this->get_table_name()} WHERE status = %s", $status ) );
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(ID) FROM {$this->get_table_name()} WHERE status = %s", $status ) );
 	}
 }
 
