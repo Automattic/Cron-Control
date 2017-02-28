@@ -245,7 +245,7 @@ class Events_Store extends Singleton {
 	 * Retrieve jobs given a set of parameters
 	 *
 	 * @param array $args
-	 * @return array|false
+	 * @return array
 	 */
 	public function get_jobs( $args ) {
 		global $wpdb;
@@ -267,7 +267,7 @@ class Events_Store extends Singleton {
 		if ( is_array( $jobs ) ) {
 			$jobs = array_map( array( $this, 'format_job' ), $jobs );
 		} else {
-			$jobs = false;
+			$jobs = array();
 		}
 
 		return $jobs;

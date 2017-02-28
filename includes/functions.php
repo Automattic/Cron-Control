@@ -92,7 +92,7 @@ function delete_event_by_id( $id, $flush_cache = false ) {
  * Retrieve jobs given a set of parameters
  *
  * @param array $args
- * @return array|false
+ * @return array
  */
 function get_events( $args ) {
 	return Events_Store::instance()->get_jobs( $args );
