@@ -138,14 +138,14 @@ class Events_Store extends Singleton {
 		$quantity = 100;
 
 		do {
-			$jobs_posts = $this->get_jobs( array(
+			$jobs = $this->get_jobs( array(
 				'status'   => self::STATUS_PENDING,
 				'quantity' => $quantity,
 				'page'     => $page++,
 			) );
 
 			// Nothing more to add
-			if ( empty( $jobs_posts ) ) {
+			if ( empty( $jobs ) ) {
 				break;
 			}
 
@@ -156,34 +156,32 @@ class Events_Store extends Singleton {
 			}
 
 			// Loop through results and built output Core expects
-			if ( ! empty( $jobs_posts ) ) {
-				foreach ( $jobs_posts as $jobs_post ) {
-					// Alias event timestamp
-					$timestamp = $jobs_post->timestamp;
+			foreach ( $jobs as $job ) {
+				// Alias event timestamp
+				$timestamp = $job->timestamp;
 
-					// If timestamp is invalid, event is removed to let its source fix it
-					if ( $timestamp <= 0 ) {
-						$this->mark_job_record_completed( $jobs_post->ID );
-						continue;
-					}
+				// If timestamp is invalid, event is removed to let its source fix it
+				if ( $timestamp <= 0 ) {
+					$this->mark_job_record_completed( $job->ID );
+					continue;
+				}
 
-					// Basic arguments to add a job to the array format Core expects
-					$action   = $jobs_post->action;
-					$instance = $jobs_post->instance;
+				// Basic arguments to add a job to the array format Core expects
+				$action   = $job->action;
+				$instance = $job->instance;
 
-					// Populate remaining job data
-					$cron_array[ $timestamp ][ $action ][ $instance ] = array(
-						'schedule' => $jobs_post->schedule,
-						'args'     => $jobs_post->args,
-						'interval' => 0,
-					);
+				// Populate remaining job data
+				$cron_array[ $timestamp ][ $action ][ $instance ] = array(
+					'schedule' => $job->schedule,
+					'args'     => $job->args,
+					'interval' => 0,
+				);
 
-					if ( isset( $jobs_post->interval ) ) {
-						$cron_array[ $timestamp ][ $action ][ $instance ]['interval'] = $jobs_post->interval;
-					}
+				if ( isset( $job->interval ) ) {
+					$cron_array[ $timestamp ][ $action ][ $instance ]['interval'] = $job->interval;
 				}
 			}
-		} while( count( $jobs_posts ) >= $quantity );
+		} while( count( $jobs ) >= $quantity );
 
 		// Re-sort the array just as Core does when events are scheduled
 		// Ensures events are sorted chronologically
