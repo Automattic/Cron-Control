@@ -64,7 +64,8 @@ class Events_Store extends Singleton {
 	 */
 	protected function prepare_tables() {
 		// Nothing to do
-		if ( (int) get_option( self::DB_VERSION_OPTION ) === self::DB_VERSION ) {
+		$current_version = (int) get_option( self::DB_VERSION_OPTION );
+		if ( version_compare( $current_version, self::DB_VERSION, '>=' ) ) {
 			return;
 		}
 
