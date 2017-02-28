@@ -69,7 +69,8 @@ class Events_Store extends Singleton {
 		}
 
 		// Limit chance of race conditions when creating table
-		if ( false === wp_cache_add( self::TABLE_CREATE_LOCK, 1, null, 1 * \MINUTE_IN_SECONDS ) ) {
+		$create_lock_set = wp_cache_add( self::TABLE_CREATE_LOCK, 1, null, 1 * \MINUTE_IN_SECONDS );
+		if ( false === $create_lock_set ) {
 			return;
 		}
 
