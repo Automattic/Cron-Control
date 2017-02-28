@@ -496,22 +496,22 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Compare two arrays and return collapsed representation of their differences
+	 * Compare two arrays and return collapsed representation of the items present in one but not the other
 	 *
-	 * @param array $new New cron array
-	 * @param array $old Old cron array
+	 * @param array $changed   Array to identify additional items from
+	 * @param array $reference Array to compare against
 	 *
 	 * @return array
 	 */
-	private function find_cron_array_differences( $new, $old ) {
+	private function find_cron_array_differences( $changed, $reference ) {
 		$differences = array();
 
-		$new = collapse_events_array( $new );
+		$changed = collapse_events_array( $changed );
 
-		foreach ( $new as $event ) {
+		foreach ( $changed as $event ) {
 			$event = (object) $event;
 
-			if ( ! isset( $old[ $event->timestamp ][ $event->action ][ $event->instance ] ) ) {
+			if ( ! isset( $reference[ $event->timestamp ][ $event->action ][ $event->instance ] ) ) {
 				$differences[] = array(
 					'timestamp' => $event->timestamp,
 					'action'    => $event->action,
