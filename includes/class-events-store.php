@@ -230,6 +230,11 @@ class Events_Store extends Singleton {
 	 * When an entry exists, don't try to create it again
 	 */
 	public function block_creation_if_job_exists( $job ) {
+		// Job already disallowed, carry on
+		if ( ! is_object( $job ) ) {
+			return $job;
+		}
+
 		$instance = md5( maybe_serialize( $job->args ) );
 		if ( 0 !== $this->get_job_id( $job->timestamp, $job->hook, $instance ) ) {
 			return false;
