@@ -146,16 +146,14 @@ class Internal_Events extends Singleton {
 		global $wpdb;
 
 		$page     = 1;
-		$quantity = 25;
+		$quantity = 100;
 
 		do {
 			$offset       = max( 0, $page - 1 ) * $quantity;
 			$query        = $wpdb->prepare( "SELECT ID, post_date FROM {$wpdb->posts} WHERE post_status = 'future' AND post_date > %s LIMIT %d,%d", current_time( 'mysql', false ), $offset, $quantity );
 			$future_posts = $wpdb->get_results( $query );
 
-			if ( empty( $future_posts ) ) {
-				break;
-			} else {
+			if ( ! empty( $future_posts ) ) {
 				foreach ( $future_posts as $future_post ) {
 					$future_post->ID = absint( $future_post->ID );
 					$gmt_time        = strtotime( get_gmt_from_date( $future_post->post_date ) . ' GMT' );
