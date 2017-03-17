@@ -108,35 +108,21 @@ class Internal_Events extends Singleton {
 	 */
 
 	/**
-	 * Published scheduled posts that miss their schedule
+	 * Publish scheduled posts that miss their schedule
 	 */
 	public function force_publish_missed_schedules() {
 		global $wpdb;
 
-		$page     = 1;
-		$quantity = 25;
+		$query        = $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_status = 'future' AND post_date <= %s LIMIT 0,100;", current_time( 'mysql', false ) );
+		$missed_posts = $wpdb->get_col( $query );
 
-		do {
-			$offset       = max( 0, $page - 1 ) * $quantity;
-			$query        = $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_status = 'future' AND post_date <= %s LIMIT %d,%d;", current_time( 'mysql', false ), $offset, $quantity );
-			$missed_posts = $wpdb->get_col( $query );
+		foreach ( $missed_posts as $missed_post ) {
+			$missed_post = absint( $missed_post );
+			wp_publish_post( $missed_post );
+			wp_clear_scheduled_hook( 'publish_future_post', array( $missed_post ) );
 
-			if ( ! empty( $missed_posts ) ) {
-				foreach ( $missed_posts as $missed_post ) {
-					$missed_post = absint( $missed_post );
-					wp_publish_post( $missed_post );
-					wp_clear_scheduled_hook( 'publish_future_post', array( $missed_post ) );
-
-					do_action( 'a8c_cron_control_published_post_that_missed_schedule', $missed_post );
-				}
-			}
-
-			$page++;
-
-			if ( count( $missed_posts ) < $quantity || $page > 5 ) {
-				break;
-			}
-		} while ( ! empty( $missed_posts ) );
+			do_action( 'a8c_cron_control_published_post_that_missed_schedule', $missed_post );
+		}
 	}
 
 	/**
