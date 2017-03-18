@@ -349,6 +349,32 @@ class Events_Store extends Singleton {
 	}
 
 	/**
+	 * Retrieve a single event by its ID
+	 *
+	 * @param  int $jid Job ID
+	 * @return object|false
+	 */
+	public function get_job_by_id( $jid ) {
+		global $wpdb;
+
+		// Validate ID
+		$jid = absint( $jid );
+		if ( ! $jid ) {
+			return false;
+		}
+
+		$job = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE ID = %d AND status = %s LIMIT 1", $jid, self::STATUS_PENDING ) );
+
+		if ( is_object( $job ) && ! is_wp_error( $job ) ) {
+			$job = $this->format_job( $job );
+		} else {
+			$job = false;
+		}
+
+		return $job;
+	}
+
+	/**
 	 * Get ID for given event details
 	 *
 	 * Used in situations where performance matters, which is why it exists despite duplicating `get_job()`

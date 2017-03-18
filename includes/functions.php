@@ -109,6 +109,16 @@ function get_event_by_attributes( $attributes ) {
 }
 
 /**
+ * Retrieve a single event by its ID
+ *
+ * @param  int $jid Job ID
+ * @return object|false
+ */
+function get_event_by_id( $jid ) {
+	return Events_Store::instance()->get_job_by_id( $jid );
+}
+
+/**
  * Count events with a given status
  *
  * @param string $status Status to count
