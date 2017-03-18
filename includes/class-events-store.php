@@ -146,12 +146,6 @@ class Events_Store extends Singleton {
 				break;
 			}
 
-			// Something's probably wrong if a site has more than 1,500 pending cron actions
-			if ( $page > 15 ) {
-				do_action( 'a8c_cron_control_stopped_runaway_cron_option_rebuild' );
-				break;
-			}
-
 			// Loop through results and built output Core expects
 			foreach ( $jobs as $job ) {
 				// Alias event timestamp
