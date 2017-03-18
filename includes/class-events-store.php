@@ -375,10 +375,70 @@ class Events_Store extends Singleton {
 	}
 
 	/**
+	 * Retrieve a single event by a combination of its timestamp, instance identifier, and either action or the action's hashed representation
+	 *
+	 * @param  array $attrs Array of event attributes to query by
+	 * @return object|false
+	 */
+	public function get_job_by_attributes( $attrs ) {
+		global $wpdb;
+
+		// Validate basic inputs
+		if ( ! is_array( $attrs ) || empty( $attrs ) ) {
+			return false;
+		}
+
+		// Validate requested status
+		$allowed_status = self::ALLOWED_STATUSES;
+		$allowed_status[] = 'any';
+
+		if ( ! isset( $attrs['status'] ) || ! in_array( $attrs['status'], $allowed_status, true ) ) {
+			$attrs['status'] = self::STATUS_PENDING;
+		}
+
+		// Need a timestamp, an instance, and either an action or its hashed representation
+		if ( ! isset( $attrs['timestamp'] ) || ! isset( $attrs['instance'] ) ) {
+			return false;
+		} elseif ( ! isset( $attrs['action'] ) && ! isset( $attrs['action_hashed'] ) ) {
+			return false;
+		}
+
+		// Build query
+		if ( isset( $attrs['action'] ) ) {
+			$action_column = 'action';
+			$action_value  = $attrs['action'];
+		} else {
+			$action_column = 'action_hashed';
+			$action_value  = $attrs['action_hashed'];
+		}
+
+		// Do not sort, otherwise index isn't used
+		$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE timestamp = %d AND {$action_column} = %s AND instance = %s", $attrs['timestamp'], $action_value, $attrs['instance'] );
+
+		// Final query preparations
+		if ( 'any' !== $attrs['status'] ) {
+			$query .= $wpdb->prepare( ' AND status = %s', $attrs['status'] );
+		}
+
+		$query .= ' LIMIT 1';
+
+		// Query and format results
+		$job = $wpdb->get_row( $query );
+
+		if ( is_object( $job ) && ! is_wp_error( $job ) ) {
+			$job = $this->format_job( $job );
+		} else {
+			$job = false;
+		}
+
+		return $job;
+	}
+
+	/**
 	 * Get ID for given event details
 	 *
-	 * Used in situations where performance matters, which is why it exists despite duplicating `get_job()`
-	 * Queries outside of this class should use `get_job()`
+	 * Used in situations where performance matters, which is why it exists despite duplicating `get_job_by_attributes()`
+	 * Queries outside of this class should use `get_job_by_attributes()`
 	 *
 	 * @param  int    $timestamp    Unix timestamp event executes at
 	 * @param  string $action       Name of action used when the event is registered (unhashed)

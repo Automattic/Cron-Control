@@ -105,7 +105,7 @@ function get_events( $args ) {
  * @return object|false
  */
 function get_event_by_attributes( $attributes ) {
-	return Events_Store::instance()->get_job( $attributes );
+	return Events_Store::instance()->get_job_by_attributes( $attributes );
 }
 
 /**
