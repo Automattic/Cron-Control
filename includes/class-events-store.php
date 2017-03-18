@@ -184,7 +184,7 @@ class Events_Store extends Singleton {
 		// Ensures events are sorted chronologically
 		uksort( $cron_array, 'strnatcasecmp' );
 
-		// Cache the results, bearing in mind that they won't be used during unscheduling events
+		// Cache the results
 		wp_cache_set( self::CACHE_KEY, $cron_array, null, 1 * \HOUR_IN_SECONDS );
 
 		return $cron_array;
