@@ -12,9 +12,10 @@ class Events_Store extends Singleton {
 	 */
 	const TABLE_SUFFIX = 'a8c_cron_control_jobs';
 
-	const DB_VERSION        = 1;
-	const DB_VERSION_OPTION = 'a8c_cron_control_db_version';
-	const TABLE_CREATE_LOCK = 'a8c_cron_control_creating_table';
+	const DB_VERSION          = 1;
+	const DB_VERSION_OPTION   = 'a8c_cron_control_db_version';
+	const DB_INSTALLED_OPTION = 'a8c_cron_control_db_installed';
+	const TABLE_CREATE_LOCK   = 'a8c_cron_control_creating_table';
 
 	const STATUS_PENDING   = 'pending';
 	const STATUS_RUNNING   = 'running';
@@ -33,15 +34,31 @@ class Events_Store extends Singleton {
 	 * Register hooks
 	 */
 	protected function class_init() {
-		// Check that the table exists and is the correct version
-		$this->prepare_tables();
+		// Create tables during installation
+		add_action( 'wp_install', array( $this, 'create_table_during_install' ) );
 
-		// Option interception
-		add_filter( 'pre_option_cron', array( $this, 'get_option' ) );
-		add_filter( 'pre_update_option_cron', array( $this, 'update_option' ), 10, 2 );
+		// Enable plugin when conditions support it, otherwise limit errors as much as possible
+		$table_installed = (bool) get_option( self::DB_INSTALLED_OPTION );
 
-		// Disallow duplicates
-		add_filter( 'schedule_event', array( $this, 'block_creation_if_job_exists' ) );
+		if ( $table_installed ) {
+			// Option interception
+			add_filter( 'pre_option_cron', array( $this, 'get_option' ) );
+			add_filter( 'pre_update_option_cron', array( $this, 'update_option' ), 10, 2 );
+
+			// Disallow duplicates
+			add_filter( 'schedule_event', array( $this, 'block_creation_if_job_exists' ) );
+		} else {
+			// Can't create events since there's no table to hold them
+			$this->suspend_event_creation();
+
+			// Prime plugin's options when the options table exists
+			if ( ! defined( 'WP_INSTALLING' ) || ! WP_INSTALLING ) {
+				$this->prime_options();
+			}
+
+			// Don't schedule events that won't be run
+			add_filter( 'schedule_event', '__return_false' );
+		}
 	}
 
 	/**
@@ -54,12 +71,41 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Create the plugin's DB table when necessary
+	 * Set initial options that control plugin's behaviour
 	 */
-	protected function prepare_tables() {
+	protected function prime_options() {
+		// Set a flag if the table doesn't exist; not autoloaded
+		add_option( self::DB_INSTALLED_OPTION, 0, null, false );
+
+		// Prime DB option
+		add_option( self::DB_VERSION_OPTION, 0, null, false );
+	}
+
+	/**
+	 * Create table during setup
+	 */
+	public function create_table_during_install() {
+		if ( 'wp_install' !== current_action() ) {
+			return;
+		}
+
+		$this->_prepare_table();
+	}
+
+	/**
+	 * Create table in non-setup contexts, with some protections
+	 */
+	protected function prepare_table() {
+		// Table installed
+		$installed = (bool) get_option( self::DB_INSTALLED_OPTION );
+		if ( $installed ) {
+			return;
+		}
+
 		// Nothing to do
 		$current_version = (int) get_option( self::DB_VERSION_OPTION );
 		if ( version_compare( $current_version, self::DB_VERSION, '>=' ) ) {
+			update_option( self::DB_INSTALLED_OPTION, true );
 			return;
 		}
 
@@ -69,6 +115,13 @@ class Events_Store extends Singleton {
 			return;
 		}
 
+		$this->_prepare_table();
+	}
+
+	/**
+	 * Create the plugin's DB table when necessary
+	 */
+	protected function _prepare_table() {
 		// Use Core's method of creating/updating tables
 		if ( ! function_exists( 'dbDelta' ) ) {
 			require_once ABSPATH . '/wp-admin/includes/upgrade.php';
@@ -104,9 +157,8 @@ class Events_Store extends Singleton {
 		$table_count = count( $wpdb->get_col( "SHOW TABLES LIKE '{$this->get_table_name()}'" ) );
 
 		if ( 1 === $table_count ) {
-			update_option( self::DB_VERSION_OPTION, self::DB_VERSION, true );
-		} else {
-			delete_option( self::DB_VERSION_OPTION );
+			update_option( self::DB_INSTALLED_OPTION, true );
+			update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
 		}
 	}
 
