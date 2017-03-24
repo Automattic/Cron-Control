@@ -168,6 +168,17 @@ class Events_Store extends Singleton {
 	}
 
 	/**
+	 * Prepare table on demand via CLI
+	 */
+	public function cli_create_tables() {
+		if ( ! defined( 'WP_CLI' ) || ! \WP_CLI ) {
+			return;
+		}
+
+		$this->_prepare_table();
+	}
+
+	/**
 	 * PLUGIN FUNCTIONALITY
 	 */
 
