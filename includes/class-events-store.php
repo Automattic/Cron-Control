@@ -58,6 +58,11 @@ class Events_Store extends Singleton {
 
 			// Don't schedule events that won't be run
 			add_filter( 'schedule_event', '__return_false' );
+
+			// In limited circumstances, try creating the table
+			if ( is_admin() ) {
+				add_action( 'shutdown', array( $this, 'prepare_table' ) );
+			}
 		}
 	}
 
@@ -95,7 +100,7 @@ class Events_Store extends Singleton {
 	/**
 	 * Create table in non-setup contexts, with some protections
 	 */
-	protected function prepare_table() {
+	public function prepare_table() {
 		// Table installed
 		$installed = (bool) get_option( self::DB_INSTALLED_OPTION );
 		if ( $installed ) {
