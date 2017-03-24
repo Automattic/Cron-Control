@@ -12,10 +12,9 @@ class Events_Store extends Singleton {
 	 */
 	const TABLE_SUFFIX = 'a8c_cron_control_jobs';
 
-	const DB_VERSION          = 1;
-	const DB_VERSION_OPTION   = 'a8c_cron_control_db_version';
-	const DB_INSTALLED_OPTION = 'a8c_cron_control_db_installed';
-	const TABLE_CREATE_LOCK   = 'a8c_cron_control_creating_table';
+	const DB_VERSION        = 1;
+	const DB_VERSION_OPTION = 'a8c_cron_control_db_version';
+	const TABLE_CREATE_LOCK = 'a8c_cron_control_creating_table';
 
 	const STATUS_PENDING   = 'pending';
 	const STATUS_RUNNING   = 'running';
@@ -38,9 +37,7 @@ class Events_Store extends Singleton {
 		add_action( 'wp_install', array( $this, 'create_table_during_install' ) );
 
 		// Enable plugin when conditions support it, otherwise limit errors as much as possible
-		$table_installed = (bool) get_option( self::DB_INSTALLED_OPTION );
-
-		if ( $table_installed ) {
+		if ( self::is_installed() ) {
 			// Option interception
 			add_filter( 'pre_option_cron', array( $this, 'get_option' ) );
 			add_filter( 'pre_update_option_cron', array( $this, 'update_option' ), 10, 2 );
@@ -67,6 +64,19 @@ class Events_Store extends Singleton {
 	}
 
 	/**
+	 * Check if events store is ready
+	 *
+	 * Plugin breaks spectacularly if events store isn't available
+	 *
+	 * @return bool
+	 */
+	public static function is_installed() {
+		$db_version = (int) get_option( self::DB_VERSION_OPTION );
+
+		return version_compare( $db_version, 0, '>' );
+	}
+
+	/**
 	 * Build appropriate table name for this install
 	 */
 	public function get_table_name() {
@@ -79,9 +89,6 @@ class Events_Store extends Singleton {
 	 * Set initial options that control plugin's behaviour
 	 */
 	protected function prime_options() {
-		// Set a flag if the table doesn't exist; not autoloaded
-		add_option( self::DB_INSTALLED_OPTION, 0, null, false );
-
 		// Prime DB option
 		add_option( self::DB_VERSION_OPTION, 0, null, false );
 	}
@@ -102,15 +109,13 @@ class Events_Store extends Singleton {
 	 */
 	public function prepare_table() {
 		// Table installed
-		$installed = (bool) get_option( self::DB_INSTALLED_OPTION );
-		if ( $installed ) {
+		if ( self::is_installed() ) {
 			return;
 		}
 
 		// Nothing to do
 		$current_version = (int) get_option( self::DB_VERSION_OPTION );
 		if ( version_compare( $current_version, self::DB_VERSION, '>=' ) ) {
-			update_option( self::DB_INSTALLED_OPTION, true );
 			return;
 		}
 
@@ -162,7 +167,6 @@ class Events_Store extends Singleton {
 		$table_count = count( $wpdb->get_col( "SHOW TABLES LIKE '{$this->get_table_name()}'" ) );
 
 		if ( 1 === $table_count ) {
-			update_option( self::DB_INSTALLED_OPTION, true );
 			update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
 		}
 	}
