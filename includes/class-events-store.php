@@ -139,8 +139,10 @@ class Events_Store extends Singleton {
 
 		global $wpdb;
 
+		$table_name = $this->get_table_name();
+
 		// Define schema and create the table
-		$schema = "CREATE TABLE `{$this->get_table_name()}` (
+		$schema = "CREATE TABLE `{$table_name}` (
 			`ID` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 
 			`timestamp` bigint(20) unsigned NOT NULL,
@@ -164,7 +166,7 @@ class Events_Store extends Singleton {
 		dbDelta( $schema, true );
 
 		// Confirm that the table was created, and set the option to prevent further updates
-		$table_count = count( $wpdb->get_col( "SHOW TABLES LIKE '{$this->get_table_name()}'" ) );
+		$table_count = count( $wpdb->get_col( "SHOW TABLES LIKE '{$table_name}'" ) );
 
 		if ( 1 === $table_count ) {
 			update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
