@@ -42,18 +42,14 @@ class Main extends Singleton {
 		require __DIR__ . '/utils.php';
 		require __DIR__ . '/class-events-store.php';
 
-		if ( Events_Store::is_installed() ) {
-			// Load dependencies for remaining classes
-			require __DIR__ . '/class-lock.php';
+		// Load dependencies for remaining classes
+		require __DIR__ . '/class-lock.php';
 
-			// Load remaining functionality
-			require __DIR__ . '/class-events.php';
-			require __DIR__ . '/class-internal-events.php';
-			require __DIR__ . '/class-rest-api.php';
-			require __DIR__ . '/functions.php';
-		}
-
-		// Last but not least, some CLI
+		// Load remaining functionality
+		require __DIR__ . '/class-events.php';
+		require __DIR__ . '/class-internal-events.php';
+		require __DIR__ . '/class-rest-api.php';
+		require __DIR__ . '/functions.php';
 		require __DIR__ . '/wp-cli.php';
 	}
 
