@@ -112,7 +112,7 @@ class Events_Store extends Singleton {
 		switch_to_blog( $bid );
 
 		if ( ! self::is_installed() ) {
-			$this->prepare_table();
+			$this->_prepare_table();
 		}
 
 		restore_current_blog();
