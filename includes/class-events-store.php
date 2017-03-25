@@ -58,9 +58,7 @@ class Events_Store extends Singleton {
 			add_filter( 'schedule_event', '__return_false' );
 
 			// In limited circumstances, try creating the table
-			if ( is_admin() ) {
-				add_action( 'shutdown', array( $this, 'prepare_table' ) );
-			}
+			add_action( 'shutdown', array( $this, 'maybe_create_table_on_shutdown' ) );
 		}
 	}
 
@@ -116,6 +114,18 @@ class Events_Store extends Singleton {
 		}
 
 		restore_current_blog();
+	}
+
+	/**
+	 * For certain requests, create the table on shutdown
+	 * Does not include front-end requests
+	 */
+	public function maybe_create_table_on_shutdown() {
+		if ( ! is_admin() && ! is_rest_endpoint_request( 'list' ) ) {
+			return;
+		}
+
+		$this->prepare_table();
 	}
 
 	/**
