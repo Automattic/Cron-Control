@@ -22,6 +22,7 @@ function _manually_load_plugin() {
 	require dirname( dirname( __FILE__ ) ) . '/cron-control.php';
 
 	// Plugin loads after `wp_install()` is called, so we compensate
+	// See the `class_init()` method in Events_Store for the logic behind this
 	\Automattic\WP\Cron_Control\Events_Store::instance()->prepare_table();
 	remove_filter( 'schedule_event', '__return_false' );
 	add_filter( 'pre_option_cron', array( \Automattic\WP\Cron_Control\Events_Store::instance(), 'get_option' ) );
