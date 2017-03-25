@@ -35,6 +35,7 @@ class Events_Store extends Singleton {
 	protected function class_init() {
 		// Create tables during installation
 		add_action( 'wp_install', array( $this, 'create_table_during_install' ) );
+		add_action( 'wpmu_new_blog', array( $this, 'create_tables_during_multisite_install' ) );
 
 		// Enable plugin when conditions support it, otherwise limit errors as much as possible
 		if ( self::is_installed() ) {
@@ -94,7 +95,7 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Create table during setup
+	 * Create table during initial install
 	 */
 	public function create_table_during_install() {
 		if ( 'wp_install' !== current_action() ) {
@@ -102,6 +103,19 @@ class Events_Store extends Singleton {
 		}
 
 		$this->_prepare_table();
+	}
+
+	/**
+	 * Create table when new subsite is added to a multisite
+	 */
+	public function create_tables_during_multisite_install( $bid ) {
+		switch_to_blog( $bid );
+
+		if ( ! self::is_installed() ) {
+			$this->prepare_table();
+		}
+
+		restore_current_blog();
 	}
 
 	/**
