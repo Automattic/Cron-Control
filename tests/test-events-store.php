@@ -1,6 +1,6 @@
 <?php
 /**
- * Class Cron_Options_CPT_Tests
+ * Class Events_Store_Tests
  *
  * @package Automattic_Cron_Control
  */
@@ -10,38 +10,60 @@ namespace Automattic\WP\Cron_Control\Tests;
 /**
  * Sample test case.
  */
-class Cron_Options_CPT_Tests extends \WP_UnitTestCase {
-
+class Events_Store_Tests extends \WP_UnitTestCase {
 	/**
-	 * Custom post type exists
+	 * Prepare test environment
 	 */
-	function test_cpt_exists() {
-		$this->assertTrue( post_type_exists( \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE ) );
+	function setUp() {
+		parent::setUp();
+
+		// make sure the schedule is clear
+		_set_cron_array( array() );
 	}
 
 	/**
-	 * Check that an event is stored properly in a CPT entry
+	 * Clean up after our tests
+	 */
+	function tearDown() {
+		// make sure the schedule is clear
+		_set_cron_array( array() );
+
+		parent::tearDown();
+	}
+
+	/**
+	 * Custom table exists
+	 */
+	function test_table_exists() {
+		global $wpdb;
+
+		$table_name = Utils::get_table_name();
+
+		$this->assertEquals( count( $wpdb->get_col( "SHOW TABLES LIKE '{$table_name}'" ) ), 1 );
+	}
+
+	/**
+	 * Check that an event is stored properly in table
 	 */
 	function test_events_exist() {
 		global $wpdb;
 
-		$event     = \Automattic\WP\Cron_Control\Tests\Utils::create_test_event();
-		$post_name = sprintf( '%s-%s-%s', $event['timestamp'], md5( $event['action'] ), md5( maybe_serialize( $event['args'] ) ) );
+		$event = Utils::create_test_event();
+		$table_name = Utils::get_table_name();
 
-		$entry = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $wpdb->posts WHERE post_type = %s AND post_status = %s AND post_name = %s LIMIT 1", \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_TYPE, \Automattic\WP\Cron_Control\Cron_Options_CPT::POST_STATUS_PENDING, $post_name ) );
+		$entry = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table_name} WHERE timestamp = %d AND action = %s AND instance = %s AND status = %s LIMIT 1", $event['timestamp'], $event['action'], md5( maybe_serialize( $event['args'] ) ), \Automattic\WP\Cron_Control\Events_Store::STATUS_PENDING ) );
 
 		$this->assertEquals( count( $entry ), 1 );
 
-		$entry    = array_shift( $entry );
-		$instance = maybe_unserialize( $entry->post_content_filtered );
+		$entry = array_shift( $entry );
 
-		$this->assertEquals( $event['action'], $instance['action'] );
-		$this->assertEquals( md5( maybe_serialize( $event['args'] ) ), $instance['instance'] );
-		Utils::compare_arrays( $event['args'], $instance['args'], $this );
+		$this->assertEquals( $event['action'], $entry->action );
+		$this->assertEquals( md5( maybe_serialize( $event['args'] ) ), $entry->instance );
+		Utils::compare_arrays( $event['args'], maybe_unserialize( $entry->args ), $this );
 	}
 
 	/**
-	 * Check format of filtered array returned from CPT
+	 * Check format of filtered array returned from table
 	 */
 	function test_filter_cron_option_get() {
 		$event = Utils::create_test_event();
@@ -93,9 +115,9 @@ class Cron_Options_CPT_Tests extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that events are unscheduled correctly by checking the CPT
+	 * Test that events are unscheduled correctly by checking the table
 	 */
-	function test_event_unscheduling_against_cpt() {
+	function test_event_unscheduling_against_event_store() {
 		// Schedule two events and prepare their data a bit for further testing
 		$first_event = Utils::create_test_event();
 		$first_event['instance'] = md5( maybe_serialize( $first_event['args'] ) );
@@ -110,16 +132,16 @@ class Cron_Options_CPT_Tests extends \WP_UnitTestCase {
 		unset( $second_event['args'] );
 
 		// First, check that posts were created for the two events
-		Utils::compare_arrays( array( $first_event, $second_event ), Utils::get_events_from_post_objects(), $this );
+		Utils::compare_arrays( array( $first_event, $second_event ), Utils::get_events_from_store(), $this );
 
 		// Second, unschedule an event and confirm that the post is removed
 		wp_unschedule_event( $first_event['timestamp'], $first_event['action'], $first_event_args );
 
-		Utils::compare_arrays( array( $second_event ), Utils::get_events_from_post_objects(), $this );
+		Utils::compare_arrays( array( $second_event ), Utils::get_events_from_store(), $this );
 
 		// Finally, unschedule the second event and confirm its post is also deleted
 		wp_unschedule_event( $second_event['timestamp'], $second_event['action'], $second_event_args );
 
-		$this->assertEmpty( Utils::get_events_from_post_objects() );
+		$this->assertEmpty( Utils::get_events_from_store() );
 	}
 }

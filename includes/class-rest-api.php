@@ -64,7 +64,7 @@ class REST_API extends Singleton {
 		$action    = isset( $event['action'] ) ? trim( sanitize_text_field( $event['action'] ) ) : null;
 		$instance  = isset( $event['instance'] ) ? trim( sanitize_text_field( $event['instance'] ) ) : null;
 
-		return rest_ensure_response( Events::instance()->run_event( $timestamp, $action, $instance ) );
+		return rest_ensure_response( run_event( $timestamp, $action, $instance ) );
 	}
 
 	/**

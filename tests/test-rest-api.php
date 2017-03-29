@@ -20,6 +20,22 @@ class REST_API_Tests extends \WP_UnitTestCase {
 		global $wp_rest_server;
 		$this->server = $wp_rest_server = new \WP_REST_Server;
 		do_action( 'rest_api_init' );
+
+		// make sure the schedule is clear
+		_set_cron_array( array() );
+	}
+
+	/**
+	 * Clean up after our tests
+	 */
+	function tearDown() {
+		global $wp_rest_server;
+		$wp_rest_server = null;
+
+		// make sure the schedule is clear
+		_set_cron_array( array() );
+
+		parent::tearDown();
 	}
 
 	/**
@@ -108,15 +124,4 @@ class REST_API_Tests extends \WP_UnitTestCase {
 	protected function assertResponseData( $data, $response ) {
 		Utils::compare_arrays( $data, $response->get_data(), $this );
 	}
-
-	/**
-	 * Clean up
-	 */
-	public function tearDown() {
-		parent::tearDown();
-
-		global $wp_rest_server;
-		$wp_rest_server = null;
-	}
-
 }
