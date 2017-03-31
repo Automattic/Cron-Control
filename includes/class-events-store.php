@@ -195,6 +195,9 @@ class Events_Store extends Singleton {
 		if ( 1 === $table_count ) {
 			update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
 		}
+
+		// Clear caches now that table exists
+		$this->flush_internal_caches();
 	}
 
 	/**
