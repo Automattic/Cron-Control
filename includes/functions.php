@@ -10,6 +10,53 @@ function is_internal_event( $action ) {
 }
 
 /**
+ * Check which of the plugin's REST endpoints the current request is for, if any
+ *
+ * @return string|bool
+ */
+function get_endpoint_type() {
+	// Request won't change, so hold for the duration
+	static $endpoint = null;
+	if ( ! is_null( $endpoint ) ) {
+		return $endpoint;
+	}
+
+	// Determine request URL according to how Core does
+	$request = parse_request();
+
+	// Search by our URL "prefix"
+	$namespace = sprintf( '%s/%s', rest_get_url_prefix(), REST_API::API_NAMESPACE );
+
+	// Check if any parts of the parse request are in our namespace
+	$endpoint_slug = false;
+
+	foreach ( $request as $req ) {
+		if ( 0 === stripos( $req, $namespace ) ) {
+			$req_parts = explode( '/', $req );
+			$endpoint_slug = array_pop( $req_parts );
+			break;
+		}
+	}
+
+	// Convert endpoint slug to its type
+	switch ( $endpoint_slug ) {
+		case REST_API::ENDPOINT_LIST :
+			$endpoint = 'list';
+			break;
+
+		case REST_API::ENDPOINT_RUN :
+			$endpoint = 'run';
+			break;
+
+		default :
+			$endpoint = false;
+			break;
+	}
+
+	return $endpoint;
+}
+
+/**
  * Check if the current request is to one of the plugin's REST endpoints
  *
  * @param string $type list|run

@@ -32,7 +32,8 @@ class Events extends Singleton {
 	 */
 	public function prepare_environment() {
 		// Limit to plugin's endpoints
-		if ( ! is_rest_endpoint_request( 'list' ) && ! is_rest_endpoint_request( 'run' ) ) {
+		$endpoint = get_endpoint_type();
+		if ( false === $endpoint ) {
 			return;
 		}
 
@@ -40,7 +41,7 @@ class Events extends Singleton {
 		define( 'DOING_CRON', true );
 
 		// When running events, allow for long-running ones, and non-blocking trigger requests
-		if ( is_rest_endpoint_request( 'run' ) ) {
+		if ( 'run' === $endpoint ) {
 			ignore_user_abort( true );
 			set_time_limit( JOB_TIMEOUT_IN_MINUTES * MINUTE_IN_SECONDS );
 		}
