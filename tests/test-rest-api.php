@@ -74,16 +74,18 @@ class REST_API_Tests extends \WP_UnitTestCase {
 		$this->assertResponseStatus( 200, $response );
 		$this->assertArrayHasKey( 'events', $data );
 		$this->assertArrayHasKey( 'endpoint', $data );
+		$this->assertArrayHasKey( 'total_events_pending', $data );
 
 		$this->assertResponseData( array(
-			'events'   => array(
+			'events'               => array(
 				array(
 					'timestamp' => $ev['timestamp'],
 					'action'    => md5( $ev['action'] ),
 					'instance'  => md5( maybe_serialize( $ev['args'] ) ),
 				),
 			),
-			'endpoint' => get_rest_url( null, \Automattic\WP\Cron_Control\REST_API::API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API::ENDPOINT_RUN ),
+			'endpoint'             => get_rest_url( null, \Automattic\WP\Cron_Control\REST_API::API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API::ENDPOINT_RUN ),
+			'total_events_pending' => 1,
 		), $response );
 	}
 
