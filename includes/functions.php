@@ -10,34 +10,46 @@ function is_internal_event( $action ) {
 }
 
 /**
+ * Check which of the plugin's REST endpoints the current request is for, if any
+ *
+ * @return string|bool
+ */
+function get_endpoint_type() {
+	// Request won't change, so hold for the duration
+	static $endpoint_slug = null;
+	if ( ! is_null( $endpoint_slug ) ) {
+		return $endpoint_slug;
+	}
+
+	// Determine request URL according to how Core does
+	$request = parse_request();
+
+	// Search by our URL "prefix"
+	$namespace = sprintf( '%s/%s', rest_get_url_prefix(), REST_API::API_NAMESPACE );
+
+	// Check if any parts of the parse request are in our namespace
+	$endpoint_slug = false;
+
+	foreach ( $request as $req ) {
+		if ( 0 === stripos( $req, $namespace ) ) {
+			$req_parts = explode( '/', $req );
+			$endpoint_slug = array_pop( $req_parts );
+			break;
+		}
+	}
+
+	return $endpoint_slug;
+}
+
+/**
  * Check if the current request is to one of the plugin's REST endpoints
  *
- * @param string $type list|run
+ * @param string $type Endpoint Constant from REST_API class to compare against
  *
  * @return bool
  */
-function is_rest_endpoint_request( $type = 'list' ) {
-	// Which endpoint are we checking
-	$endpoint = null;
-	switch ( $type ) {
-		case 'list' :
-			$endpoint = REST_API::ENDPOINT_LIST;
-			break;
-
-		case 'run' :
-			$endpoint = REST_API::ENDPOINT_RUN;
-			break;
-	}
-
-	// No endpoint to check
-	if ( is_null( $endpoint ) ) {
-		return false;
-	}
-
-	// Build the full endpoint and check against the current request
-	$run_endpoint = sprintf( '%s/%s/%s', rest_get_url_prefix(), REST_API::API_NAMESPACE, $endpoint );
-
-	return in_array( $run_endpoint, parse_request(), true );
+function is_rest_endpoint_request( $type ) {
+	return get_endpoint_type() === $type;
 }
 
 /**

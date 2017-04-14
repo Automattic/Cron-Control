@@ -121,7 +121,7 @@ class Events_Store extends Singleton {
 	 * Does not include front-end requests
 	 */
 	public function maybe_create_table_on_shutdown() {
-		if ( ! is_admin() && ! is_rest_endpoint_request( 'list' ) ) {
+		if ( ! is_admin() && ! is_rest_endpoint_request( REST_API::ENDPOINT_LIST ) ) {
 			return;
 		}
 

@@ -31,13 +31,20 @@ class Events extends Singleton {
 	 * This also runs before Core has parsed the request and set the \REST_REQUEST constant
 	 */
 	public function prepare_environment() {
-		if ( ! is_rest_endpoint_request( 'run' ) ) {
+		// Limit to plugin's endpoints
+		$endpoint = get_endpoint_type();
+		if ( false === $endpoint ) {
 			return;
 		}
 
-		ignore_user_abort( true );
-		set_time_limit( JOB_TIMEOUT_IN_MINUTES * MINUTE_IN_SECONDS );
+		// Flag is used in many contexts, so should be set for all of our requests, regardless of the action
 		define( 'DOING_CRON', true );
+
+		// When running events, allow for long-running ones, and non-blocking trigger requests
+		if ( REST_API::ENDPOINT_RUN === $endpoint ) {
+			ignore_user_abort( true );
+			set_time_limit( JOB_TIMEOUT_IN_MINUTES * MINUTE_IN_SECONDS );
+		}
 	}
 
 	/**
