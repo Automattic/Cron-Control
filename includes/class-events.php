@@ -41,7 +41,7 @@ class Events extends Singleton {
 		define( 'DOING_CRON', true );
 
 		// When running events, allow for long-running ones, and non-blocking trigger requests
-		if ( 'run' === $endpoint ) {
+		if ( REST_API::ENDPOINT_RUN === $endpoint ) {
 			ignore_user_abort( true );
 			set_time_limit( JOB_TIMEOUT_IN_MINUTES * MINUTE_IN_SECONDS );
 		}

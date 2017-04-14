@@ -16,9 +16,9 @@ function is_internal_event( $action ) {
  */
 function get_endpoint_type() {
 	// Request won't change, so hold for the duration
-	static $endpoint = null;
-	if ( ! is_null( $endpoint ) ) {
-		return $endpoint;
+	static $endpoint_slug = null;
+	if ( ! is_null( $endpoint_slug ) ) {
+		return $endpoint_slug;
 	}
 
 	// Determine request URL according to how Core does
@@ -38,59 +38,18 @@ function get_endpoint_type() {
 		}
 	}
 
-	// Convert endpoint slug to its type
-	switch ( $endpoint_slug ) {
-		case REST_API::ENDPOINT_LIST :
-			$endpoint = 'list';
-			break;
-
-		case REST_API::ENDPOINT_RUN :
-			$endpoint = 'run';
-			break;
-
-		default :
-			$endpoint = false;
-			break;
-	}
-
-	return $endpoint;
+	return $endpoint_slug;
 }
 
 /**
  * Check if the current request is to one of the plugin's REST endpoints
  *
- * @param string $type list|run
+ * @param string $type Endpoint Constant from REST_API class to compare against
  *
  * @return bool
  */
-function is_rest_endpoint_request( $type = 'list' ) {
-	// Which endpoint are we checking
-	$endpoint = null;
-	switch ( $type ) {
-		case 'list' :
-			$endpoint = REST_API::ENDPOINT_LIST;
-			break;
-
-		case 'run' :
-			$endpoint = REST_API::ENDPOINT_RUN;
-			break;
-	}
-
-	// No endpoint to check
-	if ( is_null( $endpoint ) ) {
-		return false;
-	}
-
-	// Hold onto request since it won't change
-	static $request = null;
-	if ( is_null( $request ) ) {
-		$request = parse_request();
-	}
-
-	// Build the full endpoint and check against the current request
-	$run_endpoint = sprintf( '%s/%s/%s', rest_get_url_prefix(), REST_API::API_NAMESPACE, $endpoint );
-
-	return in_array( $run_endpoint, $request, true );
+function is_rest_endpoint_request( $type ) {
+	return get_endpoint_type() === $type;
 }
 
 /**
