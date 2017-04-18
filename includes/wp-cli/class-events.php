@@ -122,7 +122,7 @@ class Events extends \WP_CLI_Command {
 		// Proceed?
 		$now = time();
 		if ( $event->timestamp > $now ) {
-			\WP_CLI::warning( sprintf( __( 'This event is not scheduled to run until %1$s GMT (%2$s)', 'automattic-cron-control' ), date( TIME_FORMAT, $event->timestamp ), $this->calculate_interval( $event->timestamp - $now ) ) );
+			\WP_CLI::warning( sprintf( __( 'This event is not scheduled to run for %2$s (at %1$s UTC)', 'automattic-cron-control' ), date( TIME_FORMAT, $event->timestamp ), $this->calculate_interval( $event->timestamp - $now ) ) );
 		}
 
 		\WP_CLI::confirm( sprintf( __( 'Run this event?', 'automattic-cron-control' ) ) );
