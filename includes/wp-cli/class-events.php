@@ -107,19 +107,19 @@ class Events extends \WP_CLI_Command {
 	public function run_events( $args, $assoc_args ) {
 		// Run a specific event
 		if ( isset( $assoc_args['event_id'] ) ) {
-			$this->run_event_by_id( $assoc_args['event_id'] );
+			$this->run_event_by_id( $args, $assoc_args, $assoc_args['event_id'] );
 			return;
 		}
 
 		// Run all events with a given action
 		if ( isset( $assoc_args['action'] ) ) {
-//			$this->run_event_by_action( $args, $assoc_args );
-//			return;
+			$this->run_event_by_action( $args, $assoc_args );
+			return;
 		}
 
 		// Legacy call to run a single event
 		if ( isset( $args[0] ) && is_numeric( $args[0] ) ) {
-			$this->run_event_by_id( $args[0] );
+			$this->run_event_by_id( $args, $assoc_args, $args[0] );
 		}
 
 		\WP_CLI::error( __( 'Specify an event (or events) to run.', 'automattic-cron-control' ) );
@@ -556,9 +556,178 @@ class Events extends \WP_CLI_Command {
 	}
 
 	/**
+	 * Run all events with a given action
+	 */
+	private function run_event_by_action( $args, $assoc_args ) {
+		$action = $assoc_args['action'];
+
+		// Validate entry
+		if ( empty( $action ) ) {
+			\WP_CLI::error( __( 'Invalid action', 'automattic-cron-control' ) );
+		}
+
+		// Set defaults needed to gather all events
+		$assoc_args['page']  = 1;
+		$assoc_args['limit'] = 50;
+
+		// Gather events
+		\WP_CLI::line( __( 'Gathering events...', 'automattic-cron-control' ) );
+
+		$events_to_run = array();
+
+		$events = $this->get_events( $args, $assoc_args );
+
+		\WP_CLI::line( sprintf( _n( 'Found one event to check', 'Found %s events to check', $events['total_items'], 'automattic-cron-control' ), number_format_i18n( $events['total_items'] ) ) );
+
+		$search_progress = \WP_CLI\Utils\make_progress_bar( sprintf( __( 'Searching events for those with the action `%s`', 'automattic-cron-control' ), $action ), $events['total_items'] );
+
+		// Loop and pull out events to be run
+		do {
+			if ( ! is_array( $events ) || empty( $events['items'] ) ) {
+				break;
+			}
+
+			// Check events for those that should be run
+			foreach ( $events['items'] as $single_event ) {
+				if ( $single_event->action === $action ) {
+					$events_to_run[] = (array) $single_event;
+				}
+
+				$search_progress->tick();
+			}
+
+			// Proceed to next batch
+			$assoc_args['page']++;
+
+			if ( $assoc_args['page'] > $events['total_pages'] ) {
+				break;
+			}
+
+			$events = $this->get_events( $args, $assoc_args );
+		} while( $events['page'] <= $events['total_pages'] );
+
+		$search_progress->finish();
+
+		\WP_CLI::line( '' );
+
+		// Nothing more to do
+		if ( empty( $events_to_run ) ) {
+			\WP_CLI::error( sprintf( __( 'No events with action `%s` found', 'automattic-cron-control' ), $action ) );
+		}
+
+		// List the items to remove
+		$total_to_run = count( $events_to_run );
+
+		\WP_CLI::line( sprintf( _n( 'Found one event with action `%2$s`:', 'Found %1$s events with action `%2$s`:', $total_to_run, 'automattic-cron-control' ), number_format_i18n( $total_to_run ), $action ) );
+
+		if ( $total_to_run <= $assoc_args['limit'] ) {
+			// Sort results
+			if ( ! empty( $events_to_run ) ) {
+				usort( $events_to_run, array( $this, 'sort_events' ) );
+			}
+
+
+			\WP_CLI\Utils\format_items( 'table', $events_to_run, array(
+				'ID',
+				'created',
+				'last_modified',
+				'timestamp',
+				'instance',
+			) );
+		} else {
+			\WP_CLI::warning( sprintf( __( 'Events are not displayed as there are more than %s to run', 'automattic-cron-control' ), number_format_i18n( $assoc_args['limit'] ) ) );
+		}
+
+		\WP_CLI::line( '' );
+		\WP_CLI::confirm( _n( 'Are you sure you want to run this event?', 'Are you sure you want to run these events?', $total_to_run, 'automattic-cron-control' ) );
+
+		// Remove the items
+		$run_progress = \WP_CLI\Utils\make_progress_bar( __( 'Running events', 'automattic-cron-control' ), $total_to_run );
+
+		$events_ran       = array();
+		$events_ran_count = $events_failed_run = 0;
+
+		// Don't create new events while deleting events
+		\Automattic\WP\Cron_Control\_suspend_event_creation();
+
+		foreach ( $events_to_run as $event_to_run ) {
+			$event = \Automattic\WP\Cron_Control\get_event_by_id( $event_to_run['ID'] );
+			$ran   = \Automattic\WP\Cron_Control\run_event( $event->timestamp, $event->action_hashed, $event->instance, true );
+
+			$events_ran[] = array(
+				'ID'  => $event_to_run['ID'],
+				'ran' => false === $ran ? 'no' : 'yes',
+			);
+
+			if ( $ran ) {
+				$events_ran_count++;
+			} else {
+				$events_failed_run++;
+			}
+
+			$run_progress->tick();
+
+			if ( 0 === count( $events_ran ) % 100 ) {
+				stop_the_insanity();
+				sleep( 5 );
+			}
+		}
+
+		$run_progress->finish();
+
+		// When runs succeed, sync internal caches
+		if ( $events_ran_count > 0 ) {
+			\Automattic\WP\Cron_Control\_flush_internal_caches();
+		}
+
+		// New events can be created now that removal is complete
+		\Automattic\WP\Cron_Control\_resume_event_creation();
+
+		// List the removed items
+		\WP_CLI::line( "\n" . __( 'RESULTS:', 'automattic-cron-control' ) );
+
+		if ( 1 === $total_to_run && 1 === $events_ran_count ) {
+			\WP_CLI::success( sprintf( __( 'Ran one event with ID `%d`', 'automattic-cron-control' ), $events_ran[0]['ID'] ) );
+		} else {
+			if ( $events_ran_count === $total_to_run ) {
+				\WP_CLI::success( sprintf( __( 'Ran %s events', 'automattic-cron-control' ), number_format_i18n( $events_ran_count ) ) );
+			} else {
+				\WP_CLI::warning( sprintf( __( 'Expected to run %1$s events, but could only run %2$s events. It\'s likely that some events were executed while this command ran.', 'automattic-cron-control' ), number_format_i18n( $total_to_run ), number_format_i18n( $events_ran_count ) ) );
+			}
+
+			// Limit just to failed runs when many events are removed
+			if ( count( $events_ran ) > $assoc_args['limit'] ) {
+				$events_ran = array_filter( $events_ran, function( $event ) {
+					if ( 'no' === $event['ran'] ) {
+						return $event;
+					} else {
+						return false;
+					}
+				} );
+
+				if ( count( $events_ran ) > 0 ) {
+					\WP_CLI::line( "\n" . __( 'Events that couldn\'t be run:', 'automattic-cron-control' ) );
+				}
+			} else {
+				\WP_CLI::line( "\n" . __( 'Events run:', 'automattic-cron-control' ) );
+			}
+
+			// Don't display a table if there's nothing to display
+			if ( count( $events_ran ) > 0 ) {
+				\WP_CLI\Utils\format_items( 'table', $events_ran, array(
+					'ID',
+					'ran',
+				) );
+			}
+		}
+
+		return;
+	}
+
+	/**
 	 * Run a single event given its ID
 	 */
-	private function run_event_by_id( $event_id ) {
+	private function run_event_by_id( $args, $assoc_args, $event_id ) {
 		// Validate ID
 		if ( ! is_numeric( $event_id ) ) {
 			\WP_CLI::error( __( 'Specify the ID of an event to run', 'automattic-cron-control' ) );
