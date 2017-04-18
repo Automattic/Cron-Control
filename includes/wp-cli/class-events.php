@@ -489,6 +489,11 @@ class Events extends \WP_CLI_Command {
 			}
 
 			$delete_progress->tick();
+
+			if ( 0 === count( $events_deleted ) % 100 ) {
+				stop_the_insanity();
+				sleep( 5 );
+			}
 		}
 
 		$delete_progress->finish();
@@ -505,7 +510,7 @@ class Events extends \WP_CLI_Command {
 		\WP_CLI::line( "\n" . __( 'RESULTS:', 'automattic-cron-control' ) );
 
 		if ( 1 === $total_to_delete && 1 === $events_deleted_count ) {
-			\WP_CLI::success( sprintf( __( 'Deleted one event: %d', 'automattic-cron-control' ), $events_deleted[0]['ID'] ) );
+			\WP_CLI::success( sprintf( __( 'Deleted one event with ID `%d`', 'automattic-cron-control' ), $events_deleted[0]['ID'] ) );
 		} else {
 			if ( $events_deleted_count === $total_to_delete ) {
 				\WP_CLI::success( sprintf( __( 'Deleted %s events', 'automattic-cron-control' ), number_format_i18n( $events_deleted_count ) ) );
