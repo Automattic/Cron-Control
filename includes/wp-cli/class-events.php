@@ -102,10 +102,27 @@ class Events extends \WP_CLI_Command {
 	 * Run an event given an ID
 	 *
 	 * @subcommand run
-	 * @synopsis <event_id>
+	 * @synopsis [--event_id=<event_id>] [--action=<action>] [<event_id>]
 	 */
-	public function run_event( $args, $assoc_args ) {
-		$this->run_event_by_id( $args, $assoc_args );
+	public function run_events( $args, $assoc_args ) {
+		// Run a specific event
+		if ( isset( $assoc_args['event_id'] ) ) {
+			$this->run_event_by_id( $assoc_args['event_id'] );
+			return;
+		}
+
+		// Run all events with a given action
+		if ( isset( $assoc_args['action'] ) ) {
+//			$this->run_event_by_action( $args, $assoc_args );
+//			return;
+		}
+
+		// Legacy call to run a single event
+		if ( isset( $args[0] ) && is_numeric( $args[0] ) ) {
+			$this->run_event_by_id( $args[0] );
+		}
+
+		\WP_CLI::error( __( 'Specify an event (or events) to run.', 'automattic-cron-control' ) );
 	}
 
 	/**
@@ -541,20 +558,20 @@ class Events extends \WP_CLI_Command {
 	/**
 	 * Run a single event given its ID
 	 */
-	private function run_event_by_id( $args, $assoc_args ) {
+	private function run_event_by_id( $event_id ) {
 		// Validate ID
-		if ( ! is_numeric( $args[0] ) ) {
+		if ( ! is_numeric( $event_id ) ) {
 			\WP_CLI::error( __( 'Specify the ID of an event to run', 'automattic-cron-control' ) );
 		}
 
 		// Retrieve information needed to execute event
-		$event = \Automattic\WP\Cron_Control\get_event_by_id( $args[0] );
+		$event = \Automattic\WP\Cron_Control\get_event_by_id( $event_id );
 
 		if ( ! is_object( $event ) ) {
-			\WP_CLI::error( sprintf( __( 'Failed to locate event %d. Please confirm that the entry exists and that the ID is that of an event.', 'automattic-cron-control' ), $args[0] ) );
+			\WP_CLI::error( sprintf( __( 'Failed to locate event %d. Please confirm that the entry exists and that the ID is that of an event.', 'automattic-cron-control' ), $event_id ) );
 		}
 
-		\WP_CLI::line( sprintf( __( 'Found event %1$d with action `%2$s` and instance identifier `%3$s`', 'automattic-cron-control' ), $args[0], $event->action, $event->instance ) );
+		\WP_CLI::line( sprintf( __( 'Found event %1$d with action `%2$s` and instance identifier `%3$s`', 'automattic-cron-control' ), $event_id, $event->action, $event->instance ) );
 
 		// Proceed?
 		$now = time();
