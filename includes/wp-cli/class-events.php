@@ -105,44 +105,7 @@ class Events extends \WP_CLI_Command {
 	 * @synopsis <event_id>
 	 */
 	public function run_event( $args, $assoc_args ) {
-		// Validate ID
-		if ( ! is_numeric( $args[0] ) ) {
-			\WP_CLI::error( __( 'Specify the ID of an event to run', 'automattic-cron-control' ) );
-		}
-
-		// Retrieve information needed to execute event
-		$event = \Automattic\WP\Cron_Control\get_event_by_id( $args[0] );
-
-		if ( ! is_object( $event ) ) {
-			\WP_CLI::error( sprintf( __( 'Failed to locate event %d. Please confirm that the entry exists and that the ID is that of an event.', 'automattic-cron-control' ), $args[0] ) );
-		}
-
-		\WP_CLI::line( sprintf( __( 'Found event %1$d with action `%2$s` and instance identifier `%3$s`', 'automattic-cron-control' ), $args[0], $event->action, $event->instance ) );
-
-		// Proceed?
-		$now = time();
-		if ( $event->timestamp > $now ) {
-			\WP_CLI::warning( sprintf( __( 'This event is not scheduled to run for %2$s (at %1$s UTC)', 'automattic-cron-control' ), date( TIME_FORMAT, $event->timestamp ), $this->calculate_interval( $event->timestamp - $now ) ) );
-		}
-
-		\WP_CLI::confirm( sprintf( __( 'Run this event?', 'automattic-cron-control' ) ) );
-
-		// Environment preparation
-		if ( ! defined( 'DOING_CRON' ) ) {
-			define( 'DOING_CRON', true );
-		}
-
-		// Run the event
-		$run = \Automattic\WP\Cron_Control\run_event( $event->timestamp, $event->action_hashed, $event->instance, true );
-
-		// Output based on run attempt
-		if ( is_array( $run ) ) {
-			\WP_CLI::success( $run['message'] );
-		} elseif ( is_wp_error( $run ) ) {
-			\WP_CLI::error( $run->get_error_message() );
-		} else {
-			\WP_CLI::error( __( 'Failed to run event', 'automattic-cron-control' ) );
-		}
+		$this->run_event_by_id( $args, $assoc_args );
 	}
 
 	/**
@@ -573,6 +536,50 @@ class Events extends \WP_CLI_Command {
 		\Automattic\WP\Cron_Control\Events_Store::instance()->purge_completed_events( false );
 
 		\WP_CLI::success( __( 'Entries removed', 'automattic-cron-control' ) );
+	}
+
+	/**
+	 * Run a single event given its ID
+	 */
+	private function run_event_by_id( $args, $assoc_args ) {
+		// Validate ID
+		if ( ! is_numeric( $args[0] ) ) {
+			\WP_CLI::error( __( 'Specify the ID of an event to run', 'automattic-cron-control' ) );
+		}
+
+		// Retrieve information needed to execute event
+		$event = \Automattic\WP\Cron_Control\get_event_by_id( $args[0] );
+
+		if ( ! is_object( $event ) ) {
+			\WP_CLI::error( sprintf( __( 'Failed to locate event %d. Please confirm that the entry exists and that the ID is that of an event.', 'automattic-cron-control' ), $args[0] ) );
+		}
+
+		\WP_CLI::line( sprintf( __( 'Found event %1$d with action `%2$s` and instance identifier `%3$s`', 'automattic-cron-control' ), $args[0], $event->action, $event->instance ) );
+
+		// Proceed?
+		$now = time();
+		if ( $event->timestamp > $now ) {
+			\WP_CLI::warning( sprintf( __( 'This event is not scheduled to run for %2$s (at %1$s UTC)', 'automattic-cron-control' ), date( TIME_FORMAT, $event->timestamp ), $this->calculate_interval( $event->timestamp - $now ) ) );
+		}
+
+		\WP_CLI::confirm( sprintf( __( 'Run this event?', 'automattic-cron-control' ) ) );
+
+		// Environment preparation
+		if ( ! defined( 'DOING_CRON' ) ) {
+			define( 'DOING_CRON', true );
+		}
+
+		// Run the event
+		$run = \Automattic\WP\Cron_Control\run_event( $event->timestamp, $event->action_hashed, $event->instance, true );
+
+		// Output based on run attempt
+		if ( is_array( $run ) ) {
+			\WP_CLI::success( $run['message'] );
+		} elseif ( is_wp_error( $run ) ) {
+			\WP_CLI::error( $run->get_error_message() );
+		} else {
+			\WP_CLI::error( __( 'Failed to run event', 'automattic-cron-control' ) );
+		}
 	}
 }
 
