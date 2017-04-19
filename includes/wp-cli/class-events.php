@@ -646,14 +646,20 @@ class Events extends \WP_CLI_Command {
 		\WP_CLI::line( '' );
 		\WP_CLI::confirm( _n( 'Are you sure you want to run this event?', 'Are you sure you want to run these events?', $total_to_run, 'automattic-cron-control' ) );
 
+		// Environment preparation
+		if ( ! defined( 'DOING_CRON' ) ) {
+			define( 'DOING_CRON', true );
+		}
+
 		// Remove the items
 		$run_progress = \WP_CLI\Utils\make_progress_bar( __( 'Running events', 'automattic-cron-control' ), $total_to_run );
 
 		$events_ran       = array();
 		$events_ran_count = $events_failed_run = 0;
 
-		// Don't create new events while deleting events
-		\Automattic\WP\Cron_Control\_suspend_event_creation();
+		// Set lock to prevent other executions for this action
+		// Normally limited to 1, we use 3 here to ensure the lock is incremented during CLI even if regular execution is ongoing
+		\Automattic\WP\Cron_Control\Lock::check_lock( \Automattic\WP\Cron_Control\Events::get_lock_key_for_event_action( $assoc_args['action'] ), 3, \Automattic\WP\Cron_Control\JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS );
 
 		foreach ( $events_to_run as $event_to_run ) {
 			$event = \Automattic\WP\Cron_Control\get_event_by_id( $event_to_run['ID'] );
@@ -680,15 +686,15 @@ class Events extends \WP_CLI_Command {
 
 		$run_progress->finish();
 
+		// Free the event-specific lock
+		\Automattic\WP\Cron_Control\Lock::reset_lock( \Automattic\WP\Cron_Control\Events::get_lock_key_for_event_action( $assoc_args['action'] ), \Automattic\WP\Cron_Control\JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS );
+
 		// When runs succeed, sync internal caches
 		if ( $events_ran_count > 0 ) {
 			\Automattic\WP\Cron_Control\_flush_internal_caches();
 		}
 
-		// New events can be created now that removal is complete
-		\Automattic\WP\Cron_Control\_resume_event_creation();
-
-		// List the removed items
+		// List the completed items
 		\WP_CLI::line( "\n" . __( 'RESULTS:', 'automattic-cron-control' ) );
 
 		if ( 1 === $total_to_run && 1 === $events_ran_count ) {
