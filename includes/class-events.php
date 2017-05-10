@@ -281,8 +281,17 @@ class Events extends Singleton {
 	 * @return bool
 	 */
 	private function can_run_event( $event ) {
-		// Limit to one concurrent execution of a specific action
-		if ( ! Lock::check_lock( $this->get_lock_key_for_event_action( $event ), 1, JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS ) ) {
+		// Limit to one concurrent execution of a specific action by default
+		$limit = 1;
+
+		$concurrency_whitelist = apply_filters( 'a8c_cron_control_concurrent_event_whitelist', array(), $event );
+
+		if ( isset( $concurrency_whitelist[ $event->action ] ) ) {
+			$limit = absint( $concurrency_whitelist[ $event->action ] );
+			$limit = min( $limit, JOB_CONCURRENCY_LIMIT );
+		}
+
+		if ( ! Lock::check_lock( $this->get_lock_key_for_event_action( $event ), $limit, JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS ) ) {
 			return false;
 		}
 
