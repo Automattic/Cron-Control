@@ -301,7 +301,7 @@ class Events extends Singleton {
 		}
 
 		// Check if any resources are available to execute this job
-		// If not, the indivdual-event lock must be freed, otherwise it's deadlocked until it times out
+		// If not, the individual-event lock must be freed, otherwise it's deadlocked until it times out
 		if ( ! Lock::check_lock( self::LOCK, JOB_CONCURRENCY_LIMIT ) ) {
 			$this->reset_event_lock( $event );
 			return false;
