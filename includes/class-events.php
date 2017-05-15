@@ -353,7 +353,14 @@ class Events extends Singleton {
 	 * @return bool
 	 */
 	private function reset_event_lock( $event ) {
-		return Lock::reset_lock( $this->get_lock_key_for_event_action( $event ), JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS );
+		$lock_key = $this->get_lock_key_for_event_action( $event );
+		$expires  = JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS;
+
+		if ( isset( $this->concurrent_action_whitelist[ $event->action ] ) ) {
+			return Lock::free_lock( $lock_key, $expires );
+		} else {
+			return Lock::reset_lock( $lock_key, $expires );
+		}
 	}
 
 	/**
