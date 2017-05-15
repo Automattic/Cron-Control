@@ -12,6 +12,8 @@ class Events extends Singleton {
 	 */
 	const LOCK = 'run-events';
 
+	private $concurrent_action_whitelist = array();
+
 	/**
 	 * Register hooks
 	 */
@@ -22,6 +24,9 @@ class Events extends Singleton {
 		// Prepare environment as early as possible
 		$earliest_action = did_action( 'muplugins_loaded' ) ? 'plugins_loaded' : 'muplugins_loaded';
 		add_action( $earliest_action, array( $this, 'prepare_environment' ) );
+
+		// Allow code loaded as late as the theme to modify the whitelist
+		add_action( 'after_setup_theme', array( $this, 'populate_concurrent_action_whitelist' ) );
 	}
 
 	/**
@@ -45,6 +50,22 @@ class Events extends Singleton {
 			ignore_user_abort( true );
 			set_time_limit( JOB_TIMEOUT_IN_MINUTES * MINUTE_IN_SECONDS );
 		}
+	}
+
+	/**
+	 * Allow certain events to be run concurrently
+	 *
+	 * By default, multiple events of the same action cannot be run concurrently, due to alloptions and other data-corruption issues
+	 * Some events, however, are fine to run concurrently, and should be whitelisted for such
+	 */
+	public function populate_concurrent_action_whitelist() {
+		$concurrency_whitelist = apply_filters( 'a8c_cron_control_concurrent_event_whitelist', array() );
+
+		if ( is_array( $concurrency_whitelist ) && ! empty( $concurrency_whitelist ) ) {
+			$this->concurrent_action_whitelist = $concurrency_whitelist;
+		}
+
+		unset( $concurrency_whitelist );
 	}
 
 	/**
@@ -284,10 +305,8 @@ class Events extends Singleton {
 		// Limit to one concurrent execution of a specific action by default
 		$limit = 1;
 
-		$concurrency_whitelist = apply_filters( 'a8c_cron_control_concurrent_event_whitelist', array(), $event );
-
-		if ( isset( $concurrency_whitelist[ $event->action ] ) ) {
-			$limit = absint( $concurrency_whitelist[ $event->action ] );
+		if ( isset( $this->concurrent_action_whitelist[ $event->action ] ) ) {
+			$limit = absint( $this->concurrent_action_whitelist[ $event->action ] );
 			$limit = min( $limit, JOB_CONCURRENCY_LIMIT );
 		}
 
