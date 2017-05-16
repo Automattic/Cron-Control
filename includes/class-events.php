@@ -64,8 +64,6 @@ class Events extends Singleton {
 		if ( is_array( $concurrency_whitelist ) && ! empty( $concurrency_whitelist ) ) {
 			$this->concurrent_action_whitelist = $concurrency_whitelist;
 		}
-
-		unset( $concurrency_whitelist );
 	}
 
 	/**
