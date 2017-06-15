@@ -71,6 +71,7 @@ class REST_API extends \WP_CLI_Command {
 				'schedule_name',
 				'event_args',
 			) );
+			\WP_CLI::line( '' );
 		}
 	}
 
