@@ -95,7 +95,7 @@ class Events extends Singleton {
 
 		// Select only those events to run in the next sixty seconds
 		// Will include missed events as well
-		$current_events = $long_running_events = $internal_events = array();
+		$regular_events = $long_running_events = $internal_events = array();
 		$current_window = strtotime( sprintf( '+%d seconds', JOB_QUEUE_WINDOW_IN_SECONDS ) );
 
 		foreach ( $events as $event ) {
@@ -118,19 +118,19 @@ class Events extends Singleton {
 				'instance'  => $event['instance'],
 			);
 
-			// Queue internal events separately to avoid them being blocked
+			// Split events into various queues
 			if ( is_internal_event( $event['action'] ) ) {
 				$internal_events[] = $event_data_public;
-			} elseif ( in_array( $event['aciton'], $this->long_running_events, true ) ) {
+			} elseif ( in_array( $event['action'], $this->long_running_events, true ) ) {
 				$long_running_events[] = $event_data_public;
 			} else {
-				$current_events[] = $event_data_public;
+				$regular_events[] = $event_data_public;
 			}
 		}
 
 		// Limit batch size to avoid resource exhaustion
-		if ( count( $current_events ) > JOB_QUEUE_SIZE ) {
-			$current_events = $this->reduce_queue( $current_events );
+		if ( count( $regular_events ) > JOB_QUEUE_SIZE ) {
+			$regular_events = $this->reduce_queue( $regular_events );
 		}
 
 		if ( count( $long_running_events ) > JOB_QUEUE_SIZE ) {
@@ -139,7 +139,7 @@ class Events extends Singleton {
 
 		// Combine with Internal Events and return necessary data to process the event queue
 		return array(
-			'events'              => array_merge( $current_events, $internal_events ),
+			'events'              => array_merge( $regular_events, $internal_events ),
 			'events_long_running' => $long_running_events,
 			'endpoint'            => get_rest_url( null, REST_API::API_NAMESPACE . '/' . REST_API::ENDPOINT_RUN ),
 		);
