@@ -13,6 +13,7 @@ class Events extends Singleton {
 	const LOCK = 'run-events';
 
 	private $concurrent_action_whitelist = array();
+	private $long_running_events         = array();
 
 	/**
 	 * Register hooks
@@ -25,8 +26,8 @@ class Events extends Singleton {
 		$earliest_action = did_action( 'muplugins_loaded' ) ? 'plugins_loaded' : 'muplugins_loaded';
 		add_action( $earliest_action, array( $this, 'prepare_environment' ) );
 
-		// Allow code loaded as late as the theme to modify the whitelist
-		add_action( 'after_setup_theme', array( $this, 'populate_concurrent_action_whitelist' ) );
+		// Allow code loaded as late as the theme to modify various whitelists
+		add_action( 'after_setup_theme', array( $this, 'populate_whitelists' ) );
 	}
 
 	/**
@@ -53,16 +54,28 @@ class Events extends Singleton {
 	}
 
 	/**
-	 * Allow certain events to be run concurrently
-	 *
-	 * By default, multiple events of the same action cannot be run concurrently, due to alloptions and other data-corruption issues
-	 * Some events, however, are fine to run concurrently, and should be whitelisted for such
+	 * Populate certain whitelists at runtime, supporting code loaded as late as the theme
 	 */
-	public function populate_concurrent_action_whitelist() {
+	public function populate_whitelists() {
+		/**
+		 * Allow certain events to be run concurrently
+		 *
+		 * By default, multiple events of the same action cannot be run concurrently, due to alloptions and other data-corruption issues
+		 * Some events, however, are fine to run concurrently, and should be whitelisted for such
+		 */
 		$concurrency_whitelist = apply_filters( 'a8c_cron_control_concurrent_event_whitelist', array() );
 
 		if ( is_array( $concurrency_whitelist ) && ! empty( $concurrency_whitelist ) ) {
 			$this->concurrent_action_whitelist = $concurrency_whitelist;
+		}
+
+		/**
+		 * Identify long-running or resource-intensive events, for processing on dedicated hosts
+		 */
+		$long_running_events = apply_filters( 'a8c_cron_control_long_or_intensive_events_whitelist', array() );
+
+		if ( is_array( $long_running_events ) && ! empty( $long_running_events ) ) {
+			$this->long_running_events = $long_running_events;
 		}
 	}
 
@@ -82,7 +95,7 @@ class Events extends Singleton {
 
 		// Select only those events to run in the next sixty seconds
 		// Will include missed events as well
-		$current_events = $internal_events = array();
+		$current_events = $long_running_events = $internal_events = array();
 		$current_window = strtotime( sprintf( '+%d seconds', JOB_QUEUE_WINDOW_IN_SECONDS ) );
 
 		foreach ( $events as $event ) {
@@ -108,6 +121,8 @@ class Events extends Singleton {
 			// Queue internal events separately to avoid them being blocked
 			if ( is_internal_event( $event['action'] ) ) {
 				$internal_events[] = $event_data_public;
+			} elseif ( in_array( $event['aciton'], $this->long_running_events, true ) ) {
+				$long_running_events[] = $event_data_public;
 			} else {
 				$current_events[] = $event_data_public;
 			}
@@ -118,10 +133,15 @@ class Events extends Singleton {
 			$current_events = $this->reduce_queue( $current_events );
 		}
 
+		if ( count( $long_running_events ) > JOB_QUEUE_SIZE ) {
+			$long_running_events = $this->reduce_queue( $long_running_events );
+		}
+
 		// Combine with Internal Events and return necessary data to process the event queue
 		return array(
-			'events'   => array_merge( $current_events, $internal_events ),
-			'endpoint' => get_rest_url( null, REST_API::API_NAMESPACE . '/' . REST_API::ENDPOINT_RUN ),
+			'events'              => array_merge( $current_events, $internal_events ),
+			'events_long_running' => $long_running_events,
+			'endpoint'            => get_rest_url( null, REST_API::API_NAMESPACE . '/' . REST_API::ENDPOINT_RUN ),
 		);
 	}
 
