@@ -30,35 +30,49 @@ class REST_API extends \WP_CLI_Command {
 		$queue_response = $queue_request->get_data();
 
 		// No events, nothing more to do
-		if ( empty( $queue_response['events'] ) ) {
-			\WP_CLI::warning( __( 'No events in the current queue', 'automattic-cron-control' ) );
+		if ( empty( $queue_response['events'] ) && empty( $queue_response['events_long_running' ] ) ) {
+			\WP_CLI::warning( __( 'No events in the current queues', 'automattic-cron-control' ) );
 			return;
 		}
 
-		// Prepare items for display
-		$events_for_display      = $this->format_events( $queue_response['events'] );
-		$total_events_to_display = count( $events_for_display );
-		\WP_CLI::line( sprintf( _n( 'Displaying one event', 'Displaying %s events', $total_events_to_display, 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ) ) );
+		// Render queues
+		foreach ( array( 'events', 'events_long_running', ) as $event_type ) {
+			$events_for_display = $queue_response[ $event_type ];
 
-		// And reformat
-		$format = 'table';
-		if ( isset( $assoc_args['format'] ) ) {
-			if ( 'ids' === $assoc_args['format'] ) {
-				\WP_CLI::error( __( 'Invalid output format requested', 'automattic-cron-control' ) );
-			} else {
-				$format = $assoc_args[ 'format' ];
+			$event_type_label = 'events' === $event_type ? 'regular' : 'long-running';
+
+			if ( empty( $events_for_display ) ) {
+				\WP_CLI::line( sprintf( __( 'No events in the %s events queue', 'automattic-cron-control' ), $event_type_label ) );
+				\WP_CLI::line( '' );
+				continue;
 			}
-		}
 
-		\WP_CLI\Utils\format_items( $format, $events_for_display, array(
-			'timestamp',
-			'action',
-			'instance',
-			'scheduled_for',
-			'internal_event',
-			'schedule_name',
-			'event_args',
-		) );
+			// Prepare items for display
+			$events_for_display = $this->format_events( $events_for_display );
+			$total_events_to_display = count( $events_for_display );
+			\WP_CLI::line( sprintf( _n( 'Displaying one event from the %2$s queue', 'Displaying %1$s events from the %2$s queue', $total_events_to_display, 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ), $event_type_label ) );
+
+			// And reformat
+			$format = 'table';
+			if ( isset( $assoc_args['format'] ) ) {
+				if ( 'ids' === $assoc_args['format'] ) {
+					\WP_CLI::error( __( 'Invalid output format requested', 'automattic-cron-control' ) );
+				} else {
+					$format = $assoc_args['format'];
+				}
+			}
+
+			\WP_CLI\Utils\format_items( $format, $events_for_display, array(
+				'timestamp',
+				'action',
+				'instance',
+				'scheduled_for',
+				'internal_event',
+				'schedule_name',
+				'event_args',
+			) );
+			\WP_CLI::line( '' );
+		}
 	}
 
 	/**
