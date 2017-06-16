@@ -149,8 +149,6 @@ class Events extends \WP_CLI_Command {
 	 * Retrieve list of events, and related data, for a given request
 	 */
 	private function get_events( $args, $assoc_args ) {
-		global $wpdb;
-
 		// Accept a status argument, with a default
 		$status = 'pending';
 		if ( isset( $assoc_args['status'] ) ) {
