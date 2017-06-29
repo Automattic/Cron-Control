@@ -289,7 +289,7 @@ class Events extends Singleton {
 	 * @param $event array Event data
 	 */
 	private function prime_event_action_lock( $event ) {
-		Lock::prime_lock( $this->get_lock_key_for_event_action( $event ), JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS );
+		Lock::prime_lock( self::get_lock_key_for_event_action( $event ), JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS );
 	}
 
 	/**
@@ -308,7 +308,7 @@ class Events extends Singleton {
 			$limit = min( $limit, JOB_CONCURRENCY_LIMIT );
 		}
 
-		if ( ! Lock::check_lock( $this->get_lock_key_for_event_action( $event ), $limit, JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS ) ) {
+		if ( ! Lock::check_lock( self::get_lock_key_for_event_action( $event ), $limit, JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS ) ) {
 			return false;
 		}
 
@@ -351,7 +351,7 @@ class Events extends Singleton {
 	 * @return bool
 	 */
 	private function reset_event_lock( $event ) {
-		$lock_key = $this->get_lock_key_for_event_action( $event );
+		$lock_key = self::get_lock_key_for_event_action( $event );
 		$expires  = JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS;
 
 		if ( isset( $this->concurrent_action_whitelist[ $event->action ] ) ) {
@@ -368,7 +368,7 @@ class Events extends Singleton {
 	 *
 	 * @return string
 	 */
-	public function get_lock_key_for_event_action( $event ) {
+	public static function get_lock_key_for_event_action( $event ) {
 		// Hashed solely to constrain overall length
 		return md5( 'ev-' . $event->action );
 	}
