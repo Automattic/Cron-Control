@@ -53,12 +53,55 @@ class REST_API extends \WP_CLI_Command {
 		\WP_CLI\Utils\format_items( $format, $events_for_display, array(
 			'timestamp',
 			'action',
+			'action_hashed',
 			'instance',
 			'scheduled_for',
 			'internal_event',
 			'schedule_name',
 			'event_args',
 		) );
+	}
+
+	/**
+	 * Run a given event
+	 *
+	 * @subcommand run
+	 * @synopsis --timestamp=<timestamp> --action-hashed=<action-hashed> --instance=<instance>
+	 */
+	public function run_event( $args, $assoc_args ) {
+		$timestamp     = \WP_CLI\Utils\get_flag_value( $assoc_args, 'timestamp',     null );
+		$action_hashed = \WP_CLI\Utils\get_flag_value( $assoc_args, 'action-hashed', null );
+		$instance      = \WP_CLI\Utils\get_flag_value( $assoc_args, 'instance',      null );
+
+		if ( ! is_numeric( $timestamp ) || ! is_string( $action_hashed ) || ! is_string( $instance ) ) {
+			\WP_CLI::error( __( 'Invalid event arguments', 'automattic-cron-control' ) );
+		}
+
+		// Build and make request
+		$run_request = new \WP_REST_Request( 'PUT', '/' . \Automattic\WP\Cron_Control\REST_API::API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API::ENDPOINT_RUN );
+		$run_request->add_header( 'Content-Type', 'application/json' );
+		$run_request->set_body( wp_json_encode( array(
+			'secret'    => \WP_CRON_CONTROL_SECRET,
+			'timestamp' => $timestamp,
+			'action'    => $action_hashed,
+			'instance'  => $instance,
+		) ) );
+
+		$run_request = rest_do_request( $run_request );
+
+		// Oh well
+		if ( $run_request->is_error() ) {
+			\WP_CLI::error( $run_request->as_error()->get_error_message() );
+		}
+
+		// Get the decoded JSON object returned by the API
+		$run_response = $run_request->get_data();
+
+		if ( isset( $run_response['success'] ) && true === $run_response['success'] ) {
+			\WP_CLI::success( $run_response['message'] );
+		} else {
+			\WP_CLI::error( $run_response['message'] );
+		}
 	}
 
 	/**
@@ -81,6 +124,7 @@ class REST_API extends \WP_CLI_Command {
 			$formatted_events[] = array(
 				'timestamp'      => $event_data->timestamp,
 				'action'         => $event_data->action,
+				'action_hashed'  => $event_data->action_hashed,
 				'instance'       => $event_data->instance,
 				'scheduled_for'  => date( TIME_FORMAT, $event_data->timestamp ),
 				'internal_event' => \Automattic\WP\Cron_Control\is_internal_event( $event_data->action ) ? __( 'true', 'automattic-cron-control' ) : '',
