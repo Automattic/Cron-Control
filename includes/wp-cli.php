@@ -60,4 +60,5 @@ require __DIR__ . '/wp-cli/class-cache.php';
 require __DIR__ . '/wp-cli/class-events.php';
 require __DIR__ . '/wp-cli/class-lock.php';
 require __DIR__ . '/wp-cli/class-one-time-fixers.php';
+require __DIR__ . '/wp-cli/class-orchestrate.php';
 require __DIR__ . '/wp-cli/class-rest-api.php';
