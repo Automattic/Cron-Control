@@ -1,0 +1,3 @@
+DEPLOY_DIR="/var/www/cron-control-runner"
+CMD="${DEPLOY_DIR}/runner"
+CMD_ARGS="-workers-run 10"
