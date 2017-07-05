@@ -61,6 +61,27 @@ class Orchestrate extends \WP_CLI_Command {
 			\WP_CLI::error( $run['message'] );
 		}
 	}
+
+	/**
+	 * Get some details needed to execute events
+	 *
+	 * @subcommand get-info
+	 */
+	public function get_info( $args, $assoc_args ) {
+		$info = array(
+			array(
+				'multisite' => is_multisite() ? "true" : "false",
+				'siteurl'   => site_url(),
+			),
+		);
+
+		$format = \WP_CLI\Utils\get_flag_value( $assoc_args, 'format', 'table' );
+
+		\WP_CLI\Utils\format_items( $format, $info, array(
+			'multisite',
+			'siteurl',
+		) );
+	}
 }
 
 \WP_CLI::add_command( 'cron-control orchestrate', 'Automattic\WP\Cron_Control\CLI\Orchestrate' );
