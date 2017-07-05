@@ -77,6 +77,11 @@ class REST_API extends \WP_CLI_Command {
 			\WP_CLI::error( __( 'Invalid event arguments', 'automattic-cron-control' ) );
 		}
 
+		// Prepare environment
+		if ( ! defined( 'DOING_CRON' ) ) {
+			define( 'DOING_CRON', true );
+		}
+
 		// Build and make request
 		$run_request = new \WP_REST_Request( 'PUT', '/' . \Automattic\WP\Cron_Control\REST_API::API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API::ENDPOINT_RUN );
 		$run_request->add_header( 'Content-Type', 'application/json' );
