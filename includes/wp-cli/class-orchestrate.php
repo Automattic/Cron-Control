@@ -3,7 +3,7 @@
 namespace Automattic\WP\Cron_Control\CLI;
 
 /**
- *
+ * Commands used by the Go-based runner to execute events
  */
 class Orchestrate extends \WP_CLI_Command {
 	/**
