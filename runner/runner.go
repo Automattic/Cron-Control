@@ -18,6 +18,10 @@ type SiteInfo struct {
 	Siteurl   string
 }
 
+type Site struct {
+	Url string
+}
+
 type Event struct {
 	url       string
 	timestamp string
@@ -84,13 +88,8 @@ func spawnEventRetrievers(queue chan Event) {
 			go getSiteEvents(w, workerSites, queue)
 		}
 
-		for i, site := range sites {
-			if i == 0 {
-				// skip header line
-				continue
-			}
-
-			workerSites <- site[0]
+		for _, site := range sites {
+			workerSites <- site.Url
 		}
 
 		close(workerSites)
@@ -129,27 +128,23 @@ func keepAlive() {
 	}
 }
 
-func getSites() ([][]string, error) {
+func getSites() ([]Site, error) {
 	siteInfo, err := getInstanceInfo()
 	if err != nil {
-		return make([][]string,0), err
+		return make([]Site, 0), err
 	}
 
 	if siteInfo.Multisite == 1 {
-		sites, err := getWpCliOutput([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false"})
-
+		sites, err := getMultisiteSites()
 		if err != nil {
-			sites = make([][]string,0)
+			sites = make([]Site, 0)
 		}
 
 		return sites, err
 	} else {
 		// Mock for single site
-		sites    := make([][]string,2)
-		sites[0] = make([]string,0)
-		sites[0] = append(sites[0], "url")
-		sites[1] = make([]string,0)
-		sites[1] = append(sites[1], siteInfo.Siteurl)
+		sites := make([]Site, 0)
+		sites = append(sites, Site{Url: siteInfo.Siteurl})
 
 		return sites, nil
 	}
@@ -210,6 +205,22 @@ func getInstanceInfo() (SiteInfo, error) {
 	}
 
 	return jsonRes[0], nil
+}
+
+func getMultisiteSites() ([]Site, error) {
+	raw, err := runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false","--format=json"})
+	if err != nil {
+		logger.Println(fmt.Sprintf("%+v\n", err))
+		return make([]Site, 0), err
+	}
+
+	jsonRes := make([]Site,0)
+	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
+		logger.Println(fmt.Sprintf("%+v\n", err))
+		return make([]Site, 0), err
+	}
+
+	return jsonRes, nil
 }
 
 func getWpCliOutput(subcommand []string) ([][]string, error) {
