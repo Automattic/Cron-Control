@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -11,6 +12,11 @@ import (
 	"strings"
 	"time"
 )
+
+type SiteInfo struct {
+	Multisite int
+	Siteurl   string
+}
 
 type Event struct {
 	url       string
@@ -124,14 +130,12 @@ func keepAlive() {
 }
 
 func getSites() ([][]string, error) {
-	siteInfo, err := getWpCliOutput([]string{"cron-control", "orchestrate", "get-info"})
+	siteInfo, err := getInstanceInfo()
 	if err != nil {
 		return make([][]string,0), err
 	}
 
-	isMultisite, siteUrl := siteInfo[1][0], siteInfo[1][1]
-
-	if isMultisite == "true" {
+	if siteInfo.Multisite == 1 {
 		sites, err := getWpCliOutput([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false"})
 
 		if err != nil {
@@ -145,7 +149,7 @@ func getSites() ([][]string, error) {
 		sites[0] = make([]string,0)
 		sites[0] = append(sites[0], "url")
 		sites[1] = make([]string,0)
-		sites[1] = append(sites[1], siteUrl)
+		sites[1] = append(sites[1], siteInfo.Siteurl)
 
 		return sites, nil
 	}
@@ -192,6 +196,20 @@ func runEvents(workerId int, events <-chan Event) {
 
 		time.Sleep(runEventsBreak)
 	}
+}
+
+func getInstanceInfo() (SiteInfo, error) {
+	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "get-info","--format=json"})
+	if err != nil {
+		return SiteInfo{}, err
+	}
+
+	jsonRes := make([]SiteInfo,0)
+	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
+		return SiteInfo{}, err
+	}
+
+	return jsonRes[0], nil
 }
 
 func getWpCliOutput(subcommand []string) ([][]string, error) {

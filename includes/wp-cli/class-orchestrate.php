@@ -70,7 +70,7 @@ class Orchestrate extends \WP_CLI_Command {
 	public function get_info( $args, $assoc_args ) {
 		$info = array(
 			array(
-				'multisite' => is_multisite() ? "true" : "false",
+				'multisite' => is_multisite() ? 1 : 0,
 				'siteurl'   => site_url(),
 			),
 		);
