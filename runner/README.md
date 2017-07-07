@@ -14,15 +14,15 @@ In addition to the REST API endpoints that can be used to run events, a Go-based
 # Runner options
 
 * `-cli` string
-  * Path to WP-CLI binary (default "/usr/local/bin/wp")
+  * Path to WP-CLI binary (default `/usr/local/bin/wp`)
 * `-log` string
-  * Log path, omit to log to Stdout (default "os.Stdout")
+  * Log path, omit to log to Stdout (default `os.Stdout`)
 * `-workers-get` int
-  * Number of workers to retrieve events (default 3)
+  * Number of workers to retrieve events (default `3`)
 * `-workers-run` int
-  * Number of workers to run events (default 5)
+  * Number of workers to run events (default `5`)
 * `-wp` string
-  * Path to WordPress installation (default "/var/www/html")
+  * Path to WordPress installation (default `/var/www/html`)
 
 # Build the binary
 
