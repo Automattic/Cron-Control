@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -23,10 +21,10 @@ type Site struct {
 }
 
 type Event struct {
-	url       string
-	timestamp string
-	action    string
-	instance  string
+	Url       string
+	Timestamp int
+	Action    string
+	Instance  string
 }
 
 var (
@@ -154,24 +152,21 @@ func getSiteEvents(workerId int, sites <-chan string, queue chan<- Event) {
 	for site := range sites {
 		logger.Printf("getEvents-%d processing %s", workerId, site)
 
-		subcommand := []string{"cron-control", "orchestrate", "list-due-batch"}
-
-		if len(site) > 7 {
-			subcommand = append(subcommand, fmt.Sprintf("--url=%s", site))
+		raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "list-due-batch", fmt.Sprintf("--url=%s", site), "--format=json"})
+		if err != nil {
+			time.Sleep(getEventsBreak)
+			continue
 		}
 
-		siteEvents, err := getWpCliOutput(subcommand)
-		if err != nil || len(siteEvents) < 1 {
-			return
+		siteEvents := make([]Event,0)
+		if err = json.Unmarshal([]byte(raw), &siteEvents); err != nil {
+			time.Sleep(getEventsBreak)
+			continue
 		}
 
-		for i, event := range siteEvents {
-			if i == 0 {
-				// skip header line
-				continue
-			}
-
-			queue <- Event{url: site, timestamp: event[0], action: event[1], instance: event[2]}
+		for _, event := range siteEvents {
+			event.Url = site
+			queue <- event
 		}
 
 		time.Sleep(getEventsBreak)
@@ -180,14 +175,11 @@ func getSiteEvents(workerId int, sites <-chan string, queue chan<- Event) {
 
 func runEvents(workerId int, events <-chan Event) {
 	for event := range events {
-		subcommand := []string{"cron-control", "orchestrate", "run", fmt.Sprintf("--timestamp=%s", event.timestamp), fmt.Sprintf("--action=%s", event.action), fmt.Sprintf("--instance=%s", event.instance)}
-		if len(event.url) > 7 {
-			subcommand = append(subcommand, fmt.Sprintf("--url=%s", event.url))
-		}
+		subcommand := []string{"cron-control", "orchestrate", "run", fmt.Sprintf("--timestamp=%d", event.Timestamp), fmt.Sprintf("--action=%s", event.Action), fmt.Sprintf("--instance=%s", event.Instance), fmt.Sprintf("--url=%s", event.Url)}
 
 		runWpCliCmd(subcommand)
 
-		logger.Printf("runEvents-%d finished job %s|%s|%s for %s", workerId, event.timestamp, event.action, event.instance, event.url)
+		logger.Printf("runEvents-%d finished job %d|%s|%s for %s", workerId, event.Timestamp, event.Action, event.Instance, event.Url)
 
 		time.Sleep(runEventsBreak)
 	}
@@ -221,25 +213,6 @@ func getMultisiteSites() ([]Site, error) {
 	}
 
 	return jsonRes, nil
-}
-
-func getWpCliOutput(subcommand []string) ([][]string, error) {
-	subcommand = append(subcommand, "--format=csv")
-
-	raw, err := runWpCliCmd(subcommand)
-	if err != nil {
-		errOut := make([][]string,1)
-		errOut[0] = append(errOut[0], raw)
-		return errOut, err
-	}
-
-	rawRead := csv.NewReader(strings.NewReader(raw))
-	data, err := rawRead.ReadAll()
-	if err != nil {
-		return make([][]string,0), err
-	}
-
-	return data, nil
 }
 
 func runWpCliCmd(subcommand []string) (string, error) {
