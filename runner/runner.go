@@ -147,6 +147,36 @@ func getSites() ([]Site, error) {
 	}
 }
 
+func getInstanceInfo() (SiteInfo, error) {
+	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "get-info", "--format=json"})
+	if err != nil {
+		return SiteInfo{}, err
+	}
+
+	jsonRes := make([]SiteInfo, 0)
+	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
+		return SiteInfo{}, err
+	}
+
+	return jsonRes[0], nil
+}
+
+func getMultisiteSites() ([]Site, error) {
+	raw, err := runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
+	if err != nil {
+		logger.Println(fmt.Sprintf("%+v\n", err))
+		return make([]Site, 0), err
+	}
+
+	jsonRes := make([]Site, 0)
+	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
+		logger.Println(fmt.Sprintf("%+v\n", err))
+		return make([]Site, 0), err
+	}
+
+	return jsonRes, nil
+}
+
 func queueSiteEvents(workerId int, sites <-chan string, queue chan<- Event) {
 	for site := range sites {
 		logger.Printf("getEvents-%d processing %s", workerId, site)
@@ -190,36 +220,6 @@ func runEvents(workerId int, events <-chan Event) {
 
 		time.Sleep(runEventsBreak)
 	}
-}
-
-func getInstanceInfo() (SiteInfo, error) {
-	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "get-info", "--format=json"})
-	if err != nil {
-		return SiteInfo{}, err
-	}
-
-	jsonRes := make([]SiteInfo, 0)
-	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
-		return SiteInfo{}, err
-	}
-
-	return jsonRes[0], nil
-}
-
-func getMultisiteSites() ([]Site, error) {
-	raw, err := runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
-	if err != nil {
-		logger.Println(fmt.Sprintf("%+v\n", err))
-		return make([]Site, 0), err
-	}
-
-	jsonRes := make([]Site, 0)
-	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
-		logger.Println(fmt.Sprintf("%+v\n", err))
-		return make([]Site, 0), err
-	}
-
-	return jsonRes, nil
 }
 
 func runWpCliCmd(subcommand []string) (string, error) {
