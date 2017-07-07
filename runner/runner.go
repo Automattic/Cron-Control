@@ -83,7 +83,7 @@ func spawnEventRetrievers(queue chan Event) {
 		workerSites := make(chan string, len(sites))
 
 		for w := 1; w <= workersGetEvents; w++ {
-			go getSiteEvents(w, workerSites, queue)
+			go queueSiteEvents(w, workerSites, queue)
 		}
 
 		for _, site := range sites {
@@ -148,18 +148,12 @@ func getSites() ([]Site, error) {
 	}
 }
 
-func getSiteEvents(workerId int, sites <-chan string, queue chan<- Event) {
+func queueSiteEvents(workerId int, sites <-chan string, queue chan<- Event) {
 	for site := range sites {
 		logger.Printf("getEvents-%d processing %s", workerId, site)
 
-		raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "list-due-batch", fmt.Sprintf("--url=%s", site), "--format=json"})
+		siteEvents, err := getSiteEvents(site)
 		if err != nil {
-			time.Sleep(getEventsBreak)
-			continue
-		}
-
-		siteEvents := make([]Event,0)
-		if err = json.Unmarshal([]byte(raw), &siteEvents); err != nil {
 			time.Sleep(getEventsBreak)
 			continue
 		}
@@ -171,6 +165,20 @@ func getSiteEvents(workerId int, sites <-chan string, queue chan<- Event) {
 
 		time.Sleep(getEventsBreak)
 	}
+}
+
+func getSiteEvents(site string) ([]Event, error) {
+	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "list-due-batch", fmt.Sprintf("--url=%s", site), "--format=json"})
+	if err != nil {
+		return make([]Event, 0), err
+	}
+
+	siteEvents := make([]Event, 0)
+	if err = json.Unmarshal([]byte(raw), &siteEvents); err != nil {
+		return make([]Event, 0), err
+	}
+
+	return siteEvents, nil
 }
 
 func runEvents(workerId int, events <-chan Event) {
