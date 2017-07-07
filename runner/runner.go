@@ -84,25 +84,6 @@ func spawnEventRetrievers(sites <-chan Site, queue chan<- Event) {
 	logger.Println("Event-retrieval workers spawned")
 }
 
-func retrieveSitesPeriodically(sites chan<- Site) {
-	for true {
-		logger.Println("Retrieving sites")
-
-		siteList, err := getSites()
-		if err != nil {
-			time.Sleep(getEventsLoop)
-			continue
-		}
-
-		for _, site := range siteList {
-			sites <- site
-		}
-
-		logger.Printf("Sites sent to event retrievers, next site retreival in %d seconds", getEventsLoop / 1000 / 1000 / 1000)
-		time.Sleep(getEventsLoop)
-	}
-}
-
 func spawnEventWorkers(queue <-chan Event) {
 	logger.Println("Spawning event workers")
 
@@ -120,6 +101,25 @@ func spawnEventWorkers(queue <-chan Event) {
 
 	logger.Println("Event workers died, exiting")
 	os.Exit(1)
+}
+
+func retrieveSitesPeriodically(sites chan<- Site) {
+	for true {
+		logger.Println("Retrieving sites")
+
+		siteList, err := getSites()
+		if err != nil {
+			time.Sleep(getEventsLoop)
+			continue
+		}
+
+		for _, site := range siteList {
+			sites <- site
+		}
+
+		logger.Printf("Sites sent to event retrievers, next site retreival in %d seconds", getEventsLoop / 1000 / 1000 / 1000)
+		time.Sleep(getEventsLoop)
+	}
 }
 
 func keepAlive() {
