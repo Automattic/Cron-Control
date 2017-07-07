@@ -30,6 +30,7 @@ type Event struct {
 
 var (
 	wpCliPath string
+	wpNetwork int
 	wpPath    string
 
 	workersGetEvents int
@@ -45,6 +46,7 @@ const runEventsBreak time.Duration = time.Second * 10
 
 func init() {
 	flag.StringVar(&wpCliPath, "cli", "/usr/local/bin/wp", "Path to WP-CLI binary")
+	flag.IntVar(&wpNetwork, "network", 1, "WordPress network ID")
 	flag.StringVar(&wpPath, "wp", "/var/www/html", "Path to WordPress installation")
 	flag.IntVar(&workersGetEvents, "workers-get", 3, "Number of workers to retrieve events")
 	flag.IntVar(&workersRunEvents, "workers-run", 5, "Number of workers to run events")
@@ -220,7 +222,7 @@ func getSiteEvents(site string) ([]Event, error) {
 
 func runEvents(workerId int, events <-chan Event) {
 	for event := range events {
-		subcommand := []string{"cron-control", "orchestrate", "run", fmt.Sprintf("--timestamp=%d", event.Timestamp), fmt.Sprintf("--action=%s", event.Action), fmt.Sprintf("--instance=%s", event.Instance), fmt.Sprintf("--url=%s", event.Url)}
+		subcommand := []string{"cron-control", "orchestrate", "run", fmt.Sprintf("--timestamp=%d", event.Timestamp), fmt.Sprintf("--action=%s", event.Action), fmt.Sprintf("--instance=%s", event.Instance), fmt.Sprintf("--url=%s", event.Url), fmt.Sprintf("--network=%d", wpNetwork)}
 
 		runWpCliCmd(subcommand)
 

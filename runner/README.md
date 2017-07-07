@@ -17,6 +17,8 @@ In addition to the REST API endpoints that can be used to run events, a Go-based
   * Path to WP-CLI binary (default `/usr/local/bin/wp`)
 * `-log` string
   * Log path, omit to log to Stdout (default `os.Stdout`)
+* `-network` int
+  * WordPress network ID (default `1`)
 * `-workers-get` int
   * Number of workers to retrieve events (default `3`)
 * `-workers-run` int
