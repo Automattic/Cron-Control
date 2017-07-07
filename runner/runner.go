@@ -79,7 +79,6 @@ func spawnEventRetrievers(queue chan Event) {
 			continue
 		}
 
-		// Spawn workers to retrieve events
 		workerSites := make(chan string, len(sites))
 
 		for w := 1; w <= workersGetEvents; w++ {
@@ -194,12 +193,12 @@ func runEvents(workerId int, events <-chan Event) {
 }
 
 func getInstanceInfo() (SiteInfo, error) {
-	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "get-info","--format=json"})
+	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "get-info", "--format=json"})
 	if err != nil {
 		return SiteInfo{}, err
 	}
 
-	jsonRes := make([]SiteInfo,0)
+	jsonRes := make([]SiteInfo, 0)
 	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
 		return SiteInfo{}, err
 	}
@@ -208,13 +207,13 @@ func getInstanceInfo() (SiteInfo, error) {
 }
 
 func getMultisiteSites() ([]Site, error) {
-	raw, err := runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false","--format=json"})
+	raw, err := runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
 	if err != nil {
 		logger.Println(fmt.Sprintf("%+v\n", err))
 		return make([]Site, 0), err
 	}
 
-	jsonRes := make([]Site,0)
+	jsonRes := make([]Site, 0)
 	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
 		logger.Println(fmt.Sprintf("%+v\n", err))
 		return make([]Site, 0), err
