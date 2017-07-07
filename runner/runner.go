@@ -75,7 +75,7 @@ func main() {
 }
 
 func spawnEventRetrievers(sites <-chan Site, queue chan<- Event) {
-	logger.Println("Spawning event-retrieval workers")
+	logger.Printf("Spawning %d event-retrieval workers", workersGetEvents)
 
 	for w := 1; w <= workersGetEvents; w++ {
 		go queueSiteEvents(w, sites, queue)
@@ -85,7 +85,7 @@ func spawnEventRetrievers(sites <-chan Site, queue chan<- Event) {
 }
 
 func spawnEventWorkers(queue <-chan Event) {
-	logger.Println("Spawning event workers")
+	logger.Printf("Spawning %d event workers", workersRunEvents)
 
 	workerEvents := make(chan Event)
 
