@@ -63,43 +63,47 @@ func init() {
 func main() {
 	logger.Println("Starting")
 
+	sites  := make(chan Site)
 	events := make(chan Event)
 
-	go spawnEventRetrievers(events)
+	go spawnEventRetrievers(sites, events)
 	go spawnEventWorkers(events)
+	go retrieveSitesPeriodically(sites)
 	keepAlive()
 
 	logger.Println("Stopping")
 }
 
-func spawnEventRetrievers(queue chan Event) {
-	for true {
-		logger.Println("Spawning event-retrieval workers")
+func spawnEventRetrievers(sites <-chan Site, queue chan<- Event) {
+	logger.Println("Spawning event-retrieval workers")
 
-		sites, err := getSites()
+	for w := 1; w <= workersGetEvents; w++ {
+		go queueSiteEvents(w, sites, queue)
+	}
+
+	logger.Println("Event-retrieval workers spawned")
+}
+
+func retrieveSitesPeriodically(sites chan<- Site) {
+	for true {
+		logger.Println("Retrieving sites")
+
+		siteList, err := getSites()
 		if err != nil {
 			time.Sleep(getEventsLoop)
 			continue
 		}
 
-		workerSites := make(chan string, len(sites))
-
-		for w := 1; w <= workersGetEvents; w++ {
-			go queueSiteEvents(w, workerSites, queue)
+		for _, site := range siteList {
+			sites <- site
 		}
 
-		for _, site := range sites {
-			workerSites <- site.Url
-		}
-
-		close(workerSites)
-
-		logger.Printf("Event-retrieval workers spawned, sleeping %d seconds", getEventsLoop / 1000 / 1000 / 1000)
+		logger.Printf("Sites sent to event retrievers, next site retreival in %d seconds", getEventsLoop / 1000 / 1000 / 1000)
 		time.Sleep(getEventsLoop)
 	}
 }
 
-func spawnEventWorkers(queue chan Event) {
+func spawnEventWorkers(queue <-chan Event) {
 	logger.Println("Spawning event workers")
 
 	workerEvents := make(chan Event)
@@ -187,18 +191,18 @@ func getMultisiteSites() ([]Site, error) {
 	return jsonRes, nil
 }
 
-func queueSiteEvents(workerId int, sites <-chan string, queue chan<- Event) {
+func queueSiteEvents(workerId int, sites <-chan Site, queue chan<- Event) {
 	for site := range sites {
-		logger.Printf("getEvents-%d processing %s", workerId, site)
+		logger.Printf("getEvents-%d processing %s", workerId, site.Url)
 
-		siteEvents, err := getSiteEvents(site)
+		siteEvents, err := getSiteEvents(site.Url)
 		if err != nil {
 			time.Sleep(getEventsBreak)
 			continue
 		}
 
 		for _, event := range siteEvents {
-			event.Url = site
+			event.Url = site.Url
 			queue <- event
 		}
 
