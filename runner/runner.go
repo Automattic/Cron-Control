@@ -91,6 +91,7 @@ func spawnEventRetrievers(queue chan Event) {
 
 		close(workerSites)
 
+		logger.Println("Event-retrieval workers finished, sleepingd seconds")
 		time.Sleep(getEventsLoop)
 	}
 }
