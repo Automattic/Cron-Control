@@ -110,8 +110,8 @@ func spawnEventWorkers(queue chan Event) {
 
 	close(workerEvents)
 
-	time.Sleep(runEventsBreak)
-	go spawnEventWorkers(queue)
+	logger.Println("Event workers died, exiting")
+	os.Exit(1)
 }
 
 func keepAlive() {
