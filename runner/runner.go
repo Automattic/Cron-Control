@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"math/rand"
 	"time"
 )
 
@@ -173,6 +174,12 @@ func getMultisiteSites() ([]Site, error) {
 	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
 		logger.Println(fmt.Sprintf("%+v\n", err))
 		return make([]Site, 0), err
+	}
+
+	// Shuffle site order so that none are favored
+	for i := range jsonRes {
+		j := rand.Intn(i + 1)
+		jsonRes[i], jsonRes[j] = jsonRes[j], jsonRes[i]
 	}
 
 	return jsonRes, nil
