@@ -72,15 +72,13 @@ class Orchestrate extends \WP_CLI_Command {
 			array(
 				'multisite' => is_multisite() ? 1 : 0,
 				'siteurl'   => site_url(),
+				'disabled'  => 0,
 			),
 		);
 
 		$format = \WP_CLI\Utils\get_flag_value( $assoc_args, 'format', 'table' );
 
-		\WP_CLI\Utils\format_items( $format, $info, array(
-			'multisite',
-			'siteurl',
-		) );
+		\WP_CLI\Utils\format_items( $format, $info, array_keys( $info[0] ) );
 	}
 }
 

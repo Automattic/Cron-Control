@@ -15,6 +15,7 @@ import (
 type SiteInfo struct {
 	Multisite int
 	Siteurl   string
+	Disabled  int
 }
 
 type Site struct {
@@ -136,6 +137,14 @@ func keepAlive() {
 func getSites() ([]Site, error) {
 	siteInfo, err := getInstanceInfo()
 	if err != nil {
+		return make([]Site, 0), err
+	}
+
+	if now := time.Now(); siteInfo.Disabled == 1 {
+		logger.Println("Cron execution disabled indefinitely, listing no sites")
+		return make([]Site, 0), err
+	} else if siteInfo.Disabled > int(now.Unix()) {
+		logger.Printf("Cron execution disabled until %s, listing no sites", time.Unix(int64(siteInfo.Disabled), 0))
 		return make([]Site, 0), err
 	}
 
