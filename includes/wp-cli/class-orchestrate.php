@@ -7,9 +7,11 @@ namespace Automattic\WP\Cron_Control\CLI;
  */
 class Orchestrate extends \WP_CLI_Command {
 	/**
-	 * List the next set of events to run
+	 * List the next set of events to run; meant for Runner
 	 *
 	 * Will not be all events, just those atop the curated queue
+	 *
+	 * Not intended for human use, rather it powers the Go-based Runner. Use the `events list` command instead.
 	 *
 	 * @subcommand list-due-batch
 	 */
@@ -26,7 +28,9 @@ class Orchestrate extends \WP_CLI_Command {
 	}
 
 	/**
-	 * Run a given event
+	 * Run a given event; meant for Runner
+	 *
+	 * Not intended for human use, rather it powers the Go-based Runner. Use the `events run` command instead.
 	 *
 	 * @subcommand run
 	 * @synopsis --timestamp=<timestamp> --action=<action-hashed> --instance=<instance>
@@ -63,7 +67,9 @@ class Orchestrate extends \WP_CLI_Command {
 	}
 
 	/**
-	 * Get some details needed to execute events
+	 * Get some details needed to execute events; meant for Runner
+	 *
+	 * Not intended for human use, rather it powers the Go-based Runner. Use the `orchestrate manage-automatic-execution` command instead.
 	 *
 	 * @subcommand get-info
 	 */
@@ -82,7 +88,9 @@ class Orchestrate extends \WP_CLI_Command {
 	}
 
 	/**
+	 * Check and change status of automatic event execution
 	 *
+	 * When using the Go-based runner, it may be necessary to stop execution for a period, or indefinitely
 	 *
 	 * @subcommand manage-automatic-execution
 	 * @synopsis [--enable] [--disable] [--disable_until=<disable_until>]
@@ -115,15 +123,15 @@ class Orchestrate extends \WP_CLI_Command {
 
 		switch ( $status ) {
 			case 0 :
-				$status = 'Automatic execution enabled';
+				$status = 'Automatic execution is enabled';
 				break;
 
 			case 1 :
-				$status = 'Automatic execution disabled indefinitely';
+				$status = 'Automatic execution is disabled indefinitely';
 				break;
 
 			default :
-				$status = sprintf( 'Automatic execution disabled until %s', date( 'Y-m-d H:i:s T', $status ) );
+				$status = sprintf( 'Automatic execution is disabled until %s', date( 'Y-m-d H:i:s T', $status ) );
 				break;
 		}
 
