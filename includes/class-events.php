@@ -37,11 +37,21 @@ class Events extends Singleton {
 	 * Set initial options that control event behaviour
 	 */
 	public function prime_options() {
+		// Prime option to disable automatic execution
 		if ( is_admin() || ( defined( 'WP_CLI' ) && \WP_CLI ) || false !== get_endpoint_type() ) {
 			add_option( self::DISABLE_RUN_OPTION, 0, null, false );
 		}
 
-		$this->run_disabled = get_option( self::DISABLE_RUN_OPTION, 0 );
+		// Check if execution is disabled, or if timestamp has passed
+		$disabled = get_option( self::DISABLE_RUN_OPTION, 0 );
+		if ( $disabled <= 1 ) {
+			$this->run_disabled = $disabled;
+		} elseif ( $disabled > time() ) {
+			$this->run_disabled = $disabled;
+		} else {
+			update_option( self::DISABLE_RUN_OPTION, 0 );
+			$this->run_disabled = 0;
+		}
 	}
 
 	/**

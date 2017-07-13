@@ -86,7 +86,7 @@ class Orchestrate extends \WP_CLI_Command {
 			array(
 				'multisite' => is_multisite() ? 1 : 0,
 				'siteurl'   => site_url(),
-				'disabled'  => get_option( \Automattic\WP\Cron_Control\Events::DISABLE_RUN_OPTION, 0 ),
+				'disabled'  => \Automattic\WP\Cron_Control\Events::instance()->run_disabled(),
 			),
 		);
 
