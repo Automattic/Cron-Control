@@ -13,6 +13,7 @@ class Events extends Singleton {
 	const LOCK = 'run-events';
 
 	const DISABLE_RUN_OPTION = 'a8c_cron_control_disable_run';
+	private $run_disabled    = 0;
 
 	private $concurrent_action_whitelist = array();
 
@@ -23,11 +24,9 @@ class Events extends Singleton {
 		// Prime lock cache if not present
 		Lock::prime_lock( self::LOCK );
 
-		// Prime options under certain conditions
-		$this->prime_options();
-
-		// Prepare environment as early as possible
+		// Prime options and prepare environment as early as possible
 		$earliest_action = did_action( 'muplugins_loaded' ) ? 'plugins_loaded' : 'muplugins_loaded';
+		add_action( $earliest_action, array( $this, 'prime_options' ) );
 		add_action( $earliest_action, array( $this, 'prepare_environment' ) );
 
 		// Allow code loaded as late as the theme to modify the whitelist
@@ -37,10 +36,12 @@ class Events extends Singleton {
 	/**
 	 * Set initial options that control event behaviour
 	 */
-	private function prime_options() {
-		if ( is_admin() || ( defined( 'WP_CLI' ) && \WP_CLI ) || is_rest_endpoint_request( REST_API::ENDPOINT_LIST ) || is_rest_endpoint_request( REST_API::ENDPOINT_RUN ) ) {
+	public function prime_options() {
+		if ( is_admin() || ( defined( 'WP_CLI' ) && \WP_CLI ) || false !== get_endpoint_type() ) {
 			add_option( self::DISABLE_RUN_OPTION, 0, null, false );
 		}
+
+		$this->run_disabled = get_option( self::DISABLE_RUN_OPTION, 0 );
 	}
 
 	/**
@@ -132,10 +133,10 @@ class Events extends Singleton {
 			$current_events = $this->reduce_queue( $current_events );
 		}
 
-		// Combine with Internal Events and return necessary data to process the event queue
+		// Combine with Internal Events
+		// TODO: un-nest array, which is nested for legacy reasons
 		return array(
-			'events'   => array_merge( $current_events, $internal_events ),
-			'endpoint' => get_rest_url( null, REST_API::API_NAMESPACE . '/' . REST_API::ENDPOINT_RUN ),
+			'events' => array_merge( $current_events, $internal_events ),
 		);
 	}
 
@@ -435,6 +436,15 @@ class Events extends Singleton {
 
 		// Either event doesn't recur, or the interval couldn't be determined
 		delete_event( $event->timestamp, $event->action, $event->instance );
+	}
+
+	/**
+	 * Return status of automatic event execution
+	 *
+	 * @return int 0 is run is enabled, 1 if run is disabled indefinitely, otherwise timestamp when execution will resume
+	 */
+	public function run_disabled() {
+		return $this->run_disabled;
 	}
 }
 

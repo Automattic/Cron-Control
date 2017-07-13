@@ -16,6 +16,10 @@ class Orchestrate extends \WP_CLI_Command {
 	 * @subcommand list-due-batch
 	 */
 	public function list_due_now( $args, $assoc_args ) {
+		if ( 0 !== \Automattic\WP\Cron_Control\Events::instance()->run_disabled() ) {
+			\WP_CLI::error( __( 'Automatic event execution is disabled', 'automattic-cron-control' ) );
+		}
+
 		$events = \Automattic\WP\Cron_Control\Events::instance()->get_events();
 
 		$format = \WP_CLI\Utils\get_flag_value( $assoc_args, 'format', 'table' );
@@ -36,6 +40,10 @@ class Orchestrate extends \WP_CLI_Command {
 	 * @synopsis --timestamp=<timestamp> --action=<action-hashed> --instance=<instance>
 	 */
 	public function run_event( $args, $assoc_args ) {
+		if ( 0 !== \Automattic\WP\Cron_Control\Events::instance()->run_disabled() ) {
+			\WP_CLI::error( __( 'Automatic event execution is disabled', 'automattic-cron-control' ) );
+		}
+
 		$timestamp = \WP_CLI\Utils\get_flag_value( $assoc_args, 'timestamp', null );
 		$action    = \WP_CLI\Utils\get_flag_value( $assoc_args, 'action',    null );
 		$instance  = \WP_CLI\Utils\get_flag_value( $assoc_args, 'instance',  null );
