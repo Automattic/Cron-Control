@@ -12,6 +12,8 @@ class Events extends Singleton {
 	 */
 	const LOCK = 'run-events';
 
+	const DISABLE_RUN_OPTION = 'a8c_cron_control_disable_run';
+
 	private $concurrent_action_whitelist = array();
 
 	/**
@@ -21,12 +23,24 @@ class Events extends Singleton {
 		// Prime lock cache if not present
 		Lock::prime_lock( self::LOCK );
 
+		// Prime options under certain conditions
+		$this->prime_options();
+
 		// Prepare environment as early as possible
 		$earliest_action = did_action( 'muplugins_loaded' ) ? 'plugins_loaded' : 'muplugins_loaded';
 		add_action( $earliest_action, array( $this, 'prepare_environment' ) );
 
 		// Allow code loaded as late as the theme to modify the whitelist
 		add_action( 'after_setup_theme', array( $this, 'populate_concurrent_action_whitelist' ) );
+	}
+
+	/**
+	 * Set initial options that control event behaviour
+	 */
+	private function prime_options() {
+		if ( is_admin() || ( defined( 'WP_CLI' ) && \WP_CLI ) || is_rest_endpoint_request( REST_API::ENDPOINT_LIST ) || is_rest_endpoint_request( REST_API::ENDPOINT_RUN ) ) {
+			add_option( self::DISABLE_RUN_OPTION, 0, null, false );
+		}
 	}
 
 	/**
