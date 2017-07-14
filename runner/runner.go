@@ -81,7 +81,6 @@ func main() {
 
 	caughtSig := <-sig
 	close(events)
-	time.Sleep(time.Minute)
 	logger.Printf("Stopping, got signal %s", caughtSig)
 }
 
