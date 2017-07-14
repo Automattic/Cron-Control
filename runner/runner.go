@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"math/rand"
+	"sync/atomic"
 	"time"
 )
 
@@ -36,6 +37,8 @@ var (
 
 	workersGetEvents int
 	workersRunEvents int
+
+	disabledLoopCount uint64
 
 	logger  *log.Logger
 	logDest string
@@ -140,11 +143,7 @@ func getSites() ([]Site, error) {
 		return make([]Site, 0), err
 	}
 
-	if now := time.Now(); siteInfo.Disabled == 1 {
-		logger.Println("Cron execution disabled indefinitely, listing no sites")
-		return make([]Site, 0), err
-	} else if siteInfo.Disabled > int(now.Unix()) {
-		logger.Printf("Cron execution disabled until %s, listing no sites", time.Unix(int64(siteInfo.Disabled), 0))
+	if run := shouldGetSites(siteInfo.Disabled); false == run {
 		return make([]Site, 0), err
 	}
 
@@ -176,6 +175,34 @@ func getInstanceInfo() (SiteInfo, error) {
 	}
 
 	return jsonRes[0], nil
+}
+
+func shouldGetSites(disabled int) (bool) {
+	if disabled == 0 {
+		atomic.SwapUint64(&disabledLoopCount, 0)
+		return true;
+	}
+
+	disabledCount, now   := atomic.LoadUint64(&disabledLoopCount), time.Now()
+	disabledSleep        := time.Minute * 3 * time.Duration(disabledCount)
+	disabledSleepSeconds := int64(disabledSleep) / 1000 / 1000 / 1000
+
+	if disabled > 1 && (now.Unix() + disabledSleepSeconds) > int64(disabled) {
+		atomic.SwapUint64(&disabledLoopCount, 0)
+	} else if disabledSleep > time.Hour {
+		atomic.SwapUint64(&disabledLoopCount, 0)
+	} else {
+		atomic.AddUint64(&disabledLoopCount, 1)
+	}
+
+	if disabledSleep > 0 {
+		logger.Printf("Automatic execution disabled, sleeping for an additional %d minutes", disabledSleepSeconds / 60)
+		time.Sleep(disabledSleep)
+	} else {
+		logger.Println("Automatic execution disabled")
+	}
+
+	return false;
 }
 
 func getMultisiteSites() ([]Site, error) {
