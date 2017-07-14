@@ -21,7 +21,7 @@ In addition to the REST API endpoints that can be used to run events, a Go-based
 * `-log` string
   * Log path, omit to log to Stdout (default `os.Stdout`)
 * `-network` int
-  * WordPress network ID (default `1`)
+  * WordPress network ID, `0` to disable (default `0`)
 * `-workers-get` int
   * Number of workers to retrieve events (default `1`)
   * Increase for multisite instances so that sites are retrieved in a timely manner
