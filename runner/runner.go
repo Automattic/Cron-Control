@@ -14,18 +14,18 @@ import (
 	"time"
 )
 
-type SiteInfo struct {
+type siteInfo struct {
 	Multisite int
 	Siteurl   string
 	Disabled  int
 }
 
-type Site struct {
-	Url string
+type site struct {
+	URL string
 }
 
-type Event struct {
-	Url       string
+type event struct {
+	URL       string
 	Timestamp int
 	Action    string
 	Instance  string
@@ -50,7 +50,7 @@ var (
 	debug   bool
 )
 
-const getEventsLoop time.Duration  = time.Minute
+const getEventsLoop time.Duration = time.Minute
 const getEventsBreak time.Duration = time.Second
 const runEventsBreak time.Duration = time.Second * 10
 
@@ -78,8 +78,8 @@ func main() {
 	signal.Notify(sig, os.Interrupt)
 	signal.Notify(sig, os.Kill)
 
-	sites  := make(chan Site)
-	events := make(chan Event)
+	sites := make(chan site)
+	events := make(chan event)
 
 	go spawnEventRetrievers(sites, events)
 	go spawnEventWorkers(events)
@@ -92,14 +92,14 @@ func main() {
 	logger.Printf("Stopping, got signal %s", caughtSig)
 }
 
-func spawnEventRetrievers(sites <-chan Site, queue chan<- Event) {
+func spawnEventRetrievers(sites <-chan site, queue chan<- event) {
 	for w := 1; w <= workersGetEvents; w++ {
 		go queueSiteEvents(w, sites, queue)
 	}
 }
 
-func spawnEventWorkers(queue <-chan Event) {
-	workerEvents := make(chan Event)
+func spawnEventWorkers(queue <-chan event) {
+	workerEvents := make(chan event)
 
 	for w := 1; w <= workersRunEvents; w++ {
 		go runEvents(w, workerEvents)
@@ -112,7 +112,7 @@ func spawnEventWorkers(queue <-chan Event) {
 	close(workerEvents)
 }
 
-func retrieveSitesPeriodically(sites chan<- Site) {
+func retrieveSitesPeriodically(sites chan<- site) {
 	for true {
 		siteList, err := getSites()
 		if err != nil {
@@ -147,58 +147,58 @@ func heartbeat() {
 	}
 }
 
-func getSites() ([]Site, error) {
+func getSites() ([]site, error) {
 	siteInfo, err := getInstanceInfo()
 	if err != nil {
-		return make([]Site, 0), err
+		return make([]site, 0), err
 	}
 
 	if run := shouldGetSites(siteInfo.Disabled); false == run {
-		return make([]Site, 0), err
+		return make([]site, 0), err
 	}
 
 	if siteInfo.Multisite == 1 {
 		sites, err := getMultisiteSites()
 		if err != nil {
-			sites = make([]Site, 0)
+			sites = make([]site, 0)
 		}
 
 		return sites, err
-	} else {
-		// Mock for single site
-		sites := make([]Site, 0)
-		sites = append(sites, Site{Url: siteInfo.Siteurl})
-
-		return sites, nil
 	}
+
+	// Mock for single site
+	sites := make([]site, 0)
+	sites = append(sites, site{URL: siteInfo.Siteurl})
+
+	return sites, nil
 }
 
-func getInstanceInfo() (SiteInfo, error) {
+func getInstanceInfo() (siteInfo, error) {
 	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "runner-only", "get-info", "--format=json"})
 	if err != nil {
-		return SiteInfo{}, err
+		return siteInfo{}, err
 	}
 
-	jsonRes := make([]SiteInfo, 0)
+	jsonRes := make([]siteInfo, 0)
 	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
 		logger.Println(fmt.Sprintf("%+v\n", err))
-		return SiteInfo{}, err
+		return siteInfo{}, err
 	}
 
 	return jsonRes[0], nil
 }
 
-func shouldGetSites(disabled int) (bool) {
+func shouldGetSites(disabled int) bool {
 	if disabled == 0 {
 		atomic.SwapUint64(&disabledLoopCount, 0)
-		return true;
+		return true
 	}
 
-	disabledCount, now   := atomic.LoadUint64(&disabledLoopCount), time.Now()
-	disabledSleep        := time.Minute * 3 * time.Duration(disabledCount)
+	disabledCount, now := atomic.LoadUint64(&disabledLoopCount), time.Now()
+	disabledSleep := time.Minute * 3 * time.Duration(disabledCount)
 	disabledSleepSeconds := int64(disabledSleep) / 1000 / 1000 / 1000
 
-	if disabled > 1 && (now.Unix() + disabledSleepSeconds) > int64(disabled) {
+	if disabled > 1 && (now.Unix()+disabledSleepSeconds) > int64(disabled) {
 		atomic.SwapUint64(&disabledLoopCount, 0)
 	} else if disabledSleep > time.Hour {
 		atomic.SwapUint64(&disabledLoopCount, 0)
@@ -208,7 +208,7 @@ func shouldGetSites(disabled int) (bool) {
 
 	if disabledSleep > 0 {
 		if debug {
-			logger.Printf("Automatic execution disabled, sleeping for an additional %d minutes", disabledSleepSeconds / 60)
+			logger.Printf("Automatic execution disabled, sleeping for an additional %d minutes", disabledSleepSeconds/60)
 		}
 
 		time.Sleep(disabledSleep)
@@ -216,19 +216,19 @@ func shouldGetSites(disabled int) (bool) {
 		logger.Println("Automatic execution disabled")
 	}
 
-	return false;
+	return false
 }
 
-func getMultisiteSites() ([]Site, error) {
+func getMultisiteSites() ([]site, error) {
 	raw, err := runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
 	if err != nil {
-		return make([]Site, 0), err
+		return make([]site, 0), err
 	}
 
-	jsonRes := make([]Site, 0)
+	jsonRes := make([]site, 0)
 	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
 		logger.Println(fmt.Sprintf("%+v\n", err))
-		return make([]Site, 0), err
+		return make([]site, 0), err
 	}
 
 	// Shuffle site order so that none are favored
@@ -240,20 +240,20 @@ func getMultisiteSites() ([]Site, error) {
 	return jsonRes, nil
 }
 
-func queueSiteEvents(workerId int, sites <-chan Site, queue chan<- Event) {
+func queueSiteEvents(workerID int, sites <-chan site, queue chan<- event) {
 	for site := range sites {
 		if debug {
-			logger.Printf("getEvents-%d processing %s", workerId, site.Url)
+			logger.Printf("getEvents-%d processing %s", workerID, site.URL)
 		}
 
-		siteEvents, err := getSiteEvents(site.Url)
+		events, err := getSiteEvents(site.URL)
 		if err != nil {
 			time.Sleep(getEventsBreak)
 			continue
 		}
 
-		for _, event := range siteEvents {
-			event.Url = site.Url
+		for _, event := range events {
+			event.URL = site.URL
 			queue <- event
 		}
 
@@ -261,32 +261,32 @@ func queueSiteEvents(workerId int, sites <-chan Site, queue chan<- Event) {
 	}
 }
 
-func getSiteEvents(site string) ([]Event, error) {
+func getSiteEvents(site string) ([]event, error) {
 	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "runner-only", "list-due-batch", fmt.Sprintf("--url=%s", site), "--format=json"})
 	if err != nil {
-		return make([]Event, 0), err
+		return make([]event, 0), err
 	}
 
-	siteEvents := make([]Event, 0)
+	siteEvents := make([]event, 0)
 	if err = json.Unmarshal([]byte(raw), &siteEvents); err != nil {
 		logger.Println(fmt.Sprintf("%+v\n", err))
-		return make([]Event, 0), err
+		return make([]event, 0), err
 	}
 
 	return siteEvents, nil
 }
 
-func runEvents(workerId int, events <-chan Event) {
+func runEvents(workerID int, events <-chan event) {
 	for event := range events {
 		if now := time.Now(); event.Timestamp > int(now.Unix()) {
 			if debug {
-				logger.Printf("runEvents-%d skipping premature job %d|%s|%s for %s", workerId, event.Timestamp, event.Action, event.Instance, event.Url)
+				logger.Printf("runEvents-%d skipping premature job %d|%s|%s for %s", workerID, event.Timestamp, event.Action, event.Instance, event.URL)
 			}
 
 			continue
 		}
 
-		subcommand := []string{"cron-control", "orchestrate", "runner-only", "run", fmt.Sprintf("--timestamp=%d", event.Timestamp), fmt.Sprintf("--action=%s", event.Action), fmt.Sprintf("--instance=%s", event.Instance), fmt.Sprintf("--url=%s", event.Url)}
+		subcommand := []string{"cron-control", "orchestrate", "runner-only", "run", fmt.Sprintf("--timestamp=%d", event.Timestamp), fmt.Sprintf("--action=%s", event.Action), fmt.Sprintf("--instance=%s", event.Instance), fmt.Sprintf("--url=%s", event.URL)}
 
 		_, err := runWpCliCmd(subcommand)
 
@@ -296,7 +296,7 @@ func runEvents(workerId int, events <-chan Event) {
 			}
 
 			if debug {
-				logger.Printf("runEvents-%d finished job %d|%s|%s for %s", workerId, event.Timestamp, event.Action, event.Instance, event.Url)
+				logger.Printf("runEvents-%d finished job %d|%s|%s for %s", workerID, event.Timestamp, event.Action, event.Instance, event.URL)
 			}
 		} else if heartbeatInt > 0 {
 			atomic.AddUint64(&eventRunErrCount, 1)
@@ -335,7 +335,7 @@ func setUpLogger() {
 			logger.Fatal(err)
 		}
 
-		logFile, err := os.OpenFile(path, os.O_WRONLY | os.O_CREATE | os.O_APPEND, 0644)
+		logFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 		if err != nil {
 			log.Fatal(err)
 		}
