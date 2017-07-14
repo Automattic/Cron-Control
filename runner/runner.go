@@ -41,7 +41,9 @@ var (
 
 	heartbeatInt int
 
-	disabledLoopCount uint64
+	disabledLoopCount    uint64
+	eventRunErrCount     uint64
+	eventRunSuccessCount uint64
 
 	logger  *log.Logger
 	logDest string
@@ -136,9 +138,11 @@ func heartbeat() {
 	time.Sleep(interval)
 
 	for true {
-		// TODO: check if process should exit or something?
-		// TODO: error counters?
-		logger.Println("<heartbeat>")
+		successCount, errCount := atomic.LoadUint64(&eventRunSuccessCount), atomic.LoadUint64(&eventRunErrCount)
+		atomic.SwapUint64(&eventRunSuccessCount, 0)
+		atomic.SwapUint64(&eventRunErrCount, 0)
+		logger.Printf("<heartbeat eventsSucceededSinceLast=%d eventsErroredSinceLast=%d>", successCount, errCount)
+
 		time.Sleep(interval)
 	}
 }
@@ -284,10 +288,18 @@ func runEvents(workerId int, events <-chan Event) {
 
 		subcommand := []string{"cron-control", "orchestrate", "runner-only", "run", fmt.Sprintf("--timestamp=%d", event.Timestamp), fmt.Sprintf("--action=%s", event.Action), fmt.Sprintf("--instance=%s", event.Instance), fmt.Sprintf("--url=%s", event.Url)}
 
-		runWpCliCmd(subcommand)
+		_, err := runWpCliCmd(subcommand)
 
-		if debug {
-			logger.Printf("runEvents-%d finished job %d|%s|%s for %s", workerId, event.Timestamp, event.Action, event.Instance, event.Url)
+		if err == nil {
+			if heartbeatInt > 0 {
+				atomic.AddUint64(&eventRunSuccessCount, 1)
+			}
+
+			if debug {
+				logger.Printf("runEvents-%d finished job %d|%s|%s for %s", workerId, event.Timestamp, event.Action, event.Instance, event.Url)
+			}
+		} else if heartbeatInt > 0 {
+			atomic.AddUint64(&eventRunErrCount, 1)
 		}
 
 		time.Sleep(runEventsBreak)
