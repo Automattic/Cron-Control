@@ -45,6 +45,7 @@ var (
 
 	logger  *log.Logger
 	logDest string
+	debug   bool
 )
 
 const getEventsLoop time.Duration  = time.Minute
@@ -59,6 +60,7 @@ func init() {
 	flag.IntVar(&workersRunEvents, "workers-run", 5, "Number of workers to run events")
 	flag.IntVar(&heartbeatInt, "heartbeat", 60, "Heartbeat interval in seconds")
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
+	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
 	flag.Parse()
 
 	setUpLogger()
@@ -228,7 +230,9 @@ func getMultisiteSites() ([]Site, error) {
 
 func queueSiteEvents(workerId int, sites <-chan Site, queue chan<- Event) {
 	for site := range sites {
-		logger.Printf("getEvents-%d processing %s", workerId, site.Url)
+		if debug {
+			logger.Printf("getEvents-%d processing %s", workerId, site.Url)
+		}
 
 		siteEvents, err := getSiteEvents(site.Url)
 		if err != nil {
@@ -265,7 +269,9 @@ func runEvents(workerId int, events <-chan Event) {
 
 		runWpCliCmd(subcommand)
 
-		logger.Printf("runEvents-%d finished job %d|%s|%s for %s", workerId, event.Timestamp, event.Action, event.Instance, event.Url)
+		if debug {
+			logger.Printf("runEvents-%d finished job %d|%s|%s for %s", workerId, event.Timestamp, event.Action, event.Instance, event.Url)
+		}
 
 		time.Sleep(runEventsBreak)
 	}
