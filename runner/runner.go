@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"sync/atomic"
 	"time"
@@ -65,7 +66,10 @@ func init() {
 }
 
 func main() {
-	logger.Println("Starting")
+	logger.Printf("Starting with %d event-retreival worker(s) and %d event worker(s)", workersGetEvents, workersRunEvents)
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt)
+	signal.Notify(sig, os.Kill)
 
 	sites  := make(chan Site)
 	events := make(chan Event)
@@ -73,24 +77,21 @@ func main() {
 	go spawnEventRetrievers(sites, events)
 	go spawnEventWorkers(events)
 	go retrieveSitesPeriodically(sites)
-	keepAlive()
+	go heartbeat()
 
-	logger.Println("Stopping")
+	caughtSig := <-sig
+	close(events)
+	time.Sleep(time.Minute)
+	logger.Printf("Stopping, got signal %s", caughtSig)
 }
 
 func spawnEventRetrievers(sites <-chan Site, queue chan<- Event) {
-	logger.Printf("Spawning %d event-retrieval workers", workersGetEvents)
-
 	for w := 1; w <= workersGetEvents; w++ {
 		go queueSiteEvents(w, sites, queue)
 	}
-
-	logger.Println("Event-retrieval workers spawned")
 }
 
 func spawnEventWorkers(queue <-chan Event) {
-	logger.Printf("Spawning %d event workers", workersRunEvents)
-
 	workerEvents := make(chan Event)
 
 	for w := 1; w <= workersRunEvents; w++ {
@@ -102,15 +103,10 @@ func spawnEventWorkers(queue <-chan Event) {
 	}
 
 	close(workerEvents)
-
-	logger.Println("Event workers died, exiting")
-	os.Exit(1)
 }
 
 func retrieveSitesPeriodically(sites chan<- Site) {
 	for true {
-		logger.Println("Retrieving sites")
-
 		siteList, err := getSites()
 		if err != nil {
 			time.Sleep(getEventsLoop)
@@ -121,12 +117,11 @@ func retrieveSitesPeriodically(sites chan<- Site) {
 			sites <- site
 		}
 
-		logger.Printf("Next site retreival in %d seconds", getEventsLoop / 1000 / 1000 / 1000)
 		time.Sleep(getEventsLoop)
 	}
 }
 
-func keepAlive() {
+func heartbeat() {
 	time.Sleep(getEventsLoop)
 
 	for true {
