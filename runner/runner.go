@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"sync/atomic"
+	"syscall"
 	"time"
 )
 
@@ -75,8 +76,7 @@ func init() {
 func main() {
 	logger.Printf("Starting with %d event-retreival worker(s) and %d event worker(s)", workersGetEvents, workersRunEvents)
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
-	signal.Notify(sig, os.Kill)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
 	sites := make(chan site)
 	events := make(chan event)
