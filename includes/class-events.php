@@ -43,7 +43,7 @@ class Events extends Singleton {
 		}
 
 		// Check if execution is disabled, or if timestamp has passed
-		$disabled = get_option( self::DISABLE_RUN_OPTION, 0 );
+		$disabled = (int) get_option( self::DISABLE_RUN_OPTION, 0 );
 		if ( $disabled <= 1 ) {
 			$this->run_disabled = $disabled;
 		} elseif ( $disabled > time() ) {
