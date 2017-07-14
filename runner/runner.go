@@ -274,6 +274,14 @@ func getSiteEvents(site string) ([]Event, error) {
 
 func runEvents(workerId int, events <-chan Event) {
 	for event := range events {
+		if now := time.Now(); event.Timestamp > int(now.Unix()) {
+			if debug {
+				logger.Printf("runEvents-%d skipping premature job %d|%s|%s for %s", workerId, event.Timestamp, event.Action, event.Instance, event.Url)
+			}
+
+			continue
+		}
+
 		subcommand := []string{"cron-control", "orchestrate", "runner-only", "run", fmt.Sprintf("--timestamp=%d", event.Timestamp), fmt.Sprintf("--action=%s", event.Action), fmt.Sprintf("--instance=%s", event.Instance), fmt.Sprintf("--url=%s", event.Url)}
 
 		runWpCliCmd(subcommand)
