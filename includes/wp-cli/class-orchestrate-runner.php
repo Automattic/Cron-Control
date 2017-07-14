@@ -147,4 +147,4 @@ class Orchestrate extends \WP_CLI_Command {
 	}
 }
 
-\WP_CLI::add_command( 'cron-control orchestrate', 'Automattic\WP\Cron_Control\CLI\Orchestrate' );
+\WP_CLI::add_command( 'cron-control orchestrate runner', 'Automattic\WP\Cron_Control\CLI\Orchestrate' );

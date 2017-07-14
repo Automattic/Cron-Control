@@ -159,7 +159,7 @@ func getSites() ([]Site, error) {
 }
 
 func getInstanceInfo() (SiteInfo, error) {
-	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "get-info", "--format=json"})
+	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "runner", "get-info", "--format=json"})
 	if err != nil {
 		return SiteInfo{}, err
 	}
@@ -242,7 +242,7 @@ func queueSiteEvents(workerId int, sites <-chan Site, queue chan<- Event) {
 }
 
 func getSiteEvents(site string) ([]Event, error) {
-	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "list-due-batch", fmt.Sprintf("--url=%s", site), "--format=json"})
+	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "runner", "list-due-batch", fmt.Sprintf("--url=%s", site), "--format=json"})
 	if err != nil {
 		return make([]Event, 0), err
 	}
@@ -257,7 +257,7 @@ func getSiteEvents(site string) ([]Event, error) {
 
 func runEvents(workerId int, events <-chan Event) {
 	for event := range events {
-		subcommand := []string{"cron-control", "orchestrate", "run", fmt.Sprintf("--timestamp=%d", event.Timestamp), fmt.Sprintf("--action=%s", event.Action), fmt.Sprintf("--instance=%s", event.Instance), fmt.Sprintf("--url=%s", event.Url), fmt.Sprintf("--network=%d", wpNetwork)}
+		subcommand := []string{"cron-control", "orchestrate", "runner", "run", fmt.Sprintf("--timestamp=%d", event.Timestamp), fmt.Sprintf("--action=%s", event.Action), fmt.Sprintf("--instance=%s", event.Instance), fmt.Sprintf("--url=%s", event.Url), fmt.Sprintf("--network=%d", wpNetwork)}
 
 		runWpCliCmd(subcommand)
 
