@@ -10,6 +10,7 @@ In addition to the REST API endpoints that can be used to run events, a Go-based
 3. To override default configuration, copy `defaults` to `/etc/default/cron-control-runner` and modify as needed
 4. Run `update-rc.d cron-control-runner defaults`
 5. Start the runner: `/etc/init.d/cron-control-runner start`
+6. Check the runner's status: `/etc/init.d/cron-control-runner status`
 
 # Runner options
 
@@ -24,6 +25,7 @@ In addition to the REST API endpoints that can be used to run events, a Go-based
   * Increase for multisite instances so that sites are retrieved in a timely manner
 * `-workers-run` int
   * Number of workers to run events (default `5`)
+  * Increase for cron-heavy sites and multisite instances so that events are run in a timely manner
 * `-wp` string
   * Path to WordPress installation (default `/var/www/html`)
 
