@@ -121,7 +121,7 @@ func retrieveSitesPeriodically(sites chan<- Site) {
 			sites <- site
 		}
 
-		logger.Printf("Sites sent to event retrievers, next site retreival in %d seconds", getEventsLoop / 1000 / 1000 / 1000)
+		logger.Printf("Next site retreival in %d seconds", getEventsLoop / 1000 / 1000 / 1000)
 		time.Sleep(getEventsLoop)
 	}
 }
