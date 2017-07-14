@@ -177,6 +177,7 @@ func getInstanceInfo() (SiteInfo, error) {
 
 	jsonRes := make([]SiteInfo, 0)
 	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
+		logger.Println(fmt.Sprintf("%+v\n", err))
 		return SiteInfo{}, err
 	}
 
@@ -202,9 +203,12 @@ func shouldGetSites(disabled int) (bool) {
 	}
 
 	if disabledSleep > 0 {
-		logger.Printf("Automatic execution disabled, sleeping for an additional %d minutes", disabledSleepSeconds / 60)
+		if debug {
+			logger.Printf("Automatic execution disabled, sleeping for an additional %d minutes", disabledSleepSeconds / 60)
+		}
+
 		time.Sleep(disabledSleep)
-	} else {
+	} else if debug {
 		logger.Println("Automatic execution disabled")
 	}
 
@@ -214,7 +218,6 @@ func shouldGetSites(disabled int) (bool) {
 func getMultisiteSites() ([]Site, error) {
 	raw, err := runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
 	if err != nil {
-		logger.Println(fmt.Sprintf("%+v\n", err))
 		return make([]Site, 0), err
 	}
 
@@ -262,6 +265,7 @@ func getSiteEvents(site string) ([]Event, error) {
 
 	siteEvents := make([]Event, 0)
 	if err = json.Unmarshal([]byte(raw), &siteEvents); err != nil {
+		logger.Println(fmt.Sprintf("%+v\n", err))
 		return make([]Event, 0), err
 	}
 
@@ -293,6 +297,7 @@ func runWpCliCmd(subcommand []string) (string, error) {
 	wpOutStr := string(wpOut)
 
 	if err != nil {
+		logger.Printf("%s - %s", err, wpOutStr)
 		return wpOutStr, err
 	}
 
