@@ -39,6 +39,8 @@ var (
 	workersGetEvents int
 	workersRunEvents int
 
+	heartbeatInt int
+
 	disabledLoopCount uint64
 
 	logger  *log.Logger
@@ -55,6 +57,7 @@ func init() {
 	flag.StringVar(&wpPath, "wp", "/var/www/html", "Path to WordPress installation")
 	flag.IntVar(&workersGetEvents, "workers-get", 1, "Number of workers to retrieve events")
 	flag.IntVar(&workersRunEvents, "workers-run", 5, "Number of workers to run events")
+	flag.IntVar(&heartbeatInt, "heartbeat", 60, "Heartbeat interval in seconds")
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
 	flag.Parse()
 
@@ -122,13 +125,14 @@ func retrieveSitesPeriodically(sites chan<- Site) {
 }
 
 func heartbeat() {
-	time.Sleep(getEventsLoop)
+	interval := time.Duration(heartbeatInt) * time.Second
+	time.Sleep(interval)
 
 	for true {
 		// TODO: check if process should exit or something?
 		// TODO: error counters?
 		logger.Println("<heartbeat>")
-		time.Sleep(getEventsLoop)
+		time.Sleep(interval)
 	}
 }
 

@@ -16,6 +16,8 @@ In addition to the REST API endpoints that can be used to run events, a Go-based
 
 * `-cli` string
   * Path to WP-CLI binary (default `/usr/local/bin/wp`)
+* `-heartbeat` int
+  * Heartbeat interval in seconds (default `60`)
 * `-log` string
   * Log path, omit to log to Stdout (default `os.Stdout`)
 * `-network` int
