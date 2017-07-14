@@ -127,6 +127,11 @@ func retrieveSitesPeriodically(sites chan<- Site) {
 }
 
 func heartbeat() {
+	if heartbeatInt == 0 {
+		logger.Println("heartbeat disabled")
+		return
+	}
+
 	interval := time.Duration(heartbeatInt) * time.Second
 	time.Sleep(interval)
 
