@@ -5,10 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"math/rand"
 	"sync/atomic"
 	"time"
 )
