@@ -52,7 +52,7 @@ func init() {
 	flag.StringVar(&wpCliPath, "cli", "/usr/local/bin/wp", "Path to WP-CLI binary")
 	flag.IntVar(&wpNetwork, "network", 1, "WordPress network ID")
 	flag.StringVar(&wpPath, "wp", "/var/www/html", "Path to WordPress installation")
-	flag.IntVar(&workersGetEvents, "workers-get", 3, "Number of workers to retrieve events")
+	flag.IntVar(&workersGetEvents, "workers-get", 1, "Number of workers to retrieve events")
 	flag.IntVar(&workersRunEvents, "workers-run", 5, "Number of workers to run events")
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
 	flag.Parse()

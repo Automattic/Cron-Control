@@ -20,7 +20,8 @@ In addition to the REST API endpoints that can be used to run events, a Go-based
 * `-network` int
   * WordPress network ID (default `1`)
 * `-workers-get` int
-  * Number of workers to retrieve events (default `3`)
+  * Number of workers to retrieve events (default `1`)
+  * Increase for multisite instances so that sites are retrieved in a timely manner
 * `-workers-run` int
   * Number of workers to run events (default `5`)
 * `-wp` string
