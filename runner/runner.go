@@ -87,8 +87,6 @@ func main() {
 	go heartbeat()
 
 	caughtSig := <-sig
-	close(sites)
-	close(events)
 	logger.Printf("Stopping, got signal %s", caughtSig)
 }
 
