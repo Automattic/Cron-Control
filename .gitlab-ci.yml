@@ -14,6 +14,9 @@ before_script:
 - docker-php-ext-install mbstring mcrypt pdo_pgsql curl json intl gd xml zip bz2 opcache
 # Install Composer
 - curl -sS https://getcomposer.org/installer | php
+# Install phpunit (https://docs.gitlab.com/ce/ci/examples/php.html)
+- curl --location --output /usr/local/bin/phpunit https://phar.phpunit.de/phpunit.phar
+- chmod +x /usr/local/bin/phpunit
 # Prepare to run WP tests
 - bash bin/install-wp-tests.sh wordpress_test root '' $MYSQL_PORT_3306_TCP_ADDR $WP_VERSION
 
@@ -32,4 +35,4 @@ variables:
 # If Xdebug was installed you can generate a coverage report and see code coverage metrics.
 test:
   script:
-  - vendor/bin/phpunit --configuration phpunit.xml --coverage-text --colors=never
+  - /usr/local/bin/phpunit --configuration phpunit.xml --coverage-text --colors=never
