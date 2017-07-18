@@ -111,7 +111,7 @@ func spawnEventWorkers(queue <-chan event) {
 }
 
 func retrieveSitesPeriodically(sites chan<- site) {
-	for true {
+	for {
 		siteList, err := getSites()
 		if err != nil {
 			time.Sleep(getEventsLoop)
@@ -135,7 +135,7 @@ func heartbeat() {
 	interval := time.Duration(heartbeatInt) * time.Second
 	time.Sleep(interval)
 
-	for true {
+	for {
 		successCount, errCount := atomic.LoadUint64(&eventRunSuccessCount), atomic.LoadUint64(&eventRunErrCount)
 		atomic.SwapUint64(&eventRunSuccessCount, 0)
 		atomic.SwapUint64(&eventRunErrCount, 0)
