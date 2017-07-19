@@ -302,13 +302,17 @@ class Events extends Singleton {
 	private function can_run_event( $event ) {
 		// Limit to one concurrent execution of a specific action by default
 		$limit = 1;
-
 		if ( isset( $this->concurrent_action_whitelist[ $event->action ] ) ) {
 			$limit = absint( $this->concurrent_action_whitelist[ $event->action ] );
 			$limit = min( $limit, JOB_CONCURRENCY_LIMIT );
 		}
 
 		if ( ! Lock::check_lock( $this->get_lock_key_for_event_action( $event ), $limit, JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS ) ) {
+			// If we can, provide custom meta data to New Relic.
+			if ( extension_loaded( 'newrelic' ) ) {
+				newrelic_add_custom_parameter( 'event_lock', true );
+				newrelic_add_custom_parameter( 'event_lock_timestamp', Lock::get_lock_timestamp( $this->get_lock_key_for_event_action( $event ) ) );
+			}
 			return false;
 		}
 
