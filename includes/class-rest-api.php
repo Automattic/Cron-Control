@@ -50,6 +50,12 @@ class REST_API extends Singleton {
 	 * For monitoring and alerting, also provides the total number of pending events
 	 */
 	public function get_events() {
+
+		// If we can, create a named transaction in New Relic.
+		if ( extension_loaded( 'newrelic' ) ) {
+			newrelic_name_transaction( 'cron-control/rest-get_events' );
+		}
+
 		// Provides `events` and `endpoint` keys needed to run events
 		$response_array = Events::instance()->get_events();
 
@@ -63,6 +69,12 @@ class REST_API extends Singleton {
 	 * Execute a specific event
 	 */
 	public function run_event( $request ) {
+
+		// If we can, create a named transaction in New Relic.
+		if ( extension_loaded( 'newrelic' ) ) {
+			newrelic_name_transaction( 'cron-control/rest-run_event' );
+		}
+
 		// Parse request for details needed to identify the event to execute
 		// `$timestamp` is, unsurprisingly, the Unix timestamp the event is scheduled for
 		// `$action` is the md5 hash of the action used when the event is registered
@@ -71,6 +83,12 @@ class REST_API extends Singleton {
 		$timestamp = isset( $event['timestamp'] ) ? absint( $event['timestamp'] ) : null;
 		$action    = isset( $event['action'] ) ? trim( sanitize_text_field( $event['action'] ) ) : null;
 		$instance  = isset( $event['instance'] ) ? trim( sanitize_text_field( $event['instance'] ) ) : null;
+
+		// If we can, provide custom meta data to New Relic.
+		if ( extension_loaded( 'newrelic' ) ) {
+			newrelic_add_custom_parameter( 'action', $event['action'] );
+			newrelic_add_custom_parameter( 'timestamp', $event['timestamp'] );
+		}
 
 		return rest_ensure_response( run_event( $timestamp, $action, $instance ) );
 	}
