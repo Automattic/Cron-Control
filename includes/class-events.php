@@ -273,7 +273,7 @@ class Events extends Singleton {
 		} catch ( \Throwable $t ) {
 			$return = array(
 				'success' => false,
-				'message' => sprintf( __( 'Exception for job with action `%1$s` and arguments `%2$s` - %3$s in %4$s on line %5$d.', 'automattic-cron-control' ), $event->action, maybe_serialize( $event->args ), $t->getMessage(), $t->getFile(), $t->getLine() ),
+				'message' => sprintf( __( 'Callback for job with action `%1$s` and arguments `%2$s` raised a Throwable - %3$s in %4$s on line %5$d.', 'automattic-cron-control' ), $event->action, maybe_serialize( $event->args ), $t->getMessage(), $t->getFile(), $t->getLine() ),
 			);
 		}
 
