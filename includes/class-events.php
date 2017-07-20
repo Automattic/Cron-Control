@@ -14,6 +14,8 @@ class Events extends Singleton {
 
 	private $concurrent_action_whitelist = array();
 
+	private $running_event = null;
+
 	/**
 	 * Register hooks
 	 */
@@ -261,6 +263,10 @@ class Events extends Singleton {
 			if ( ! $this->can_run_event( $event ) ) {
 				return new \WP_Error( 'no-free-threads', sprintf( __( 'No resources available to run the job with action action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event->action, maybe_serialize( $event->args ) ), array( 'status' => 429, ) );
 			}
+
+			// Free locks should event execution time out, as `shutdown` action still runs
+			$this->running_event = $event;
+			add_action( 'shutdown', array( $this, 'do_lock_cleanup_on_shutdown' ) );
 		}
 
 		// Mark the event completed, and reschedule if desired
@@ -271,6 +277,9 @@ class Events extends Singleton {
 		try {
 			do_action_ref_array( $event->action, $event->args );
 		} catch ( \Throwable $t ) {
+			// Note that timeouts do not invoke this block
+			// Instead, those locks are freed in `do_lock_cleanup_on_shutdown()`
+
 			$return = array(
 				'success' => false,
 				'message' => sprintf( __( 'Callback for job with action `%1$s` and arguments `%2$s` raised a Throwable - %3$s in %4$s on line %5$d.', 'automattic-cron-control' ), $event->action, maybe_serialize( $event->args ), $t->getMessage(), $t->getFile(), $t->getLine() ),
@@ -279,6 +288,10 @@ class Events extends Singleton {
 
 		// Free process for the next event, unless it wasn't set to begin with
 		if ( ! $force ) {
+			// Don't need special timeout handling
+			$this->running_event = null;
+			remove_action( 'shutdown', array( $this, 'do_lock_cleanup_on_shutdown' ) );
+
 			$this->do_lock_cleanup( $event );
 		}
 
@@ -433,6 +446,19 @@ class Events extends Singleton {
 
 		// Either event doesn't recur, or the interval couldn't be determined
 		delete_event( $event->timestamp, $event->action, $event->instance );
+	}
+
+	/**
+	 * If event execution times out, ensure locks are still freed
+	 *
+	 * Under normal conditions, this callback isn't hooked to `shutdown`, but if timeout occurs, it will be
+	 */
+	public function do_lock_cleanup_on_shutdown() {
+		if ( is_null( $this->running_event ) ) {
+			return;
+		}
+
+		$this->do_lock_cleanup( $this->running_event );
 	}
 }
 
