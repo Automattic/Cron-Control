@@ -286,7 +286,7 @@ class Events extends Singleton {
 			);
 		}
 
-		// Free process for the next event, unless it wasn't set to begin with
+		// Free locks for the next event, unless they weren't set to begin with
 		if ( ! $force ) {
 			// Don't need special timeout handling
 			$this->running_event = null;
@@ -311,7 +311,7 @@ class Events extends Singleton {
 	 *
 	 * Used to ensure only one instance of a particular event, such as `wp_version_check` runs at one time
 	 *
-	 * @param $event array Event data
+	 * @param $event object Event data
 	 */
 	private function prime_event_action_lock( $event ) {
 		Lock::prime_lock( $this->get_lock_key_for_event_action( $event ), JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS );
