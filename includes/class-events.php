@@ -264,7 +264,7 @@ class Events extends Singleton {
 				return new \WP_Error( 'no-free-threads', sprintf( __( 'No resources available to run the job with action action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event->action, maybe_serialize( $event->args ) ), array( 'status' => 429, ) );
 			}
 
-			// Free locks should event execution time out, as `shutdown` action still runs
+			// Free locks should event throw uncatchable error
 			$this->running_event = $event;
 			add_action( 'shutdown', array( $this, 'do_lock_cleanup_on_shutdown' ) );
 		}
@@ -277,7 +277,7 @@ class Events extends Singleton {
 		try {
 			do_action_ref_array( $event->action, $event->args );
 		} catch ( \Throwable $t ) {
-			// Note that timeouts do not invoke this block
+			// Note that timeouts and memory exhaustion do not invoke this block
 			// Instead, those locks are freed in `do_lock_cleanup_on_shutdown()`
 
 			$return = array(
@@ -288,14 +288,14 @@ class Events extends Singleton {
 
 		// Free locks for the next event, unless they weren't set to begin with
 		if ( ! $force ) {
-			// Don't need special timeout handling
+			// If we got this far, there's no uncaught error to handle
 			$this->running_event = null;
 			remove_action( 'shutdown', array( $this, 'do_lock_cleanup_on_shutdown' ) );
 
 			$this->do_lock_cleanup( $event );
 		}
 
-		// Callback didn't trigger an exception, indicating it succeeded
+		// Callback didn't trigger a Throwable, indicating it succeeded
 		if ( ! isset( $return ) ) {
 			$return = array(
 				'success' => true,
@@ -449,16 +449,18 @@ class Events extends Singleton {
 	}
 
 	/**
-	 * If event execution times out, ensure locks are still freed
+	 * If event execution throws uncatchable error, free locks
 	 *
-	 * Under normal conditions, this callback isn't hooked to `shutdown`, but if timeout occurs, it will be
+	 * Covers situations such as timeouts and memory exhaustion, which aren't \Throwable errors
+	 *
+	 * Under normal conditions, this callback isn't hooked to `shutdown`
 	 */
 	public function do_lock_cleanup_on_shutdown() {
 		if ( is_null( $this->running_event ) ) {
 			return;
 		}
 
-		do_action( 'a8c_cron_control_freeing_event_locks_after_execution_timeout', $this->running_event );
+		do_action( 'a8c_cron_control_freeing_event_locks_after_uncaught_error', $this->running_event );
 
 		$this->do_lock_cleanup( $this->running_event );
 	}
