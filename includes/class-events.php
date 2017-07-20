@@ -458,6 +458,8 @@ class Events extends Singleton {
 			return;
 		}
 
+		do_action( 'a8c_cron_control_freeing_event_locks_after_execution_timeout', $this->running_event );
+
 		$this->do_lock_cleanup( $this->running_event );
 	}
 }
