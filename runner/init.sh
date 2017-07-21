@@ -69,19 +69,9 @@ case $1 in
    log_end_msg 0
   fi
   ;;
- reload)
-  # Reload the process. Basically sending some signal to a daemon to reload
-  # it configurations.
-  if [ -e $PIDFILE ]; then
-   start-stop-daemon --stop --signal USR1 --quiet --pidfile $PIDFILE --name $NAME
-   log_success_msg "$NAME process reloaded successfully"
-  else
-   log_failure_msg "$PIDFILE does not exists"
-  fi
-  ;;
  *)
   # For invalid arguments, print the usage message.
-  echo "Usage: $0 {start|stop|restart|reload|status}"
+  echo "Usage: $0 {start|stop|restart|status}"
   exit 2
   ;;
 esac
