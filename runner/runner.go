@@ -315,7 +315,11 @@ func runWpCliCmd(subcommand []string) (string, error) {
 	wpOutStr := string(wpOut)
 
 	if err != nil {
-		logger.Printf("%s - %s", err, wpOutStr)
+		if debug {
+			logger.Printf("%s - %s", err, wpOutStr)
+			logger.Println(fmt.Sprintf("%+v\n", subcommand))
+		}
+
 		return wpOutStr, err
 	}
 
