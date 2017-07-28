@@ -36,13 +36,13 @@ In addition to the REST API endpoints that can be used to run events, a Go-based
 If building on the target system, or under the same OS as the target machine, simply:
 
 ```
-go build runner.go
+make
 ```
 
 If building from a different OS:
 
 ```
-env GOOS=linux go build runner.go
+env GOOS=linux make
 ```
 
 Substitute `linux` with your target OS.
