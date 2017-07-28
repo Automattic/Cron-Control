@@ -179,7 +179,10 @@ func getInstanceInfo() (siteInfo, error) {
 
 	jsonRes := make([]siteInfo, 0)
 	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
-		logger.Println(fmt.Sprintf("%+v\n", err))
+		if debug {
+			logger.Println(fmt.Sprintf("%+v\n", err))
+		}
+
 		return siteInfo{}, err
 	}
 
@@ -225,7 +228,10 @@ func getMultisiteSites() ([]site, error) {
 
 	jsonRes := make([]site, 0)
 	if err = json.Unmarshal([]byte(raw), &jsonRes); err != nil {
-		logger.Println(fmt.Sprintf("%+v\n", err))
+		if debug {
+			logger.Println(fmt.Sprintf("%+v\n", err))
+		}
+
 		return make([]site, 0), err
 	}
 
@@ -267,7 +273,10 @@ func getSiteEvents(site string) ([]event, error) {
 
 	siteEvents := make([]event, 0)
 	if err = json.Unmarshal([]byte(raw), &siteEvents); err != nil {
-		logger.Println(fmt.Sprintf("%+v\n", err))
+		if debug {
+			logger.Println(fmt.Sprintf("%+v\n", err))
+		}
+
 		return make([]event, 0), err
 	}
 
