@@ -5,12 +5,18 @@ namespace Automattic\WP\Cron_Control;
 /**
  * Adjustable queue size and concurrency limits, to facilitate scaling
  */
-$job_queue_size = defined( 'CRON_CONTROL_JOB_QUEUE_SIZE' ) && is_numeric( \CRON_CONTROL_JOB_QUEUE_SIZE ) ? absint( \CRON_CONTROL_JOB_QUEUE_SIZE ) : 10;
+$job_queue_size = 10;
+if ( defined( 'CRON_CONTROL_JOB_QUEUE_SIZE' ) && is_numeric( \CRON_CONTROL_JOB_QUEUE_SIZE ) ) {
+	$job_queue_size = absint( \CRON_CONTROL_JOB_QUEUE_SIZE );
+}
 $job_queue_size = max( 1, min( $job_queue_size, 250 ) );
 define( __NAMESPACE__ . '\JOB_QUEUE_SIZE', $job_queue_size );
 unset( $job_queue_size );
 
-$job_concurrency_limit = defined( 'CRON_CONTROL_JOB_CONCURRENCY_LIMIT' ) && is_numeric( \CRON_CONTROL_JOB_CONCURRENCY_LIMIT ) ? absint( \CRON_CONTROL_JOB_CONCURRENCY_LIMIT ) : 10;
+$job_concurrency_limit = 10;
+if ( defined( 'CRON_CONTROL_JOB_CONCURRENCY_LIMIT' ) && is_numeric( \CRON_CONTROL_JOB_CONCURRENCY_LIMIT ) ) {
+	$job_concurrency_limit = absint( \CRON_CONTROL_JOB_CONCURRENCY_LIMIT );
+}
 $job_concurrency_limit = max( 1, min( $job_concurrency_limit, 250 ) );
 define( __NAMESPACE__ . '\JOB_CONCURRENCY_LIMIT', $job_concurrency_limit );
 unset( $job_concurrency_limit );
