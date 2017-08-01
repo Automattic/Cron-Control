@@ -76,5 +76,11 @@ class Utils_Tests extends \WP_UnitTestCase {
 		$inflated = Cron_Control\inflate_collapsed_events_array( $collapsed );
 
 		$this->assertEquals( $cron, $inflated );
+
+		_set_cron_array( $inflated );
+
+		$this->assertEquals( $event_one['timestamp'], wp_next_scheduled( $event_one['action'], $event_one['args'] ) );
+		$this->assertEquals( $event_two['timestamp'], wp_next_scheduled( $event_two['action'], $event_two['args'] ) );
+		$this->assertEquals( $event_three['timestamp'], wp_next_scheduled( $event_three['action'], $event_three['args'] ) );
 	}
 }
