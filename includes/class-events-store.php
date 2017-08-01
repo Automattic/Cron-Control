@@ -237,7 +237,7 @@ class Events_Store extends Singleton {
 	 */
 	public function get_option() {
 		// Use cached value when available
-		$cached_option = wp_cache_get( self::CACHE_KEY, null, true );
+		$cached_option = $this->get_cached_option();
 
 		if ( false !== $cached_option ) {
 			return $cached_option;
@@ -297,7 +297,7 @@ class Events_Store extends Singleton {
 		uksort( $cron_array, 'strnatcasecmp' );
 
 		// Cache the results
-		wp_cache_set( self::CACHE_KEY, $cron_array, null, 1 * \HOUR_IN_SECONDS );
+		$this->cache_option( $cron_array );
 
 		return $cron_array;
 	}
@@ -646,6 +646,20 @@ class Events_Store extends Singleton {
 		}
 
 		return $differences;
+	}
+
+	/**
+	 *
+	 */
+	private function get_cached_option() {
+		return wp_cache_get( self::CACHE_KEY, null, true );
+	}
+
+	/**
+	 *
+	 */
+	private function cache_option( $option ) {
+		return wp_cache_set( self::CACHE_KEY, $option, null, 1 * \HOUR_IN_SECONDS );
 	}
 
 	/**
