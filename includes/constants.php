@@ -33,3 +33,14 @@ const JOB_LOCK_EXPIRY_IN_MINUTES  = 30;
  */
 const LOCK_DEFAULT_LIMIT             = 10;
 const LOCK_DEFULT_TIMEOUT_IN_MINUTES = 10;
+
+/**
+ * Limit on size of event cache objects
+ */
+$cache_bucket_size = 1024;
+if ( defined( 'CRON_CONTROL_CACHE_BUCKET_SIZE' ) && is_numeric( \CRON_CONTROL_CACHE_BUCKET_SIZE ) ) {
+	$cache_bucket_size = absint( \CRON_CONTROL_CACHE_BUCKET_SIZE );
+	$cache_bucket_size = max( 100, min( $cache_bucket_size, \PHP_INT_MAX ) );
+}
+define( __NAMESPACE__ . '\CRON_CONTROL_CACHE_BUCKET_SIZE', $cache_bucket_size );
+unset( $job_concurrency_limit );
