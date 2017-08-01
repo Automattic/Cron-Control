@@ -8,16 +8,16 @@ namespace Automattic\WP\Cron_Control;
 $job_queue_size = 10;
 if ( defined( 'CRON_CONTROL_JOB_QUEUE_SIZE' ) && is_numeric( \CRON_CONTROL_JOB_QUEUE_SIZE ) ) {
 	$job_queue_size = absint( \CRON_CONTROL_JOB_QUEUE_SIZE );
+	$job_queue_size = max( 1, min( $job_queue_size, 250 ) );
 }
-$job_queue_size = max( 1, min( $job_queue_size, 250 ) );
 define( __NAMESPACE__ . '\JOB_QUEUE_SIZE', $job_queue_size );
 unset( $job_queue_size );
 
 $job_concurrency_limit = 10;
 if ( defined( 'CRON_CONTROL_JOB_CONCURRENCY_LIMIT' ) && is_numeric( \CRON_CONTROL_JOB_CONCURRENCY_LIMIT ) ) {
 	$job_concurrency_limit = absint( \CRON_CONTROL_JOB_CONCURRENCY_LIMIT );
+	$job_concurrency_limit = max( 1, min( $job_concurrency_limit, 250 ) );
 }
-$job_concurrency_limit = max( 1, min( $job_concurrency_limit, 250 ) );
 define( __NAMESPACE__ . '\JOB_CONCURRENCY_LIMIT', $job_concurrency_limit );
 unset( $job_concurrency_limit );
 
