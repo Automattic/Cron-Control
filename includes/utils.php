@@ -6,6 +6,10 @@ namespace Automattic\WP\Cron_Control;
  * Produce a simplified version of the cron events array
  *
  * Also removes superfluous, non-event data that Core stores in the option
+ *
+ * @param array $events
+ * @param mixed $timestamp Optional.
+ * @return array
  */
 function collapse_events_array( $events, $timestamp = null ) {
 	$collapsed_events = array();
@@ -46,6 +50,41 @@ function collapse_events_array( $events, $timestamp = null ) {
 	}
 
 	return $collapsed_events;
+}
+
+/**
+ * Convert simplified representation of cron events array to the format WordPress expects
+ *
+ * @param array $events
+ * @return array
+ */
+function inflate_collapsed_events_array( $events ) {
+	$inflated = array(
+		'version' => 2, // Core versions the cron array; without this, Core will attempt to "upgrade" the value
+	);
+
+	if ( empty( $events ) ) {
+		return $inflated;
+	}
+
+	foreach ( $events as $event ) {
+		// Object for convenience
+		$event = (object) $event;
+
+		// Set up where this event belongs in the overall structure
+		if ( ! isset( $inflated[ $event->timestamp ] ) ) {
+			$inflated[ $event->timestamp ] = array();
+		}
+
+		if ( ! isset( $inflated[ $event->timestamp ][ $event->action ] ) ) {
+			$inflated[ $event->timestamp ][ $event->action ] = array();
+		}
+
+		// Store this event
+		$inflated[ $event->timestamp ][ $event->action ][ $event->instance ] = $event->args;
+	}
+
+	return $inflated;
 }
 
 /**
