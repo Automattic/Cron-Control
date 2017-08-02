@@ -659,7 +659,16 @@ class Events_Store extends Singleton {
 	 *
 	 */
 	private function cache_option( $option ) {
-		$size = mb_strlen( serialize( $option ) );
+		$option_size = mb_strlen( serialize( $option ) );
+		$buckets     = ceil( $option_size / CACHE_BUCKET_SIZE );
+
+		// Too large to cache
+		if ( $buckets > MAX_CACHE_BUCKETS ) {
+			$this->flush_internal_caches();
+			return false;
+		}
+
+		// TODO: chunk; https://youtu.be/dmSyrGsqmg8
 
 		return wp_cache_set( self::CACHE_KEY, $option, null, 1 * \HOUR_IN_SECONDS );
 	}
