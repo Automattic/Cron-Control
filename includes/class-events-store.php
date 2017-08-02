@@ -649,18 +649,67 @@ class Events_Store extends Singleton {
 	}
 
 	/**
+	 * Retrieve cron option from cache
 	 *
+	 * @return array|false
 	 */
 	private function get_cached_option() {
-		return wp_cache_get( self::CACHE_KEY, null, true );
+		$cache_details = wp_cache_get( self::CACHE_KEY, null, true );
+
+		if ( ! is_array( $cache_details ) ) {
+			return false;
+		}
+
+		// Single bucket
+		if ( isset( $cache_details['version'] ) ) {
+			return $cache_details;
+		}
+
+		// Invalid data
+		if ( ! isset( $cache_details['incrementer'] ) ) {
+			return false;
+		}
+
+		$option_flat = array();
+
+		// Restore option from cached pieces
+		for ( $i = 1; $i <= $cache_details['buckets']; $i++ ) {
+			$cache_key    = $this->get_cache_key_for_slice( $cache_details['incrementer'], $i );
+			$cached_slice = wp_cache_get( $cache_key, null, true );
+
+			// Bail if a chunk is missing
+			if ( ! is_array( $cached_slice ) ) {
+				return false;
+			}
+
+			$option_flat += $cached_slice;
+		}
+
+		// Something's missing, likely due to cache eviction
+		if ( empty( $option_flat ) || count( $option_flat ) !== $cache_details['event_count'] ) {
+			return false;
+		}
+
+		return inflate_collapsed_events_array( $option_flat );
 	}
 
 	/**
+	 * Cache cron option, accommodating large versions by splitting into chunks
 	 *
+	 * @param array $option
+	 * @return bool
 	 */
 	private function cache_option( $option ) {
-		$option_size = mb_strlen( serialize( $option ) );
-		$buckets     = ceil( $option_size / CACHE_BUCKET_SIZE );
+		// Determine storage requirements
+		$option_flat = collapse_events_array( $option );
+		$option_size = mb_strlen( serialize( $option_flat ) );
+		$buckets     = (int) ceil( $option_size / CACHE_BUCKET_SIZE );
+
+		// Store in single cache key
+		if ( 1 === $buckets ) {
+			error_log( var_export( $buckets, true ) );
+			return wp_cache_set( self::CACHE_KEY, $option, null, 1 * \HOUR_IN_SECONDS );
+		}
 
 		// Too large to cache
 		if ( $buckets > MAX_CACHE_BUCKETS ) {
@@ -668,9 +717,36 @@ class Events_Store extends Singleton {
 			return false;
 		}
 
-		// TODO: chunk; https://youtu.be/dmSyrGsqmg8
+		$incrementer  = md5( serialize( $option_flat ) );
+		$event_count  = count( $option_flat );
+		$segment_size = (int) ceil( $event_count / $buckets );
+
+		for ( $i = 1; $i <= $buckets; $i++ ) {
+			$offset    = ( $i - 1 ) * $segment_size;
+			$slice     = array_slice( $option_flat, $offset, $segment_size );
+			$cache_key = $this->get_cache_key_for_slice( $incrementer, $i );
+
+			wp_cache_set( $cache_key, $slice, null, 1 * \HOUR_IN_SECONDS );
+		}
+
+		$option = array(
+			'incrementer' => $incrementer,
+			'buckets'     => $buckets,
+			'event_count' => count( $option_flat ),
+		);
 
 		return wp_cache_set( self::CACHE_KEY, $option, null, 1 * \HOUR_IN_SECONDS );
+	}
+
+	/**
+	 * Build cache key for a given portion of a large option
+	 *
+	 * @param string $incrementor
+	 * @param int    $slice
+	 * @return string
+	 */
+	private function get_cache_key_for_slice( $incrementor, $slice ) {
+		return md5( sprintf( '%1$s|%2$s|%3$d', self::CACHE_KEY, $incrementor, $slice ) );
 	}
 
 	/**
