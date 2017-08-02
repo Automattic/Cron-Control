@@ -707,7 +707,6 @@ class Events_Store extends Singleton {
 
 		// Store in single cache key
 		if ( 1 === $buckets ) {
-			error_log( var_export( $buckets, true ) );
 			return wp_cache_set( self::CACHE_KEY, $option, null, 1 * \HOUR_IN_SECONDS );
 		}
 
