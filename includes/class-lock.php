@@ -25,15 +25,15 @@ class Lock {
 		}
 
 		// Default limit for concurrent events
-		if ( ! is_numeric( $limit ) ) {
+		if ( ! is_int( $limit ) ) {
 			$limit = LOCK_DEFAULT_LIMIT;
 		}
 
 		// Check lock according to limit
 		if ( 1 === $limit ) {
-			return self::check_single_lock( $lock );
+			return self::check_single_lock( $lock, self::get_lock_value( $lock ) );
 		} else {
-			return self::check_multi_lock( $lock, $limit, $timeout );
+			return self::check_multi_lock( $lock, self::get_lock_value( $lock ), $limit, $timeout );
 		}
 	}
 
@@ -41,10 +41,11 @@ class Lock {
 	 * Check a single-concurrency lock
 	 *
 	 * @param string $lock
+	 * @param int    $lock_value
 	 * @return bool
 	 */
-	private static function check_single_lock( $lock ) {
-		if ( self::get_lock_value( $lock ) >= 1 ) {
+	private static function check_single_lock( $lock, $lock_value ) {
+		if ( $lock_value >= 1 ) {
 			return false;
 		} else {
 			wp_cache_incr( self::get_key( $lock ) );
@@ -56,30 +57,29 @@ class Lock {
 	 * Check a multiple-concurrency lock
 	 *
 	 * @param string $lock
+	 * @param mixed  $lock_value
 	 * @param int    $limit
 	 * @param int    $timeout
 	 * @return bool
 	 */
-	private static function check_multi_lock( $lock, $limit, $timeout ) {
-		$value = self::get_lock_value( $lock );
-
+	private static function check_multi_lock( $lock, $lock_value, $limit, $timeout ) {
 		// Upgrade to timestamped multi-lock, otherwise clear deadlocks
-		if ( is_int( $value ) ) {
-			$value = array_fill( 0, $value, time() );
-		} elseif ( is_array( $value ) ) {
-			$value = empty( $value ) ? array() : self::purge_stale_values( $value, $timeout );
+		if ( is_int( $lock_value ) ) {
+			$lock_value = array_fill( 0, $lock_value, time() );
+		} elseif ( is_array( $lock_value ) ) {
+			$lock_value = empty( $lock_value ) ? array() : self::purge_stale_values( $lock_value, $timeout );
 		} else {
-			$value = array();
+			$lock_value = array();
 		}
 
 		// Still locked
-		if ( count( $value ) >= $limit ) {
+		if ( count( $lock_value ) >= $limit ) {
 			return false;
 		}
 
 		// Available, claim a slot
-		$value[] = time();
-		wp_cache_set( self::get_key( $lock ), $value );
+		$lock_value[] = time();
+		wp_cache_set( self::get_key( $lock ), $lock_value );
 
 		return true;
 	}
