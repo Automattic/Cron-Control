@@ -702,7 +702,7 @@ class Events_Store extends Singleton {
 	private function cache_option( $option ) {
 		// Determine storage requirements
 		$option_flat = collapse_events_array( $option );
-		$option_size = mb_strlen( serialize( $option_flat ) );
+		$option_size = strlen( serialize( $option_flat ) );
 		$buckets     = (int) ceil( $option_size / CACHE_BUCKET_SIZE );
 
 		// Store in single cache key
