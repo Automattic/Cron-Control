@@ -31,5 +31,5 @@ const JOB_LOCK_EXPIRY_IN_MINUTES  = 30;
 /**
  * Locks
  */
-const LOCK_DEFAULT_LIMIT             = 10;
-const LOCK_DEFULT_TIMEOUT_IN_MINUTES = 10;
+const LOCK_DEFAULT_LIMIT              = 10;
+const LOCK_DEFAULT_TIMEOUT_IN_MINUTES = 10;
