@@ -37,7 +37,7 @@ const LOCK_DEFAULT_TIMEOUT_IN_MINUTES = 10;
 /**
  * Limit on size of event cache objects
  */
-$cache_bucket_size = \MB_IN_BYTES;
+$cache_bucket_size = \MB_IN_BYTES * 0.95;
 if ( defined( 'CRON_CONTROL_CACHE_BUCKET_SIZE' ) && is_numeric( \CRON_CONTROL_CACHE_BUCKET_SIZE ) ) {
 	$cache_bucket_size = absint( \CRON_CONTROL_CACHE_BUCKET_SIZE );
 	$cache_bucket_size = max( 256 * \KB_IN_BYTES, min( $cache_bucket_size, \TB_IN_BYTES ) );
