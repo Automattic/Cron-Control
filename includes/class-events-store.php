@@ -701,9 +701,10 @@ class Events_Store extends Singleton {
 	 */
 	private function cache_option( $option ) {
 		// Determine storage requirements
-		$option_flat = collapse_events_array( $option );
-		$option_size = strlen( serialize( $option_flat ) );
-		$buckets     = (int) ceil( $option_size / CACHE_BUCKET_SIZE );
+		$option_flat        = collapse_events_array( $option );
+		$option_flat_string = maybe_serialize( $option_flat );
+		$option_size        = strlen( $option_flat_string );
+		$buckets            = (int) ceil( $option_size / CACHE_BUCKET_SIZE );
 
 		// Store in single cache key
 		if ( 1 === $buckets ) {
@@ -716,7 +717,7 @@ class Events_Store extends Singleton {
 			return false;
 		}
 
-		$incrementer  = md5( serialize( $option_flat ) );
+		$incrementer  = md5( $option_flat_string . time() );
 		$event_count  = count( $option_flat );
 		$segment_size = (int) ceil( $event_count / $buckets );
 
@@ -745,7 +746,7 @@ class Events_Store extends Singleton {
 	 * @return string
 	 */
 	private function get_cache_key_for_slice( $incrementor, $slice ) {
-		return md5( sprintf( '%1$s|%2$s|%3$d', self::CACHE_KEY, $incrementor, $slice ) );
+		return md5( self::CACHE_KEY . $incrementor . $slice );
 	}
 
 	/**
