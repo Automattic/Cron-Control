@@ -659,6 +659,8 @@ class Events_Store extends Singleton {
 	 *
 	 */
 	private function cache_option( $option ) {
+		$size = mb_strlen( serialize( $option ) );
+
 		return wp_cache_set( self::CACHE_KEY, $option, null, 1 * \HOUR_IN_SECONDS );
 	}
 

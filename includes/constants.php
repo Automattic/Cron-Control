@@ -42,7 +42,7 @@ if ( defined( 'CRON_CONTROL_CACHE_BUCKET_SIZE' ) && is_numeric( \CRON_CONTROL_CA
 	$cache_bucket_size = absint( \CRON_CONTROL_CACHE_BUCKET_SIZE );
 	$cache_bucket_size = max( 256 * \KB_IN_BYTES, min( $cache_bucket_size, \TB_IN_BYTES ) );
 }
-define( __NAMESPACE__ . '\CRON_CONTROL_CACHE_BUCKET_SIZE', $cache_bucket_size );
+define( __NAMESPACE__ . '\CACHE_BUCKET_SIZE', $cache_bucket_size );
 unset( $cache_bucket_size );
 
 /**
@@ -53,5 +53,5 @@ if ( defined( 'CRON_CONTROL_MAX_CACHE_BUCKETS' ) && is_numeric( \CRON_CONTROL_MA
 	$max_cache_buckets = absint( \CRON_CONTROL_MAX_CACHE_BUCKETS );
 	$max_cache_buckets = max( 1, min( $max_cache_buckets, 250 ) );
 }
-define( __NAMESPACE__ . '\CRON_CONTROL_MAX_CACHE_BUCKETS', $max_cache_buckets );
+define( __NAMESPACE__ . '\MAX_CACHE_BUCKETS', $max_cache_buckets );
 unset( $max_cache_buckets );
