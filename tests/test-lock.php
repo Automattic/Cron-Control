@@ -30,7 +30,7 @@ class Lock_Tests extends \WP_UnitTestCase {
 	/**
 	 * Test a single-concurrency lock
 	 */
-	function test_single_lock() {
+	function test_single_concurrency_lock() {
 		$lock_name = 'test-lock';
 
 		Cron_Control\Lock::prime_lock( $lock_name );
