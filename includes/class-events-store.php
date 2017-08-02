@@ -713,6 +713,8 @@ class Events_Store extends Singleton {
 
 		// Too large to cache
 		if ( $buckets > MAX_CACHE_BUCKETS ) {
+			do_action( 'a8c_cron_control_uncacheable_cron_option', $option_size, $buckets, count( $option_flat ) );
+
 			$this->flush_internal_caches();
 			return false;
 		}
