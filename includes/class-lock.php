@@ -33,7 +33,7 @@ class Lock {
 		if ( 1 === $limit ) {
 			return self::check_single_lock( $lock );
 		} else {
-			return self::check_multi_lock( $lock, $limit );
+			return self::check_multi_lock( $lock, $limit, $timeout );
 		}
 	}
 
@@ -53,16 +53,35 @@ class Lock {
 	}
 
 	/**
+	 * Check a multiple-concurrency lock
 	 *
+	 * @param string $lock
+	 * @param int    $limit
+	 * @param int    $timeout
+	 * @return bool
 	 */
-	private static function check_multi_lock( $lock, $limit ) {
-		// Check if process can run
-		if ( self::get_lock_value( $lock ) >= $limit ) {
-			return false;
+	private static function check_multi_lock( $lock, $limit, $timeout ) {
+		$value = self::get_lock_value( $lock );
+
+		// Upgrade to timestamped multi-lock, otherwise clear deadlocks
+		if ( is_int( $value ) ) {
+			$value = array_fill( 0, $value, time() );
+		} elseif ( is_array( $value ) ) {
+			$value = empty( $value ) ? array() : self::purge_stale_values( $value, $timeout );
 		} else {
-			wp_cache_incr( self::get_key( $lock ) );
-			return true;
+			$value = array();
 		}
+
+		// Still locked
+		if ( count( $value ) >= $limit ) {
+			return false;
+		}
+
+		// Available, claim a slot
+		$value[] = time();
+		wp_cache_set( self::get_key( $lock ), $value );
+
+		return true;
 	}
 
 	/**
@@ -71,10 +90,15 @@ class Lock {
 	public static function free_lock( $lock, $expires = 0 ) {
 		$lock_value = self::get_lock_value( $lock );
 
+		if ( empty( $lock_value ) ) {
+			wp_cache_set( self::get_key( $lock, 'timestamp' ), time(), null, $expires );
+			return true;
+		}
+
 		if ( is_int( $lock_value ) ) {
-			self::free_single_lock( $lock, $expires );
+			self::free_single_lock( $lock, $lock_value, $expires );
 		} else {
-			self::free_multi_lock( $lock, $expires );
+			self::free_multi_lock( $lock, $lock_value, $expires );
 		}
 
 		return true;
@@ -84,26 +108,31 @@ class Lock {
 	 * Free a single-concurrency lock
 	 *
 	 * @param string $lock
+	 * @param mixed  $lock_value
 	 * @param int    $expires
-	 * @return bool
 	 */
-	private static function free_single_lock( $lock, $expires ) {
-		if ( self::get_lock_value( $lock ) > 1 ) {
+	private static function free_single_lock( $lock, $lock_value, $expires ) {
+		if ( $lock_value > 1 ) {
 			wp_cache_decr( self::get_key( $lock ) );
 		} else {
 			wp_cache_set( self::get_key( $lock ), 0, null, $expires );
 		}
 
 		wp_cache_set( self::get_key( $lock, 'timestamp' ), time(), null, $expires );
-
-		return true;
 	}
 
 	/**
+	 * Free old multi-concurrency lock
 	 *
+	 * @param string $lock
+	 * @param mixed  $lock_value
+	 * @param int    $expires
 	 */
-	private static function free_multi_lock( $lock, $expires ) {
-		return self::free_single_lock( $lock, $expires );
+	private static function free_multi_lock( $lock, $lock_value, $expires ) {
+		sort( $lock_value, SORT_NUMERIC );
+		array_shift( $lock_value );
+		wp_cache_set( self::get_key( $lock ), $lock_value, null, $expires );
+		wp_cache_set( self::get_key( $lock, 'timestamp' ), time(), null, $expires );
 	}
 
 	/**
@@ -166,5 +195,18 @@ class Lock {
 		wp_cache_set( self::get_key( $lock, 'timestamp' ), time(), null, $expires );
 
 		return true;
+	}
+
+	/**
+	 * Remove stale lock entries
+	 *
+	 * @param array $locks
+	 * @param int   $timeout
+	 * @return array
+	 */
+	private static function purge_stale_values( $locks, $timeout ) {
+		return array_filter( $locks, function( $lock ) use( $timeout ) {
+			return $lock > time() - $timeout;
+		} );
 	}
 }

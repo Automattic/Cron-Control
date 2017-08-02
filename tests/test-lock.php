@@ -69,14 +69,14 @@ class Lock_Tests extends \WP_UnitTestCase {
 		$can_run = Cron_Control\Lock::check_lock( $lock_name, $limit );
 
 		$this->assertEquals( true, $can_run );
-		$this->assertEquals( 1, Cron_Control\Lock::get_lock_value( $lock_name ) );
+		$this->assertEquals( 1, count( Cron_Control\Lock::get_lock_value( $lock_name ) ) );
 
 		for ( $i = 0; $i < $limit; $i++ ) {
 			$can_run = Cron_Control\Lock::check_lock( $lock_name, $limit );
 		}
 
 		$this->assertEquals( false, $can_run );
-		$this->assertEquals( $limit, Cron_Control\Lock::get_lock_value( $lock_name ) );
+		$this->assertEquals( $limit, count( Cron_Control\Lock::get_lock_value( $lock_name ) ) );
 
 		Cron_Control\Lock::free_lock( $lock_name );
 
