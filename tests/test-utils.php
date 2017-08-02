@@ -71,7 +71,7 @@ class Utils_Tests extends \WP_UnitTestCase {
 
 		$collapsed = Cron_Control\collapse_events_array( $cron );
 
-		$this->assertEquals( count( $collapsed ), 3 );
+		$this->assertEquals( 3, count( $collapsed ) );
 
 		$inflated = Cron_Control\inflate_collapsed_events_array( $collapsed );
 
