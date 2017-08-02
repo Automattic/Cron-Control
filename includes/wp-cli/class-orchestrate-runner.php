@@ -67,7 +67,7 @@ class Orchestrate_Runner extends \WP_CLI_Command {
 
 		if ( is_wp_error( $run ) ) {
 			\WP_CLI::error( $run->get_error_message() );
-		} elseif ( is_array( $run ) && isset( $run['success'] ) && true === $run['success'] ) {
+		} elseif ( isset( $run['success'] ) && true === $run['success'] ) {
 			\WP_CLI::success( $run['message'] );
 		} else {
 			\WP_CLI::error( $run['message'] );
