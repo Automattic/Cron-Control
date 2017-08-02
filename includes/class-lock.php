@@ -29,6 +29,31 @@ class Lock {
 			$limit = LOCK_DEFAULT_LIMIT;
 		}
 
+		// Check lock according to limit
+		if ( 1 === $limit ) {
+			return self::check_single_lock( $lock );
+		} else {
+			return self::check_multi_lock( $lock, $limit );
+		}
+	}
+
+	/**
+	 *
+	 */
+	private static function check_single_lock( $lock ) {
+		// Check if process can run
+		if ( self::get_lock_value( $lock ) >= 1 ) {
+			return false;
+		} else {
+			wp_cache_incr( self::get_key( $lock ) );
+			return true;
+		}
+	}
+
+	/**
+	 *
+	 */
+	private static function check_multi_lock( $lock, $limit ) {
 		// Check if process can run
 		if ( self::get_lock_value( $lock ) >= $limit ) {
 			return false;
