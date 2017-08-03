@@ -48,8 +48,16 @@ class Orchestrate_Runner extends \WP_CLI_Command {
 		$action    = \WP_CLI\Utils\get_flag_value( $assoc_args, 'action',    null );
 		$instance  = \WP_CLI\Utils\get_flag_value( $assoc_args, 'instance',  null );
 
-		if ( ! is_numeric( $timestamp ) || ! is_string( $action ) || ! is_string( $instance ) ) {
-			\WP_CLI::error( __( 'Invalid event arguments', 'automattic-cron-control' ) );
+		if ( ! is_numeric( $timestamp ) ) {
+			\WP_CLI::error( __( 'Invalid timestamp', 'automattic-cron-control' ) );
+		}
+
+		if ( ! is_string( $action ) ) {
+			\WP_CLI::error( __( 'Invalid action', 'automattic-cron-control' ) );
+		}
+
+		if( ! is_string( $instance ) ) {
+			\WP_CLI::error( __( 'Invalid instance', 'automattic-cron-control' ) );
 		}
 
 		// Prepare environment
