@@ -51,8 +51,7 @@ class Events extends Singleton {
 		} elseif ( $disabled > time() ) {
 			$this->run_disabled = $disabled;
 		} else {
-			update_option( self::DISABLE_RUN_OPTION, 0 );
-			$this->run_disabled = 0;
+			$this->update_run_status( 0 );
 		}
 	}
 
@@ -495,10 +494,39 @@ class Events extends Singleton {
 	/**
 	 * Return status of automatic event execution
 	 *
-	 * @return int 0 is run is enabled, 1 if run is disabled indefinitely, otherwise timestamp when execution will resume
+	 * @return int 0 if run is enabled, 1 if run is disabled indefinitely, otherwise timestamp when execution will resume
 	 */
 	public function run_disabled() {
 		return $this->run_disabled;
+	}
+
+	/**
+	 * Set automatic execution status
+	 *
+	 * 0 if run is enabled, 1 if run is disabled indefinitely, otherwise timestamp when execution will resume
+	 *
+	 * @param int $new_status
+	 * @return bool
+	 */
+	public function update_run_status( $new_status ) {
+		$new_status = absint( $new_status );
+
+		if ( $new_status > 1 && $new_status < time() ) {
+			return false;
+		}
+
+		if ( $new_status === $this->run_disabled() ) {
+			return false;
+		}
+
+		$updated = update_option( self::DISABLE_RUN_OPTION, $new_status );
+
+		if ( $updated ) {
+			$this->run_disabled = $new_status;
+			return true;
+		}
+
+		return false;
 	}
 }
 
