@@ -308,6 +308,7 @@ func runEvents(workerID int, events <-chan event) {
 }
 
 func runWpCliCmd(subcommand []string) (string, error) {
+	// `--quiet`` included to prevent WP-CLI commands from generating invalid JSON
 	subcommand = append(subcommand, "--allow-root", "--quiet", fmt.Sprintf("--path=%s", wpPath))
 	if wpNetwork > 0 {
 		subcommand = append(subcommand, fmt.Sprintf("--network=%d", wpNetwork))
