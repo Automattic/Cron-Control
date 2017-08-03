@@ -511,10 +511,12 @@ class Events extends Singleton {
 	public function update_run_status( $new_status ) {
 		$new_status = absint( $new_status );
 
+		// Don't store a past timestamp
 		if ( $new_status > 1 && $new_status < time() ) {
 			return false;
 		}
 
+		// Nothing to do, but `update_option()` will return false
 		if ( $new_status === $this->run_disabled() ) {
 			return false;
 		}
