@@ -67,7 +67,7 @@ class Orchestrate_Runner extends \WP_CLI_Command {
 
 		$now = time();
 		if ( $timestamp > $now ) {
-			\WP_CLI::error( sprintf( __( 'This event is not scheduled to run until %1$s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $timestamp ) ) );
+			\WP_CLI::error( sprintf( __( 'Given timestamp is for %1$s GMT, %2$s from now. The event\'s existence was not confirmed, and no attempt was made to execute it.', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $timestamp ), human_time_diff( $now, $timestamp ) ) );
 		}
 
 		// Run the event
