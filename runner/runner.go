@@ -111,18 +111,15 @@ func spawnEventWorkers(queue <-chan event) {
 }
 
 func retrieveSitesPeriodically(sites chan<- site) {
-	for {
+	for range time.Tick(getEventsLoop) {
 		siteList, err := getSites()
 		if err != nil {
-			time.Sleep(getEventsLoop)
 			continue
 		}
 
 		for _, site := range siteList {
 			sites <- site
 		}
-
-		time.Sleep(getEventsLoop)
 	}
 }
 
@@ -133,15 +130,12 @@ func heartbeat() {
 	}
 
 	interval := time.Duration(heartbeatInt) * time.Second
-	time.Sleep(interval)
 
-	for {
+	for range time.Tick(interval) {
 		successCount, errCount := atomic.LoadUint64(&eventRunSuccessCount), atomic.LoadUint64(&eventRunErrCount)
 		atomic.SwapUint64(&eventRunSuccessCount, 0)
 		atomic.SwapUint64(&eventRunErrCount, 0)
 		logger.Printf("<heartbeat eventsSucceededSinceLast=%d eventsErroredSinceLast=%d>", successCount, errCount)
-
-		time.Sleep(interval)
 	}
 }
 
