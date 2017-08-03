@@ -142,17 +142,17 @@ func heartbeat() {
 func getSites() ([]site, error) {
 	siteInfo, err := getInstanceInfo()
 	if err != nil {
-		return make([]site, 0), err
+		return nil, err
 	}
 
 	if run := shouldGetSites(siteInfo.Disabled); false == run {
-		return make([]site, 0), err
+		return nil, err
 	}
 
 	if siteInfo.Multisite == 1 {
 		sites, err := getMultisiteSites()
 		if err != nil {
-			sites = make([]site, 0)
+			sites = nil
 		}
 
 		return sites, err
@@ -217,7 +217,7 @@ func shouldGetSites(disabled int) bool {
 func getMultisiteSites() ([]site, error) {
 	raw, err := runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
 	if err != nil {
-		return make([]site, 0), err
+		return nil, err
 	}
 
 	jsonRes := make([]site, 0)
@@ -226,7 +226,7 @@ func getMultisiteSites() ([]site, error) {
 			logger.Println(fmt.Sprintf("%+v", err))
 		}
 
-		return make([]site, 0), err
+		return nil, err
 	}
 
 	// Shuffle site order so that none are favored
@@ -262,7 +262,7 @@ func queueSiteEvents(workerID int, sites <-chan site, queue chan<- event) {
 func getSiteEvents(site string) ([]event, error) {
 	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "runner-only", "list-due-batch", fmt.Sprintf("--url=%s", site), "--format=json"})
 	if err != nil {
-		return make([]event, 0), err
+		return nil, err
 	}
 
 	siteEvents := make([]event, 0)
@@ -271,7 +271,7 @@ func getSiteEvents(site string) ([]event, error) {
 			logger.Println(fmt.Sprintf("%+v", err))
 		}
 
-		return make([]event, 0), err
+		return nil, err
 	}
 
 	return siteEvents, nil
