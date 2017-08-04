@@ -47,7 +47,7 @@ class Events extends Singleton {
 		}
 
 		// Flag is used in many contexts, so should be set for all of our requests, regardless of the action
-		define( 'DOING_CRON', true );
+		set_doing_cron();
 
 		// When running events, allow for long-running ones, and non-blocking trigger requests
 		if ( REST_API::ENDPOINT_RUN === $endpoint ) {

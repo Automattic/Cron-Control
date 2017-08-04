@@ -29,9 +29,7 @@ function prepare_environment() {
 
 	// Set DOING_CRON when appropriate
 	if ( isset( $cmd[1] ) && 'orchestrate' === $cmd[1] ) {
-		if ( ! defined( 'DOING_CRON' ) ) {
-			define( 'DOING_CRON', true );
-		}
+		\Automattic\WP\Cron_Control\set_doing_cron();
 	}
 }
 prepare_environment();

@@ -60,15 +60,13 @@ class Orchestrate_Runner extends \WP_CLI_Command {
 			\WP_CLI::error( __( 'Invalid instance', 'automattic-cron-control' ) );
 		}
 
-		// Prepare environment
-		if ( ! defined( 'DOING_CRON' ) ) {
-			define( 'DOING_CRON', true );
-		}
-
 		$now = time();
 		if ( $timestamp > $now ) {
 			\WP_CLI::error( sprintf( __( 'Given timestamp is for %1$s GMT, %2$s from now. The event\'s existence was not confirmed, and no attempt was made to execute it.', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $timestamp ), human_time_diff( $now, $timestamp ) ) );
 		}
+
+		// Prepare environment
+		\Automattic\WP\Cron_Control\set_doing_cron();
 
 		// Run the event
 		$run = \Automattic\WP\Cron_Control\run_event( $timestamp, $action, $instance );
