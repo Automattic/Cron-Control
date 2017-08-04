@@ -37,8 +37,8 @@ var (
 	wpNetwork int
 	wpPath    string
 
-	workersGetEvents int
-	workersRunEvents int
+	numGetWorkers int
+	numRunWorkers int
 
 	heartbeatInt int
 
@@ -59,8 +59,8 @@ func init() {
 	flag.StringVar(&wpCliPath, "cli", "/usr/local/bin/wp", "Path to WP-CLI binary")
 	flag.IntVar(&wpNetwork, "network", 0, "WordPress network ID, `0` to disable")
 	flag.StringVar(&wpPath, "wp", "/var/www/html", "Path to WordPress installation")
-	flag.IntVar(&workersGetEvents, "workers-get", 1, "Number of workers to retrieve events")
-	flag.IntVar(&workersRunEvents, "workers-run", 5, "Number of workers to run events")
+	flag.IntVar(&numGetWorkers, "workers-get", 1, "Number of workers to retrieve events")
+	flag.IntVar(&numRunWorkers, "workers-run", 5, "Number of workers to run events")
 	flag.IntVar(&heartbeatInt, "heartbeat", 60, "Heartbeat interval in seconds")
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
@@ -74,7 +74,7 @@ func init() {
 }
 
 func main() {
-	logger.Printf("Starting with %d event-retreival worker(s) and %d event worker(s)", workersGetEvents, workersRunEvents)
+	logger.Printf("Starting with %d event-retreival worker(s) and %d event worker(s)", numGetWorkers, numRunWorkers)
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
@@ -91,7 +91,7 @@ func main() {
 }
 
 func spawnEventRetrievers(sites <-chan site, queue chan<- event) {
-	for w := 1; w <= workersGetEvents; w++ {
+	for w := 1; w <= numGetWorkers; w++ {
 		go queueSiteEvents(w, sites, queue)
 	}
 }
@@ -99,7 +99,7 @@ func spawnEventRetrievers(sites <-chan site, queue chan<- event) {
 func spawnEventWorkers(queue <-chan event) {
 	workerEvents := make(chan event)
 
-	for w := 1; w <= workersRunEvents; w++ {
+	for w := 1; w <= numRunWorkers; w++ {
 		go runEvents(w, workerEvents)
 	}
 
