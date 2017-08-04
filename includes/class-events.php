@@ -25,7 +25,7 @@ class Events extends Singleton {
 		// Prime lock cache if not present
 		Lock::prime_lock( self::LOCK );
 
-		// Prime options and prepare environment as early as possible
+		// Prepare environment as early as possible
 		$earliest_action = did_action( 'muplugins_loaded' ) ? 'plugins_loaded' : 'muplugins_loaded';
 		add_action( $earliest_action, array( $this, 'prepare_environment' ) );
 
