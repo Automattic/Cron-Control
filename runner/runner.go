@@ -69,8 +69,8 @@ func init() {
 	setUpLogger()
 
 	// TODO: Should check for wp-config.php instead?
-	validatePath(&wpCliPath)
-	validatePath(&wpPath)
+	validatePath(&wpCliPath, "WP-CLI path")
+	validatePath(&wpPath, "WordPress path")
 }
 
 func main() {
@@ -350,20 +350,22 @@ func setUpLogger() {
 	}
 }
 
-func validatePath(path *string) {
+func validatePath(path *string, label string) {
 	if len(*path) > 1 {
 		var err error
 		*path, err = filepath.Abs(*path)
 
 		if err != nil {
-			fmt.Printf("Error: %s", err.Error())
+			fmt.Printf("Error for %s: %s\n", label, err.Error())
 			os.Exit(3)
 		}
 
 		if _, err = os.Stat(*path); os.IsNotExist(err) {
-			usage()
+			fmt.Printf("Error for %s: '%s' does not exist\n", label, *path)
+			os.Exit(3)
 		}
 	} else {
+		fmt.Printf("Empty path provided for %s\n", label)
 		usage()
 	}
 }
