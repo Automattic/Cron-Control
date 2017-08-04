@@ -13,7 +13,6 @@ class Events extends Singleton {
 	const LOCK = 'run-events';
 
 	const DISABLE_RUN_OPTION = 'a8c_cron_control_disable_run';
-	private $run_disabled    = 0;
 
 	private $concurrent_action_whitelist = array();
 
@@ -28,31 +27,10 @@ class Events extends Singleton {
 
 		// Prime options and prepare environment as early as possible
 		$earliest_action = did_action( 'muplugins_loaded' ) ? 'plugins_loaded' : 'muplugins_loaded';
-		add_action( $earliest_action, array( $this, 'prime_options' ) );
 		add_action( $earliest_action, array( $this, 'prepare_environment' ) );
 
 		// Allow code loaded as late as the theme to modify the whitelist
 		add_action( 'after_setup_theme', array( $this, 'populate_concurrent_action_whitelist' ) );
-	}
-
-	/**
-	 * Set initial options that control event behaviour
-	 */
-	public function prime_options() {
-		// Prime option to disable automatic execution
-		if ( is_admin() || ( defined( 'WP_CLI' ) && \WP_CLI ) || false !== get_endpoint_type() ) {
-			add_option( self::DISABLE_RUN_OPTION, 0, null, false );
-		}
-
-		// Check if execution is disabled, or if timestamp has passed
-		$disabled = (int) get_option( self::DISABLE_RUN_OPTION, 0 );
-		if ( $disabled <= 1 ) {
-			$this->run_disabled = $disabled;
-		} elseif ( $disabled > time() ) {
-			$this->run_disabled = $disabled;
-		} else {
-			$this->update_run_status( 0 );
-		}
 	}
 
 	/**
@@ -497,7 +475,14 @@ class Events extends Singleton {
 	 * @return int 0 if run is enabled, 1 if run is disabled indefinitely, otherwise timestamp when execution will resume
 	 */
 	public function run_disabled() {
-		return $this->run_disabled;
+		$disabled = (int) get_option( self::DISABLE_RUN_OPTION, 0 );
+
+		if ( $disabled <= 1 || $disabled > time() ) {
+			return $disabled;
+		}
+
+		$this->update_run_status( 0 );
+		return 0;
 	}
 
 	/**
@@ -521,14 +506,7 @@ class Events extends Singleton {
 			return false;
 		}
 
-		$updated = update_option( self::DISABLE_RUN_OPTION, $new_status );
-
-		if ( $updated ) {
-			$this->run_disabled = $new_status;
-			return true;
-		}
-
-		return false;
+		return update_option( self::DISABLE_RUN_OPTION, $new_status );
 	}
 }
 
