@@ -362,7 +362,7 @@ func validatePath(path *string, label string) {
 
 		if _, err = os.Stat(*path); os.IsNotExist(err) {
 			fmt.Printf("Error for %s: '%s' does not exist\n", label, *path)
-			os.Exit(3)
+			usage()
 		}
 	} else {
 		fmt.Printf("Empty path provided for %s\n", label)
