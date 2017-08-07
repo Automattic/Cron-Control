@@ -147,7 +147,7 @@ func heartbeat() {
 func getSites() ([]site, error) {
 	siteInfo, err := getInstanceInfo()
 	if err != nil {
-		return nil, err
+		siteInfo.Disabled = 1
 	}
 
 	if run := shouldGetSites(siteInfo.Disabled); false == run {
