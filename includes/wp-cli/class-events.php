@@ -122,7 +122,7 @@ class Events extends \WP_CLI_Command {
 		// Proceed?
 		$now = time();
 		if ( $event->timestamp > $now ) {
-			\WP_CLI::warning( sprintf( __( 'This event is not scheduled to run until %1$s GMT (%2$s)', 'automattic-cron-control' ), date( TIME_FORMAT, $event->timestamp ), $this->calculate_interval( $event->timestamp - $now ) ) );
+			\WP_CLI::warning( sprintf( __( 'This event is not scheduled to run until %1$s GMT (%2$s)', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $event->timestamp ), $this->calculate_interval( $event->timestamp - $now ) ) );
 		}
 
 		\WP_CLI::confirm( sprintf( __( 'Run this event?', 'automattic-cron-control' ) ) );
@@ -222,9 +222,9 @@ class Events extends \WP_CLI_Command {
 				'ID'                => $event->ID,
 				'action'            => $event->action,
 				'instance'          => $event->instance,
-				'next_run_gmt'      => date( TIME_FORMAT, $event->timestamp ),
+				'next_run_gmt'      => date_i18n( TIME_FORMAT, $event->timestamp ),
 				'next_run_relative' => '',
-				'last_updated_gmt'  => date( TIME_FORMAT, strtotime( $event->last_modified ) ),
+				'last_updated_gmt'  => date_i18n( TIME_FORMAT, strtotime( $event->last_modified ) ),
 				'recurrence'        => __( 'Non-repeating', 'automattic-cron-control' ),
 				'internal_event'    => '',
 				'schedule_name'     => __( 'n/a', 'automattic-cron-control' ),
@@ -369,7 +369,7 @@ class Events extends \WP_CLI_Command {
 				\WP_CLI::warning( __( 'This is an event created by the Cron Control plugin. It will recreated automatically.', 'automattic-cron-control' ) );
 			}
 
-			\WP_CLI::log( sprintf( __( 'Execution time: %s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $event->timestamp ) ) );
+			\WP_CLI::log( sprintf( __( 'Execution time: %s GMT', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $event->timestamp ) ) );
 			\WP_CLI::log( sprintf( __( 'Action: %s', 'automattic-cron-control' ), $event->action ) );
 			\WP_CLI::log( sprintf( __( 'Instance identifier: %s', 'automattic-cron-control' ), $event->instance ) );
 			\WP_CLI::log( '' );
