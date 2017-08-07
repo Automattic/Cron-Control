@@ -40,6 +40,8 @@ var (
 	numGetWorkers int
 	numRunWorkers int
 
+	getEventsInterval int
+
 	heartbeatInt int
 
 	disabledLoopCount    uint64
@@ -51,7 +53,6 @@ var (
 	debug   bool
 )
 
-const getEventsLoop time.Duration = time.Minute
 const getEventsBreak time.Duration = time.Second
 const runEventsBreak time.Duration = time.Second * 10
 
@@ -61,6 +62,7 @@ func init() {
 	flag.StringVar(&wpPath, "wp", "/var/www/html", "Path to WordPress installation")
 	flag.IntVar(&numGetWorkers, "workers-get", 1, "Number of workers to retrieve events")
 	flag.IntVar(&numRunWorkers, "workers-run", 5, "Number of workers to run events")
+	flag.IntVar(&getEventsInterval, "get-events-interval", 60, "Seconds between event retrieval")
 	flag.IntVar(&heartbeatInt, "heartbeat", 60, "Heartbeat interval in seconds")
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
@@ -75,6 +77,7 @@ func init() {
 
 func main() {
 	logger.Printf("Starting with %d event-retreival worker(s) and %d event worker(s)", numGetWorkers, numRunWorkers)
+	logger.Printf("Retrieving events every %d seconds", getEventsInterval)
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
@@ -111,7 +114,9 @@ func spawnEventWorkers(queue <-chan event) {
 }
 
 func retrieveSitesPeriodically(sites chan<- site) {
-	for range time.Tick(getEventsLoop) {
+	loopInterval := time.Duration(getEventsInterval) * time.Second
+
+	for range time.Tick(loopInterval) {
 		siteList, err := getSites()
 		if err != nil {
 			continue
