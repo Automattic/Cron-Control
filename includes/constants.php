@@ -48,7 +48,7 @@ unset( $cache_bucket_size );
 /**
  * Limit how many buckets can be created, to avoid cache exhaustion
  */
-$max_cache_buckets = 25;
+$max_cache_buckets = 5;
 if ( defined( 'CRON_CONTROL_MAX_CACHE_BUCKETS' ) && is_numeric( \CRON_CONTROL_MAX_CACHE_BUCKETS ) ) {
 	$max_cache_buckets = absint( \CRON_CONTROL_MAX_CACHE_BUCKETS );
 	$max_cache_buckets = max( 1, min( $max_cache_buckets, 250 ) );
