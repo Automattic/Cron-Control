@@ -55,7 +55,7 @@ class Lock extends \WP_CLI_Command {
 			$timestamp = \Automattic\WP\Cron_Control\Lock::get_lock_timestamp( $lock_name );
 
 			\WP_CLI::log( sprintf( __( 'Previous value: %s', 'automattic-cron-control' ), number_format_i18n( $lock ) ) );
-			\WP_CLI::log( sprintf( __( 'Previously modified: %s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $timestamp ) ) . "\n" );
+			\WP_CLI::log( sprintf( __( 'Previously modified: %s GMT', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $timestamp ) ) . "\n" );
 
 			\WP_CLI::confirm( sprintf( __( 'Are you sure you want to reset this lock?', 'automattic-cron-control' ) ) );
 			\WP_CLI::log( '' );
@@ -70,7 +70,7 @@ class Lock extends \WP_CLI_Command {
 		$timestamp = \Automattic\WP\Cron_Control\Lock::get_lock_timestamp( $lock_name );
 
 		\WP_CLI::log( sprintf( __( 'Current value: %s', 'automattic-cron-control' ), number_format_i18n( $lock ) ) );
-		\WP_CLI::log( sprintf( __( 'Last modified: %s GMT', 'automattic-cron-control' ), date( TIME_FORMAT, $timestamp ) ) );
+		\WP_CLI::log( sprintf( __( 'Last modified: %s GMT', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $timestamp ) ) );
 	}
 }
 
