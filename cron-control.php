@@ -8,7 +8,7 @@
  * Text Domain: automattic-cron-control
  * Domain Path: /languages
  *
- * @package: a8c_Cron_Control
+ * @package a8c_Cron_Control
  */
 
 namespace Automattic\WP\Cron_Control;
