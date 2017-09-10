@@ -75,6 +75,7 @@ class Main extends Singleton {
 		foreach ( $constants as $constant => $expected_value ) {
 			if ( defined( $constant ) ) {
 				if ( constant( $constant ) !== $expected_value ) {
+					/* translators: 1: Plugin name, 2: Constant name */
 					error_log( sprintf( __( '%1$s: %2$s set to unexpected value; must be corrected for proper behaviour.', 'automattic-cron-control' ), 'Cron Control', $constant ) );
 				}
 			} else {
@@ -89,6 +90,7 @@ class Main extends Singleton {
 	public function block_direct_cron() {
 		if ( false !== stripos( $_SERVER['REQUEST_URI'], '/wp-cron.php' ) || false !== stripos( $_SERVER['SCRIPT_NAME'], '/wp-cron.php' ) ) {
 			status_header( 403 );
+			/* translators: 1: Plugin name */
 			wp_send_json_error( new \WP_Error( 'forbidden', sprintf( __( 'Normal cron execution is blocked when the %s plugin is active.', 'automattic-cron-control' ), 'Cron Control' ) ), array( 'status' => 400 ) );
 		}
 	}
@@ -115,7 +117,10 @@ class Main extends Singleton {
 	public function admin_notice() {
 		?>
 		<div class="notice notice-error">
-			<p><?php printf( __( '<strong>%1$s</strong>: To use this plugin, define the constant %2$s.', 'automattic-cron-control' ), 'Cron Control', '<code>WP_CRON_CONTROL_SECRET</code>' ); ?></p>
+			<p><?php
+				/* translators: 1: Plugin name, 2: Constant name */
+				printf( __( '<strong>%1$s</strong>: To use this plugin, define the constant %2$s.', 'automattic-cron-control' ), 'Cron Control', '<code>WP_CRON_CONTROL_SECRET</code>' );
+			?></p>
 		</div>
 		<?php
 	}

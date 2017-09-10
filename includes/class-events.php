@@ -96,7 +96,9 @@ class Events extends Singleton {
 
 		// That was easy.
 		if ( ! is_array( $events ) || empty( $events ) ) {
-			return array( 'events' => null );
+			return array(
+				'events' => null,
+			);
 		}
 
 		// Simplify array format for further processing.
@@ -104,8 +106,9 @@ class Events extends Singleton {
 
 		// Select only those events to run in the next sixty seconds.
 		// Will include missed events as well.
-		$current_events = $internal_events = array();
-		$current_window = strtotime( sprintf( '+%d seconds', JOB_QUEUE_WINDOW_IN_SECONDS ) );
+		$current_events  = array();
+		$internal_events = array();
+		$current_window  = strtotime( sprintf( '+%d seconds', JOB_QUEUE_WINDOW_IN_SECONDS ) );
 
 		foreach ( $events as $event ) {
 			// Skip events whose time hasn't come.
@@ -250,12 +253,17 @@ class Events extends Singleton {
 	public function run_event( $timestamp, $action, $instance, $force = false ) {
 		// Validate input data.
 		if ( empty( $timestamp ) || empty( $action ) || empty( $instance ) ) {
-			return new \WP_Error( 'missing-data', __( 'Invalid or incomplete request data.', 'automattic-cron-control' ), array( 'status' => 400 ) );
+			return new \WP_Error( 'missing-data', __( 'Invalid or incomplete request data.', 'automattic-cron-control' ), array(
+				'status' => 400,
+			) );
 		}
 
 		// Ensure we don't run jobs ahead of time.
 		if ( ! $force && $timestamp > time() ) {
-			return new \WP_Error( 'premature', sprintf( __( 'Job with identifier `%1$s` is not scheduled to run yet.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ), array( 'status' => 403 ) );
+			/* translators: 1: Job identifier */
+			return new \WP_Error( 'premature', sprintf( __( 'Job with identifier `%1$s` is not scheduled to run yet.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ), array(
+				'status' => 403,
+			) );
 		}
 
 		// Find the event to retrieve the full arguments.
@@ -268,7 +276,10 @@ class Events extends Singleton {
 
 		// Nothing to do...
 		if ( ! is_object( $event ) ) {
-			return new \WP_Error( 'no-event', sprintf( __( 'Job with identifier `%1$s` could not be found.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ), array( 'status' => 404 ) );
+			/* translators: 1: Job identifier */
+			return new \WP_Error( 'no-event', sprintf( __( 'Job with identifier `%1$s` could not be found.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ), array(
+				'status' => 404,
+			) );
 		}
 
 		unset( $timestamp, $action, $instance );
@@ -279,7 +290,10 @@ class Events extends Singleton {
 			$this->prime_event_action_lock( $event );
 
 			if ( ! $this->can_run_event( $event ) ) {
-				return new \WP_Error( 'no-free-threads', sprintf( __( 'No resources available to run the job with action action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event->action, maybe_serialize( $event->args ) ), array( 'status' => 429 ) );
+				/* translators: 1: Event action, 2: Event arguments */
+				return new \WP_Error( 'no-free-threads', sprintf( __( 'No resources available to run the job with action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event->action, maybe_serialize( $event->args ) ), array(
+					'status' => 429,
+				) );
 			}
 
 			// Free locks should event throw uncatchable error.
@@ -304,6 +318,7 @@ class Events extends Singleton {
 
 			$return = array(
 				'success' => false,
+				/* translators: 1: Event action, 2: Event arguments, 3: Throwable error, 4: Line number that raised Throwable error */
 				'message' => sprintf( __( 'Callback for job with action `%1$s` and arguments `%2$s` raised a Throwable - %3$s in %4$s on line %5$d.', 'automattic-cron-control' ), $event->action, maybe_serialize( $event->args ), $t->getMessage(), $t->getFile(), $t->getLine() ),
 			);
 		}
@@ -321,6 +336,7 @@ class Events extends Singleton {
 		if ( ! isset( $return ) ) {
 			$return = array(
 				'success' => true,
+				/* translators: 1: Event action, 2: Event arguments */
 				'message' => sprintf( __( 'Job with action `%1$s` and arguments `%2$s` executed.', 'automattic-cron-control' ), $event->action, maybe_serialize( $event->args ) ),
 			);
 		}

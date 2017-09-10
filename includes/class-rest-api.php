@@ -89,10 +89,13 @@ class REST_API extends Singleton {
 			if ( 1 === $run_disabled ) {
 				$message = __( 'Automatic event execution is disabled indefinitely.', 'automattic-cron-control' );
 			} else {
+				/* translators: 1: Time automatic execution is disabled until, 2: Unix timestamp */
 				$message = sprintf( __( 'Automatic event execution is disabled until %1$s UTC (%2$d).', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $run_disabled ), $run_disabled );
 			}
 
-			return rest_ensure_response( new \WP_Error( 'automatic-execution-disabled', $message, array( 'status' => 403 ) ) );
+			return rest_ensure_response( new \WP_Error( 'automatic-execution-disabled', $message, array(
+				'status' => 403,
+			) ) );
 		}
 
 		// Parse request for details needed to identify the event to execute.
@@ -118,7 +121,9 @@ class REST_API extends Singleton {
 
 		// For now, mimic original plugin's "authentication" method. This needs to be better.
 		if ( ! isset( $body['secret'] ) || ! hash_equals( \WP_CRON_CONTROL_SECRET, $body['secret'] ) ) {
-			return new \WP_Error( 'no-secret', __( 'Secret must be specified with all requests', 'automattic-cron-control' ), array( 'status' => 400 ) );
+			return new \WP_Error( 'no-secret', __( 'Secret must be specified with all requests', 'automattic-cron-control' ), array(
+				'status' => 400,
+			) );
 		}
 
 		return true;

@@ -579,7 +579,9 @@ class Events_Store extends Singleton {
 
 		// Create the post, or update an existing entry to run again in the future.
 		if ( is_int( $update_id ) && $update_id > 0 ) {
-			$wpdb->update( $this->get_table_name(), $job_post, array( 'ID' => $update_id ) );
+			$wpdb->update( $this->get_table_name(), $job_post, array(
+				'ID' => $update_id,
+			) );
 		} else {
 			$job_post['created'] = current_time( 'mysql', true );
 
@@ -637,7 +639,9 @@ class Events_Store extends Singleton {
 			'instance' => mt_rand( 1000000, 999999999 ), // Breaks unique constraint, and can be recreated from entry's remaining data.
 		);
 
-		$success = $wpdb->update( $this->get_table_name(), $updates, array( 'ID' => $job_id ) );
+		$success = $wpdb->update( $this->get_table_name(), $updates, array(
+			'ID' => $job_id,
+		) );
 
 		// Delete internal cache.
 		// Should only be skipped during bulk operations.
@@ -724,7 +728,9 @@ class Events_Store extends Singleton {
 		}
 
 		if ( $count > 0 ) {
-			$wpdb->delete( $this->get_table_name(), array( 'status' => self::STATUS_COMPLETED ) );
+			$wpdb->delete( $this->get_table_name(), array(
+				'status' => self::STATUS_COMPLETED,
+			) );
 		}
 	}
 

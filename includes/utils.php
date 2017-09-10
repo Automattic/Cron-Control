@@ -28,7 +28,9 @@ function collapse_events_array( $events, $timestamp = null ) {
 	if ( is_numeric( $timestamp ) ) {
 		if ( isset( $events[ $timestamp ] ) ) {
 			$_events = $events[ $timestamp ];
-			$events  = array( $timestamp => $_events );
+			$events  = array(
+				$timestamp => $_events,
+			);
 			unset( $_events );
 		} else {
 			return $collapsed_events;
