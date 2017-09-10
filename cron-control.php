@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Plugin Name: Cron Control
  * Plugin URI: https://vip.wordpress.com/
@@ -15,7 +14,7 @@
 namespace Automattic\WP\Cron_Control;
 
 // Load basics needed to instantiate plugin.
-require __DIR__ . '/includes/abstract-class-singleton.php';
+require __DIR__ . '/includes/class-singleton.php';
 
 // Instantiate main plugin class, which checks environment and loads remaining classes when appropriate.
 require __DIR__ . '/includes/class-main.php';
