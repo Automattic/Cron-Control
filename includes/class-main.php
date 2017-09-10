@@ -91,7 +91,9 @@ class Main extends Singleton {
 		if ( false !== stripos( $_SERVER['REQUEST_URI'], '/wp-cron.php' ) || false !== stripos( $_SERVER['SCRIPT_NAME'], '/wp-cron.php' ) ) {
 			status_header( 403 );
 			/* translators: 1: Plugin name */
-			wp_send_json_error( new \WP_Error( 'forbidden', sprintf( __( 'Normal cron execution is blocked when the %s plugin is active.', 'automattic-cron-control' ), 'Cron Control' ) ), array( 'status' => 400 ) );
+			wp_send_json_error( new \WP_Error( 'forbidden', sprintf( __( 'Normal cron execution is blocked when the %s plugin is active.', 'automattic-cron-control' ), 'Cron Control' ) ), array(
+				'status' => 400,
+			) );
 		}
 	}
 
@@ -117,10 +119,12 @@ class Main extends Singleton {
 	public function admin_notice() {
 		?>
 		<div class="notice notice-error">
-			<p><?php
+			<p>
+			<?php
 				/* translators: 1: Plugin name, 2: Constant name */
 				printf( __( '<strong>%1$s</strong>: To use this plugin, define the constant %2$s.', 'automattic-cron-control' ), 'Cron Control', '<code>WP_CRON_CONTROL_SECRET</code>' );
-			?></p>
+			?>
+			</p>
 		</div>
 		<?php
 	}

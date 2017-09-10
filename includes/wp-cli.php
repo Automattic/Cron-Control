@@ -53,7 +53,7 @@ const TIME_FORMAT = \Automattic\WP\Cron_Control\TIME_FORMAT;
 function stop_the_insanity() {
 	global $wpdb, $wp_object_cache;
 
-	$wpdb->queries = array(); // or define WP_IMPORTING
+	$wpdb->queries = array();
 
 	if ( ! is_object( $wp_object_cache ) ) {
 		return;
