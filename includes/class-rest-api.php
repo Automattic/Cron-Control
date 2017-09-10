@@ -78,7 +78,7 @@ class REST_API extends Singleton {
 			if ( 1 === $run_disabled ) {
 				$message = __( 'Automatic event execution is disabled indefinitely.', 'automattic-cron-control' );
 			} else {
-				$message = sprintf( __( 'Automatic event execution is disabled until %s (%d).', 'automattic-cron-control' ), date( 'Y-m-d H:i:s T', $run_disabled ), $run_disabled );
+				$message = sprintf( __( 'Automatic event execution is disabled until %s UTC (%d).', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $run_disabled ), $run_disabled );
 			}
 
 			return rest_ensure_response( new \WP_Error( 'automatic-execution-disabled', $message, array( 'status' => 403, ) ) );

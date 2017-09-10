@@ -37,8 +37,10 @@ prepare_environment();
 
 /**
  * Consistent time format across commands
+ *
+ * Defined here for backwards compatibility, as it was here before it was in the primary namespace
  */
-const TIME_FORMAT = 'Y-m-d H:i:s';
+const TIME_FORMAT = \Automattic\WP\Cron_Control\TIME_FORMAT;
 
 /**
  *  Clear all of the caches for memory management
