@@ -404,7 +404,7 @@ class Events_Store extends Singleton {
 			$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE status = %s LIMIT %d,%d;", $args['status'], $offset, $args['quantity'] ); // Cannot prepare table name. @codingStandardsIgnoreLine
 		}
 
-		$jobs = $wpdb->get_results( $query, 'OBJECT' );  // @codingStandardsIgnoreLine
+		$jobs = $wpdb->get_results( $query, 'OBJECT' ); // Already prepared. @codingStandardsIgnoreLine
 
 		if ( is_array( $jobs ) ) {
 			$jobs = array_map( array( $this, 'format_job' ), $jobs );
@@ -490,7 +490,7 @@ class Events_Store extends Singleton {
 		$query .= ' LIMIT 1';
 
 		// Query and format results.
-		$job = $wpdb->get_row( $query );  // @codingStandardsIgnoreLine
+		$job = $wpdb->get_row( $query ); // Already prepared. @codingStandardsIgnoreLine
 
 		if ( is_object( $job ) && ! is_wp_error( $job ) ) {
 			$job = $this->format_job( $job );
