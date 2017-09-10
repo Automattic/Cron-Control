@@ -350,7 +350,8 @@ class Events extends \WP_CLI_Command {
 		 */
 
 		// step one: the first chunk.
-		for ( $i = 0, $j = count( $chunks ); $i < $j; $i++ ) {
+		$j = count( $chunks );
+		for ( $i = 0; $i < $j; $i++ ) {
 			$seconds = $chunks[ $i ][0];
 			$name    = $chunks[ $i ][1];
 
@@ -535,7 +536,8 @@ class Events extends \WP_CLI_Command {
 		$delete_progress = \WP_CLI\Utils\make_progress_bar( __( 'Deleting events', 'automattic-cron-control' ), $total_to_delete );
 
 		$events_deleted       = array();
-		$events_deleted_count = $events_failed_delete = 0;
+		$events_deleted_count = 0;
+		$events_failed_delete = 0;
 
 		// Don't create new events while deleting events.
 		\Automattic\WP\Cron_Control\_suspend_event_creation();
