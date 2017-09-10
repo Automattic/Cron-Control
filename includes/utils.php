@@ -79,7 +79,7 @@ function parse_request() {
 	 *
 	 * References to $wp_rewrite->index were replaced with $rewrite_index, and whitespace updated, but otherwise, this is directly from WP::parse_request()
 	 */
-	// @codingStandardsIgnoreStart
+	// Borrowed from Core. @codingStandardsIgnoreStart
 	$pathinfo = isset( $_SERVER['PATH_INFO'] ) ? $_SERVER['PATH_INFO'] : '';
 	list( $pathinfo ) = explode( '?', $pathinfo );
 	$pathinfo = str_replace( "%", "%25", $pathinfo );
@@ -118,7 +118,7 @@ function parse_request() {
 	}
 
 	$requested_file = $req_uri;
-	// @codingStandardsIgnoreEnd
+	// Borrowed from Core. @codingStandardsIgnoreEnd
 	/**
 	 * End what's borrowed from Core
 	 */

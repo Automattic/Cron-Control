@@ -323,14 +323,14 @@ class Events extends \WP_CLI_Command {
 	 * @return string
 	 */
 	private function calculate_interval( $since ) {
+		// Borrowed from WP-CLI. @codingStandardsIgnoreStart
 		if ( $since <= 0 ) {
 			return 'now';
 		}
 
 		$since = absint( $since );
 
-		// array of time period chunks.
-		// @codingStandardsIgnoreStart
+		// array of time period chunks
 		$chunks = array(
 			array( 60 * 60 * 24 * 365 , \_n_noop( '%s year', '%s years' ) ),
 			array( 60 * 60 * 24 * 30 , \_n_noop( '%s month', '%s months' ) ),
@@ -340,44 +340,39 @@ class Events extends \WP_CLI_Command {
 			array( 60 , \_n_noop( '%s minute', '%s minutes' ) ),
 			array(  1 , \_n_noop( '%s second', '%s seconds' ) ),
 		);
-		// @codingStandardsIgnoreEnd
 
-		/**
-		 * We only want to output two chunks of time here, eg:
-		 * x years, xx months
-		 * x days, xx hours
-		 * so there's only two bits of calculation below:
-		 */
+		// we only want to output two chunks of time here, eg:
+		// x years, xx months
+		// x days, xx hours
+		// so there's only two bits of calculation below:
 
-		// step one: the first chunk.
-		$j = count( $chunks );
-		for ( $i = 0; $i < $j; $i++ ) {
-			$seconds = $chunks[ $i ][0];
-			$name    = $chunks[ $i ][1];
+		// step one: the first chunk
+		for ( $i = 0, $j = count( $chunks ); $i < $j; $i++ ) {
+			$seconds = $chunks[$i][0];
+			$name = $chunks[$i][1];
 
-			// finding the biggest chunk (if the chunk fits, break).
-			$count = floor( $since / $seconds );
-			if ( 0 !== $count ) {
+			// finding the biggest chunk (if the chunk fits, break)
+			if ( ( $count = floor( $since / $seconds ) ) != 0 ){
 				break;
 			}
 		}
 
-		// set output var.
-		$output = sprintf( \_n( $name[0], $name[1], $count ), $count ); // @codingStandardsIgnoreLine
+		// set output var
+		$output = sprintf( \_n( $name[0], $name[1], $count ), $count );
 
-		// step two: the second chunk.
+		// step two: the second chunk
 		if ( $i + 1 < $j ) {
-			$seconds2 = $chunks[ $i + 1 ][0];
-			$name2    = $chunks[ $i + 1 ][1];
+			$seconds2 = $chunks[$i + 1][0];
+			$name2    = $chunks[$i + 1][1];
 
-			$count2 = floor( ( $since - ( $seconds * $count ) ) / $seconds2 );
-			if ( 0 !== $count2 ) {
-				// add to output var.
-				$output .= ' ' . sprintf( \_n( $name2[0], $name2[1], $count2 ), $count2 ); // @codingStandardsIgnoreLine
+			if ( ( $count2 = floor( ( $since - ( $seconds * $count ) ) / $seconds2 ) ) != 0 ) {
+				// add to output var
+				$output .= ' ' . sprintf( \_n( $name2[0], $name2[1], $count2 ), $count2 );
 			}
 		}
 
 		return $output;
+		// Borrowed from WP-CLI. @codingStandardsIgnoreEnd
 	}
 
 	/**
