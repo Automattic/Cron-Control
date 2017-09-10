@@ -36,6 +36,7 @@ class One_Time_Fixers extends \WP_CLI_Command {
 		$count = (int) $wpdb->get_var( "SELECT COUNT(ID) FROM {$table_name}" ); // Cannot prepare table name. @codingStandardsIgnoreLine
 
 		if ( $count > 1 ) {
+			/* translators: 1: Event count */
 			\WP_CLI::log( sprintf( __( 'Found %s total items', 'automattic-cron-control' ), number_format_i18n( $count ) ) . "\n\n" );
 
 			if ( $dry_run ) {
@@ -63,6 +64,7 @@ class One_Time_Fixers extends \WP_CLI_Command {
 		// Remove the now-stale cache when actively run.
 		if ( ! $dry_run ) {
 			\Automattic\WP\Cron_Control\_flush_internal_caches();
+			/* translators: 1: Plugin name */
 			\WP_CLI::log( "\n" . sprintf( __( 'Cleared the %s cache', 'automattic-cron-control' ), 'Cron Control' ) );
 		}
 
@@ -97,6 +99,7 @@ class One_Time_Fixers extends \WP_CLI_Command {
 		$count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(ID) FROM {$wpdb->posts} WHERE post_type = %s;", 'a8c_cron_ctrl_event' ) );
 
 		if ( $count > 0 ) {
+			/* translators: 1: Event count */
 			\WP_CLI::log( sprintf( _n( 'Found %s item', 'Found %s total items', $count, 'automattic-cron-control' ), number_format_i18n( $count ) ) . "\n\n" );
 			\WP_CLI::confirm( __( 'Proceed?', 'automattic-cron-control' ) );
 		} else {
@@ -116,6 +119,8 @@ class One_Time_Fixers extends \WP_CLI_Command {
 		} else {
 			$page_size = 250;
 		}
+
+		/* translators: 1: Batch size */
 		\WP_CLI::log( sprintf( __( 'Processing in batches of %s', 'automattic-cron-control' ), number_format_i18n( $page_size ) ) . "\n\n" );
 
 		$pages     = 1;
@@ -127,6 +132,7 @@ class One_Time_Fixers extends \WP_CLI_Command {
 
 		// Let's get on with it.
 		do {
+			/* translators: 1: Current page, 2: total pages */
 			\WP_CLI::log( "\n\n" . sprintf( __( 'Processing page %1$s of %2$s', 'automattic-cron-control' ), number_format_i18n( $page ), number_format_i18n( $pages ) ) . "\n" );
 
 			$items = $wpdb->get_results( $wpdb->prepare( "SELECT ID, post_title FROM {$wpdb->posts} WHERE post_type = %s LIMIT %d,%d", 'a8c_cron_ctrl_event', absint( ( $page - 1 ) * $page_size ),$page_size ) );
@@ -137,6 +143,7 @@ class One_Time_Fixers extends \WP_CLI_Command {
 				break;
 			}
 
+			/* translators: 1: Event count for this batch */
 			\WP_CLI::log( sprintf( __( 'Found %s items in this batch' ), number_format_i18n( count( $items ) ) ) );
 
 			foreach ( $items as $item ) {
