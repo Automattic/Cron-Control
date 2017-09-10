@@ -32,7 +32,7 @@ function _manually_load_plugin() {
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
-// Utilities
+// Utilities.
 require_once __DIR__ . '/includes/class-utils.php';
 
 // Start up the WP testing environment.
