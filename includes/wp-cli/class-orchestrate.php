@@ -24,7 +24,7 @@ class Orchestrate extends \WP_CLI_Command {
 				break;
 
 			default :
-				$status = sprintf( __( 'Automatic execution is disabled for %1$s UTC (until %2$s)', 'automattic-cron-control' ), human_time_diff( $status ), date_i18n( TIME_FORMAT, $status ) );
+				$status = sprintf( __( 'Automatic execution is disabled for %1$s (until %2$s UTC)', 'automattic-cron-control' ), human_time_diff( $status ), date_i18n( TIME_FORMAT, $status ) );
 				break;
 		}
 
