@@ -24,7 +24,7 @@ class Orchestrate extends \WP_CLI_Command {
 				break;
 
 			default :
-				$status = sprintf( __( 'Automatic execution is disabled until %s', 'automattic-cron-control' ), date_i18n( 'Y-m-d H:i:s T', $status ) );
+				$status = sprintf( __( 'Automatic execution is disabled for %1$s (until %2$s UTC)', 'automattic-cron-control' ), human_time_diff( $status ), date_i18n( TIME_FORMAT, $status ) );
 				break;
 		}
 
@@ -67,7 +67,7 @@ class Orchestrate extends \WP_CLI_Command {
 				$updated = \Automattic\WP\Cron_Control\Events::instance()->update_run_status( $disable_ts );
 
 				if ( $updated ) {
-					\WP_CLI::success( sprintf( __( 'Disabled until %s', 'automattic-cron-control' ), date_i18n( 'Y-m-d H:i:s T', $disable_ts ) ) );
+					\WP_CLI::success( sprintf( __( 'Disabled for %1$s (until %2$s UTC)', 'automattic-cron-control' ), human_time_diff( $disable_ts ), date_i18n( TIME_FORMAT, $disable_ts ) ) );
 					return;
 				}
 

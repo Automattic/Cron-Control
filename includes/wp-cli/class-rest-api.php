@@ -82,7 +82,7 @@ class REST_API extends \WP_CLI_Command {
 				'timestamp'      => $event_data->timestamp,
 				'action'         => $event_data->action,
 				'instance'       => $event_data->instance,
-				'scheduled_for'  => date( TIME_FORMAT, $event_data->timestamp ),
+				'scheduled_for'  => date_i18n( TIME_FORMAT, $event_data->timestamp ),
 				'internal_event' => \Automattic\WP\Cron_Control\is_internal_event( $event_data->action ) ? __( 'true', 'automattic-cron-control' ) : '',
 				'schedule_name'  => false === $event_data->schedule ? __( 'n/a', 'automattic-cron-control' ) : $event_data->schedule,
 				'event_args'     => maybe_serialize( $event_data->args ),
