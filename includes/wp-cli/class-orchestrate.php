@@ -22,15 +22,16 @@ class Orchestrate extends \WP_CLI_Command {
 		$status = \Automattic\WP\Cron_Control\Events::instance()->run_disabled();
 
 		switch ( $status ) {
-			case 0 :
+			case 0:
 				$status = __( 'Automatic execution is enabled', 'automattic-cron-control' );
 				break;
 
-			case 1 :
+			case 1:
 				$status = __( 'Automatic execution is disabled indefinitely', 'automattic-cron-control' );
 				break;
 
-			default :
+			default:
+				/* translators: 1: Human time diff, 2: Time execution is disabled until */
 				$status = sprintf( __( 'Automatic execution is disabled for %1$s (until %2$s UTC)', 'automattic-cron-control' ), human_time_diff( $status ), date_i18n( TIME_FORMAT, $status ) );
 				break;
 		}
@@ -76,6 +77,7 @@ class Orchestrate extends \WP_CLI_Command {
 				$updated = \Automattic\WP\Cron_Control\Events::instance()->update_run_status( $disable_ts );
 
 				if ( $updated ) {
+					/* translators: 1: Human time diff, 2: Time execution is disabled until */
 					\WP_CLI::success( sprintf( __( 'Disabled for %1$s (until %2$s UTC)', 'automattic-cron-control' ), human_time_diff( $disable_ts ), date_i18n( TIME_FORMAT, $disable_ts ) ) );
 					return;
 				}

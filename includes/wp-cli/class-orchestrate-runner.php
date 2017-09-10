@@ -73,6 +73,7 @@ class Orchestrate_Runner extends \WP_CLI_Command {
 
 		$now = time();
 		if ( $timestamp > $now ) {
+			/* translators: 1: Event execution time in UTC, 2: Human time diff */
 			\WP_CLI::error( sprintf( __( 'Given timestamp is for %1$s UTC, %2$s from now. The event\'s existence was not confirmed, and no attempt was made to execute it.', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $timestamp ), human_time_diff( $now, $timestamp ) ) );
 		}
 
