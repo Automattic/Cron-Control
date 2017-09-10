@@ -18,7 +18,8 @@ class REST_API_Tests extends \WP_UnitTestCase {
 		parent::setUp();
 
 		global $wp_rest_server;
-		$this->server = $wp_rest_server = new \WP_REST_Server;
+		$wp_rest_server = new \WP_REST_Server;
+		$this->server   = $wp_rest_server;
 		do_action( 'rest_api_init' );
 
 		// make sure the schedule is clear.
