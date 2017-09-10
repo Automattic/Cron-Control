@@ -1,4 +1,9 @@
 <?php
+/**
+ * Plugin's WP-CLI integration
+ *
+ * @package a8c_Cron_Control
+ */
 
 namespace Automattic\WP\Cron_Control\CLI;
 
@@ -10,7 +15,7 @@ if ( ! defined( '\WP_CLI' ) || ! \WP_CLI ) {
  * Prepare environment
  */
 function prepare_environment() {
-	// Only interfere with `cron-control` commands
+	// Only interfere with `cron-control` commands.
 	$cmd = \WP_CLI::get_runner()->arguments;
 	if ( ! is_array( $cmd ) || ! isset( $cmd['0'] ) ) {
 		return;
@@ -20,14 +25,14 @@ function prepare_environment() {
 		return;
 	}
 
-	// Create table and die, to ensure command runs with proper state
+	// Create table and die, to ensure command runs with proper state.
 	if ( ! \Automattic\WP\Cron_Control\Events_Store::is_installed() ) {
 		\Automattic\WP\Cron_Control\Events_Store::instance()->cli_create_tables();
 
 		\WP_CLI::error( __( 'Cron Control installation completed. Please try again.', 'automattic-cron-control' ) );
 	}
 
-	// Set DOING_CRON when appropriate
+	// Set DOING_CRON when appropriate.
 	if ( isset( $cmd[1] ) && 'orchestrate' === $cmd[1] ) {
 		@ini_set( 'display_errors', '0' ); // @codingStandardsIgnoreLine - error output breaks JSON used by runner
 		\Automattic\WP\Cron_Control\set_doing_cron();
@@ -48,10 +53,11 @@ const TIME_FORMAT = \Automattic\WP\Cron_Control\TIME_FORMAT;
 function stop_the_insanity() {
 	global $wpdb, $wp_object_cache;
 
-	$wpdb->queries = array(); // or define( 'WP_IMPORTING', true );
+	$wpdb->queries = array(); // or define( 'WP_IMPORTING', true );.
 
-	if ( ! is_object( $wp_object_cache ) )
+	if ( ! is_object( $wp_object_cache ) ) {
 		return;
+	}
 
 	$wp_object_cache->group_ops      = array();
 	$wp_object_cache->stats          = array();
@@ -59,7 +65,7 @@ function stop_the_insanity() {
 	$wp_object_cache->cache          = array();
 
 	if ( is_callable( $wp_object_cache, '__remoteset' ) ) {
-		$wp_object_cache->__remoteset(); // important
+		$wp_object_cache->__remoteset(); // important!
 	}
 }
 
