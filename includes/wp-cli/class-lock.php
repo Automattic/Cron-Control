@@ -60,6 +60,7 @@ class Lock extends \WP_CLI_Command {
 		// Output information about the lock.
 		\WP_CLI::log( $lock_description . "\n" );
 
+		/* translators: 1: Lock limit */
 		\WP_CLI::log( sprintf( __( 'Maximum: %s', 'automattic-cron-control' ), number_format_i18n( $lock_limit ) ) . "\n" );
 
 		// Reset requested.
@@ -69,7 +70,9 @@ class Lock extends \WP_CLI_Command {
 			$lock      = \Automattic\WP\Cron_Control\Lock::get_lock_value( $lock_name );
 			$timestamp = \Automattic\WP\Cron_Control\Lock::get_lock_timestamp( $lock_name );
 
+			/* translators: 1: Previous lock value */
 			\WP_CLI::log( sprintf( __( 'Previous value: %s', 'automattic-cron-control' ), number_format_i18n( $lock ) ) );
+			/* translators: 1: Previous lock timestamp */
 			\WP_CLI::log( sprintf( __( 'Previously modified: %s UTC', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $timestamp ) ) . "\n" );
 
 			\WP_CLI::confirm( sprintf( __( 'Are you sure you want to reset this lock?', 'automattic-cron-control' ) ) );
@@ -84,7 +87,9 @@ class Lock extends \WP_CLI_Command {
 		$lock      = \Automattic\WP\Cron_Control\Lock::get_lock_value( $lock_name );
 		$timestamp = \Automattic\WP\Cron_Control\Lock::get_lock_timestamp( $lock_name );
 
+		/* translators: 1: Current lock value */
 		\WP_CLI::log( sprintf( __( 'Current value: %s', 'automattic-cron-control' ), number_format_i18n( $lock ) ) );
+		/* translators: 1: Current lock timestamp */
 		\WP_CLI::log( sprintf( __( 'Last modified: %s UTC', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $timestamp ) ) );
 	}
 }
