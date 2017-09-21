@@ -1,4 +1,9 @@
 <?php
+/**
+ * Plugin's constants
+ *
+ * @package a8c_Cron_Control
+ */
 
 namespace Automattic\WP\Cron_Control;
 
