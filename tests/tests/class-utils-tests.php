@@ -1,16 +1,15 @@
 <?php
 /**
- * Class Utils_Tests
+ * Test plugin's utility functions
  *
- * @package Automattic_Cron_Control
+ * @package a8c_Cron_Control
  */
 
 namespace Automattic\WP\Cron_Control\Tests;
-
 use Automattic\WP\Cron_Control;
 
 /**
- * Sample test case.
+ * Class Utils_Tests
  */
 class Utils_Tests extends \WP_UnitTestCase {
 	/**
@@ -19,7 +18,7 @@ class Utils_Tests extends \WP_UnitTestCase {
 	function setUp() {
 		parent::setUp();
 
-		// make sure the schedule is clear
+		// make sure the schedule is clear.
 		_set_cron_array( array() );
 	}
 
@@ -27,7 +26,7 @@ class Utils_Tests extends \WP_UnitTestCase {
 	 * Clean up after our tests
 	 */
 	function tearDown() {
-		// make sure the schedule is clear
+		// make sure the schedule is clear.
 		_set_cron_array( array() );
 
 		parent::tearDown();

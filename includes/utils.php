@@ -62,12 +62,12 @@ function collapse_events_array( $events, $timestamp = null ) {
 /**
  * Convert simplified representation of cron events array to the format WordPress expects
  *
- * @param array $events
+ * @param array $events Flattened event list.
  * @return array
  */
 function inflate_collapsed_events_array( $events ) {
 	$inflated = array(
-		'version' => 2, // Core versions the cron array; without this, Core will attempt to "upgrade" the value
+		'version' => 2, // Core versions the cron array; without this, Core will attempt to "upgrade" the value.
 	);
 
 	if ( empty( $events ) ) {
@@ -75,10 +75,10 @@ function inflate_collapsed_events_array( $events ) {
 	}
 
 	foreach ( $events as $event ) {
-		// Object for convenience
+		// Object for convenience.
 		$event = (object) $event;
 
-		// Set up where this event belongs in the overall structure
+		// Set up where this event belongs in the overall structure.
 		if ( ! isset( $inflated[ $event->timestamp ] ) ) {
 			$inflated[ $event->timestamp ] = array();
 		}
@@ -87,7 +87,7 @@ function inflate_collapsed_events_array( $events ) {
 			$inflated[ $event->timestamp ][ $event->action ] = array();
 		}
 
-		// Store this event
+		// Store this event.
 		$inflated[ $event->timestamp ][ $event->action ][ $event->instance ] = $event->args;
 	}
 

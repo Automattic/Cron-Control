@@ -19,7 +19,7 @@ require_once $_tests_dir . '/includes/functions.php';
 function _manually_load_plugin() {
 	define( 'WP_CRON_CONTROL_SECRET', 'testtesttest' );
 
-	// Nonsense values to test constraints and aid testing
+	// Nonsense values to test constraints and aid testing.
 	define( 'CRON_CONTROL_CACHE_BUCKET_SIZE', 0 );
 	define( 'CRON_CONTROL_MAX_CACHE_BUCKETS', PHP_INT_MAX / 2 );
 
