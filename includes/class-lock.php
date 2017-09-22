@@ -1,24 +1,31 @@
 <?php
+/**
+ * Concurrency locks
+ *
+ * @package a8c_Cron_Control
+ */
 
 namespace Automattic\WP\Cron_Control;
 
+/**
+ * Lock class
+ */
 class Lock {
 	/**
 	 * Set a lock and limit how many concurrent jobs are permitted
 	 *
-	 * @param $lock     string  Lock name
-	 * @param $limit    int     Concurrency limit
-	 * @param $timeout  int     Timeout in seconds
-	 *
+	 * @param string $lock  Lock name.
+	 * @param int    $limit Concurrency limit.
+	 * @param int    $timeout Timeout in seconds.
 	 * @return bool
 	 */
 	public static function check_lock( $lock, $limit = null, $timeout = null ) {
-		// Timeout, should a process die before its lock is freed
+		// Timeout, should a process die before its lock is freed.
 		if ( ! is_numeric( $timeout ) ) {
 			$timeout = LOCK_DEFAULT_TIMEOUT_IN_MINUTES * \MINUTE_IN_SECONDS;
 		}
 
-		// Check for, and recover from, deadlock
+		// Check for, and recover from, deadlock.
 		if ( self::get_lock_timestamp( $lock ) < time() - $timeout ) {
 			self::reset_lock( $lock );
 			return true;
@@ -86,6 +93,10 @@ class Lock {
 
 	/**
 	 * When event completes, allow another
+	 *
+	 * @param string $lock Lock name.
+	 * @param int    $expires Lock expiration timestamp.
+	 * @return bool
 	 */
 	public static function free_lock( $lock, $expires = 0 ) {
 		$lock_value = self::get_lock_value( $lock );
@@ -137,14 +148,18 @@ class Lock {
 
 	/**
 	 * Build cache key
+	 *
+	 * @param string $lock Lock name.
+	 * @param string $type Key type, either lock or timestamp.
+	 * @return string|bool
 	 */
 	private static function get_key( $lock, $type = 'lock' ) {
 		switch ( $type ) {
-			case 'lock' :
+			case 'lock':
 				return "a8ccc_lock_{$lock}";
 				break;
 
-			case 'timestamp' :
+			case 'timestamp':
 				return "a8ccc_lock_ts_{$lock}";
 				break;
 		}
@@ -154,6 +169,10 @@ class Lock {
 
 	/**
 	 * Ensure lock entries are initially set
+	 *
+	 * @param string $lock Lock name.
+	 * @param int    $expires Lock expiration timestamp.
+	 * @return null
 	 */
 	public static function prime_lock( $lock, $expires = 0 ) {
 		wp_cache_add( self::get_key( $lock ), 0, null, $expires );
@@ -164,6 +183,9 @@ class Lock {
 
 	/**
 	 * Retrieve a lock from cache
+	 *
+	 * @param string $lock Lock name.
+	 * @return int
 	 */
 	public static function get_lock_value( $lock ) {
 		$value = wp_cache_get( self::get_key( $lock ), null, true );
@@ -182,6 +204,9 @@ class Lock {
 
 	/**
 	 * Retrieve a lock's timestamp
+	 *
+	 * @param string $lock Lock name.
+	 * @return int
 	 */
 	public static function get_lock_timestamp( $lock ) {
 		return (int) wp_cache_get( self::get_key( $lock, 'timestamp' ), null, true );
@@ -189,6 +214,10 @@ class Lock {
 
 	/**
 	 * Clear a lock's current values, in order to free it
+	 *
+	 * @param string $lock Lock name.
+	 * @param int    $expires Lock expiration timestamp.
+	 * @return bool
 	 */
 	public static function reset_lock( $lock, $expires = 0 ) {
 		wp_cache_set( self::get_key( $lock ), 0, null, $expires );

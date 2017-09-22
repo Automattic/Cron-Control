@@ -1,4 +1,9 @@
 <?php
+/**
+ * Plugin's constants
+ *
+ * @package a8c_Cron_Control
+ */
 
 namespace Automattic\WP\Cron_Control;
 
@@ -33,3 +38,10 @@ const JOB_LOCK_EXPIRY_IN_MINUTES  = 30;
  */
 const LOCK_DEFAULT_LIMIT              = 10;
 const LOCK_DEFAULT_TIMEOUT_IN_MINUTES = 10;
+
+/**
+ * Consistent time format across plugin
+ *
+ * Excludes timestamp as UTC is used throughout
+ */
+const TIME_FORMAT = 'Y-m-d H:i:s';

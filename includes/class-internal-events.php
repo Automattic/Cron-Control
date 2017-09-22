@@ -1,23 +1,41 @@
 <?php
+/**
+ * Internal events to manage plugin and common WP cron complaints
+ *
+ * @package a8c_Cron_Control
+ */
 
 namespace Automattic\WP\Cron_Control;
 
+/**
+ * Internal Events class
+ */
 class Internal_Events extends Singleton {
 	/**
 	 * PLUGIN SETUP
 	 */
 
 	/**
-	 * Class properties
+	 * List of registered internal events
+	 *
+	 * @var array
 	 */
 	private $internal_jobs           = array();
+
+	/**
+	 * Schedules for internal events
+	 *
+	 * Provides for intervals shorter than Core does by default
+	 *
+	 * @var array
+	 */
 	private $internal_jobs_schedules = array();
 
 	/**
 	 * Register hooks
 	 */
 	protected function class_init() {
-		// Internal jobs variables
+		// Internal jobs variables.
 		$this->internal_jobs = array(
 			array(
 				'schedule' => 'a8c_cron_control_minute',
@@ -52,7 +70,7 @@ class Internal_Events extends Singleton {
 			),
 		);
 
-		// Register hooks
+		// Register hooks.
 		add_action( 'admin_init', array( $this, 'schedule_internal_events' ) );
 		add_action( 'rest_api_init', array( $this, 'schedule_internal_events' ) );
 		add_filter( 'cron_schedules', array( $this, 'register_internal_events_schedules' ) );
@@ -64,6 +82,9 @@ class Internal_Events extends Singleton {
 
 	/**
 	 * Include custom schedules used for internal jobs
+	 *
+	 * @param array $schedules List of registered event intervals.
+	 * @return array
 	 */
 	public function register_internal_events_schedules( $schedules ) {
 		return array_merge( $schedules, $this->internal_jobs_schedules );
@@ -98,6 +119,9 @@ class Internal_Events extends Singleton {
 
 	/**
 	 * Events that are always run, regardless of how many jobs are queued
+	 *
+	 * @param string $action Event action.
+	 * @return bool
 	 */
 	public function is_internal_event( $action ) {
 		return in_array( $action, wp_list_pluck( $this->internal_jobs, 'action' ), true );
@@ -113,8 +137,7 @@ class Internal_Events extends Singleton {
 	public function force_publish_missed_schedules() {
 		global $wpdb;
 
-		$query        = $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_status = 'future' AND post_date <= %s LIMIT 0,100;", current_time( 'mysql', false ) );
-		$missed_posts = $wpdb->get_col( $query );
+		$missed_posts = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_status = 'future' AND post_date <= %s LIMIT 0,100;", current_time( 'mysql', false ) ) );
 
 		foreach ( $missed_posts as $missed_post ) {
 			$missed_post = absint( $missed_post );
@@ -136,8 +159,7 @@ class Internal_Events extends Singleton {
 
 		do {
 			$offset       = max( 0, $page - 1 ) * $quantity;
-			$query        = $wpdb->prepare( "SELECT ID, post_date FROM {$wpdb->posts} WHERE post_status = 'future' AND post_date > %s LIMIT %d,%d", current_time( 'mysql', false ), $offset, $quantity );
-			$future_posts = $wpdb->get_results( $query );
+			$future_posts = $wpdb->get_results( $wpdb->prepare( "SELECT ID, post_date FROM {$wpdb->posts} WHERE post_status = 'future' AND post_date > %s LIMIT %d,%d", current_time( 'mysql', false ), $offset, $quantity ) );
 
 			if ( ! empty( $future_posts ) ) {
 				foreach ( $future_posts as $future_post ) {
@@ -172,23 +194,23 @@ class Internal_Events extends Singleton {
 	 * Some of this data relates to how Core manages Cron when this plugin isn't active
 	 */
 	public function clean_legacy_data() {
-		// Cron option can be very large, so it shouldn't linger
+		// Cron option can be very large, so it shouldn't linger.
 		delete_option( 'cron' );
 
-		// While this plugin doesn't use this locking mechanism, other code may check the value
+		// While this plugin doesn't use this locking mechanism, other code may check the value.
 		if ( wp_using_ext_object_cache() ) {
 			wp_cache_delete( 'doing_cron', 'transient' );
 		} else {
 			delete_transient( 'doing_cron' );
 		}
 
-		// Confirm internal events are scheduled for when they're expected
+		// Confirm internal events are scheduled for when they're expected.
 		$schedules = wp_get_schedules();
 
 		foreach ( $this->internal_jobs as $internal_job ) {
 			$timestamp = wp_next_scheduled( $internal_job['action'] );
 
-			// Will reschedule on its own
+			// Will reschedule on its own.
 			if ( false === $timestamp ) {
 				continue;
 			}

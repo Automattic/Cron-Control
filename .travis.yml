@@ -1,3 +1,5 @@
+sudo: false
+
 language: php
 
 notifications:
@@ -5,25 +7,59 @@ notifications:
     on_success: never
     on_failure: change
 
-php:
-  - 5.6
-  - 7.0
+cache:
+  directories:
+    - vendor
+    - $HOME/.composer/cache
 
-env:
-  - WP_VERSION=latest WP_MULTISITE=0
-  - WP_VERSION=latest WP_MULTISITE=1
-  - WP_VERSION=trunk WP_MULTISITE=0
-  - WP_VERSION=trunk WP_MULTISITE=1
+matrix:
+  include:
+    # PHPUnit
+    - php: 7.2
+      env: WP_VERSION=latest
+    - php: 7.2
+      env: WP_VERSION=trunk
+    - php: 7.1
+      env: WP_VERSION=latest
+    - php: 7.1
+      env: WP_VERSION=trunk
+    - php: 7.0
+      env: WP_VERSION=latest
+    - php: 7.0
+      env: WP_VERSION=trunk
+    - php: 5.6
+      env: WP_VERSION=latest
+    - php: 5.6
+      env: WP_VERSION=trunk
+    # PHPCS
+    - php: 7.1
+      env: WP_TRAVISCI=phpcs
 
 before_script:
   - phpenv config-rm xdebug.ini
   - export PATH="$HOME/.composer/vendor/bin:$PATH"
   - |
-    if [[ ${TRAVIS_PHP_VERSION:0:2} == "7." ]]; then
-      composer global require "phpunit/phpunit=5.7.*"
-    elif [[ ${TRAVIS_PHP_VERSION:0:3} != "5.2" ]]; then
-      composer global require "phpunit/phpunit=4.8.*"
+    if [[ ! -z "$WP_VERSION" ]] ; then
+      bash bin/install-wp-tests.sh wordpress_test root '' localhost $WP_VERSION
+      if [[ ${TRAVIS_PHP_VERSION:0:2} == "5." ]]; then
+        composer global require "phpunit/phpunit=4.8.*"
+      else
+        composer global require "phpunit/phpunit=5.7.*"
+      fi
     fi
-  - bash bin/install-wp-tests.sh wordpress_test root '' localhost $WP_VERSION
+  - |
+    if [[ "$WP_TRAVISCI" == "phpcs" ]] ; then
+      composer global require wp-coding-standards/wpcs
+      phpcs --config-set installed_paths $HOME/.composer/vendor/wp-coding-standards/wpcs
+    fi
 
-script: phpunit
+script:
+  - |
+    if [[ ! -z "$WP_VERSION" ]] ; then
+      phpunit
+      WP_MULTISITE=1 phpunit
+    fi
+  - |
+    if [[ "$WP_TRAVISCI" == "phpcs" ]] ; then
+      phpcs
+    fi
