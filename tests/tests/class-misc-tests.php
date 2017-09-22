@@ -1,14 +1,14 @@
 <?php
 /**
- * Class Misc_Tests
+ * Miscellaneous tests
  *
- * @package Automattic_Cron_Control
+ * @package a8c_Cron_Control
  */
 
 namespace Automattic\WP\Cron_Control\Tests;
 
 /**
- * Sample test case.
+ * Misc tests
  */
 class Misc_Tests extends \WP_UnitTestCase {
 	/**
@@ -17,7 +17,7 @@ class Misc_Tests extends \WP_UnitTestCase {
 	function setUp() {
 		parent::setUp();
 
-		// make sure the schedule is clear
+		// make sure the schedule is clear.
 		_set_cron_array( array() );
 	}
 
@@ -25,7 +25,7 @@ class Misc_Tests extends \WP_UnitTestCase {
 	 * Clean up after our tests
 	 */
 	function tearDown() {
-		// make sure the schedule is clear
+		// make sure the schedule is clear.
 		_set_cron_array( array() );
 
 		parent::tearDown();

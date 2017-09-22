@@ -1,4 +1,9 @@
 <?php
+/**
+ * Plugin's constants
+ *
+ * @package a8c_Cron_Control
+ */
 
 namespace Automattic\WP\Cron_Control;
 
@@ -55,3 +60,10 @@ if ( defined( 'CRON_CONTROL_MAX_CACHE_BUCKETS' ) && is_numeric( \CRON_CONTROL_MA
 }
 define( __NAMESPACE__ . '\MAX_CACHE_BUCKETS', $max_cache_buckets );
 unset( $max_cache_buckets );
+
+/**
+ * Consistent time format across plugin
+ *
+ * Excludes timestamp as UTC is used throughout
+ */
+const TIME_FORMAT = 'Y-m-d H:i:s';

@@ -1,14 +1,14 @@
 <?php
 /**
- * Class Internal_Events_Tests
+ * Test plugin's Internal Events
  *
- * @package Automattic_Cron_Control
+ * @package a8c_Cron_Control
  */
 
 namespace Automattic\WP\Cron_Control\Tests;
 
 /**
- * Sample test case.
+ * Internal Events tests
  */
 class Internal_Events_Tests extends \WP_UnitTestCase {
 	/**
@@ -17,7 +17,7 @@ class Internal_Events_Tests extends \WP_UnitTestCase {
 	function setUp() {
 		parent::setUp();
 
-		// make sure the schedule is clear
+		// make sure the schedule is clear.
 		_set_cron_array( array() );
 	}
 
@@ -25,7 +25,7 @@ class Internal_Events_Tests extends \WP_UnitTestCase {
 	 * Clean up after our tests
 	 */
 	function tearDown() {
-		// make sure the schedule is clear
+		// make sure the schedule is clear.
 		_set_cron_array( array() );
 
 		parent::tearDown();
@@ -39,10 +39,10 @@ class Internal_Events_Tests extends \WP_UnitTestCase {
 
 		$events = \Automattic\WP\Cron_Control\collapse_events_array( get_option( 'cron' ) );
 
-		// Check that the plugin scheduled the expected number of events
+		// Check that the plugin scheduled the expected number of events.
 		$this->assertEquals( count( $events ), 4 );
 
-		// Confirm that the scheduled jobs came from the Internal Events class
+		// Confirm that the scheduled jobs came from the Internal Events class.
 		foreach ( $events as $event ) {
 			$this->assertTrue( \Automattic\WP\Cron_Control\is_internal_event( $event['action'] ) );
 		}
