@@ -20,7 +20,7 @@ class Internal_Events extends Singleton {
 	 *
 	 * @var array
 	 */
-	private $internal_jobs           = array();
+	private $internal_jobs = array();
 
 	/**
 	 * Schedules for internal events
@@ -35,31 +35,72 @@ class Internal_Events extends Singleton {
 	 * Register hooks
 	 */
 	protected function class_init() {
-		// Internal jobs variables.
-		$this->internal_jobs = array(
+		// Prepare events and their schedules, allowing for additions.
+		$this->prepare_internal_events();
+		$this->prepare_internal_events_schedules();
+
+		// Register hooks.
+		add_action( 'admin_init',     array( $this, 'schedule_internal_events' ) );
+		add_action( 'rest_api_init',  array( $this, 'schedule_internal_events' ) );
+		add_filter( 'cron_schedules', array( $this, 'register_internal_events_schedules' ) );
+
+		foreach ( $this->internal_jobs as $internal_job ) {
+			add_action( $internal_job['action'], $internal_job['callback'] );
+		}
+	}
+
+	/**
+	 * Populate internal events, allowing for additions
+	 */
+	private function prepare_internal_events() {
+		$internal_jobs = array(
 			array(
 				'schedule' => 'a8c_cron_control_minute',
 				'action'   => 'a8c_cron_control_force_publish_missed_schedules',
-				'callback' => 'force_publish_missed_schedules',
+				'callback' => array( $this, 'force_publish_missed_schedules' ),
 			),
 			array(
 				'schedule' => 'a8c_cron_control_ten_minutes',
 				'action'   => 'a8c_cron_control_confirm_scheduled_posts',
-				'callback' => 'confirm_scheduled_posts',
+				'callback' => array( $this, 'confirm_scheduled_posts' ),
 			),
 			array(
 				'schedule' => 'daily',
 				'action'   => 'a8c_cron_control_clean_legacy_data',
-				'callback' => 'clean_legacy_data',
+				'callback' => array( $this, 'clean_legacy_data' ),
 			),
 			array(
 				'schedule' => 'hourly',
 				'action'   => 'a8c_cron_control_purge_completed_events',
-				'callback' => 'purge_completed_events',
+				'callback' => array( $this, 'purge_completed_events' ),
 			),
 		);
 
-		$this->internal_jobs_schedules = array(
+		// Allow additional internal events to be specified, ensuring the above cannot be overwritten.
+		if ( defined( 'CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS' ) && is_array( \CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS ) ) {
+			$internal_actions = wp_list_pluck( $internal_jobs, 'action' );
+
+			foreach ( \CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS as $additional ) {
+				if ( in_array( $additional['action'], $internal_actions, true ) ) {
+					continue;
+				}
+
+				if ( ! array_key_exists( 'schedule', $additional ) || ! array_key_exists( 'action', $additional ) || ! array_key_exists( 'callback', $additional ) ) {
+					continue;
+				}
+
+				$internal_jobs[] = $additional;
+			}
+		}
+
+		$this->internal_jobs = $internal_jobs;
+	}
+
+	/**
+	 * Allow custom internal events to provide their own schedules
+	 */
+	private function prepare_internal_events_schedules() {
+		$internal_jobs_schedules = array(
 			'a8c_cron_control_minute' => array(
 				'interval' => 1 * MINUTE_IN_SECONDS,
 				'display' => __( 'Cron Control internal job - every minute', 'automattic-cron-control' ),
@@ -70,14 +111,22 @@ class Internal_Events extends Singleton {
 			),
 		);
 
-		// Register hooks.
-		add_action( 'admin_init', array( $this, 'schedule_internal_events' ) );
-		add_action( 'rest_api_init', array( $this, 'schedule_internal_events' ) );
-		add_filter( 'cron_schedules', array( $this, 'register_internal_events_schedules' ) );
+		// Allow additional schedules for custom events, ensuring the above cannot be overwritten.
+		if ( defined( 'CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS_SCHEDULES' ) && is_array( \CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS_SCHEDULES ) ) {
+			foreach ( \CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS_SCHEDULES as $name => $attrs ) {
+				if ( array_key_exists( $name, $internal_jobs_schedules ) ) {
+					continue;
+				}
 
-		foreach ( $this->internal_jobs as $internal_job ) {
-			add_action( $internal_job['action'], array( $this, $internal_job['callback'] ) );
+				if ( ! array_key_exists( 'interval', $attrs ) || ! array_key_exists( 'display', $attrs ) ) {
+					continue;
+				}
+
+				$internal_jobs_schedules[ $name ] = $attrs;
+			}
 		}
+
+		$this->internal_jobs_schedules = $internal_jobs_schedules;
 	}
 
 	/**
