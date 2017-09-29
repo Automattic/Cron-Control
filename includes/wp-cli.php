@@ -72,6 +72,7 @@ function stop_the_insanity() {
 /**
  * Load commands
  */
+require __DIR__ . '/wp-cli/class-main.php';
 require __DIR__ . '/wp-cli/class-cache.php';
 require __DIR__ . '/wp-cli/class-events.php';
 require __DIR__ . '/wp-cli/class-lock.php';
