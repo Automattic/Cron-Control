@@ -43,7 +43,7 @@ class Internal_Events_Tests extends WP_UnitTestCase {
 		$events = Cron_Control\collapse_events_array( get_option( 'cron' ) );
 
 		$expected = 4; // Number of events created by the Internal_Events::prepare_internal_events() method, which is private.
-		$expected += count( CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS );
+		$expected += count( \CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS );
 
 		$this->assertEquals( count( $events ), $expected, 'Incorrect number of Internal Events registered' );
 	}
@@ -63,7 +63,7 @@ class Internal_Events_Tests extends WP_UnitTestCase {
 	 * Test that additional Internal Events can be added
 	 */
 	function test_add_events() {
-		$additional = CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS;
+		$additional = \CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS;
 
 		foreach ( $additional as $added ) {
 			$next = wp_next_scheduled( $added['action'], array() );
