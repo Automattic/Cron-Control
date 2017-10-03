@@ -144,7 +144,7 @@ class One_Time_Fixers extends \WP_CLI_Command {
 			}
 
 			/* translators: 1: Event count for this batch */
-			\WP_CLI::log( sprintf( __( 'Found %s items in this batch' ), number_format_i18n( count( $items ) ) ) );
+			\WP_CLI::log( sprintf( __( 'Found %s items in this batch', 'automattic-cron-control' ), number_format_i18n( count( $items ) ) ) );
 
 			foreach ( $items as $item ) {
 				\WP_CLI::log( "{$item->ID}, `{$item->post_title}`" );
