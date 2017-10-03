@@ -1,6 +1,6 @@
 === Cron Control ===
 Contributors: automattic, ethitter
-Tags: support, user
+Tags: cron, cron control, concurrency, parallel, async
 Requires at least: 4.4
 Tested up to: 4.9
 Requires PHP: 7.0
