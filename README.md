@@ -7,7 +7,7 @@ Using REST API endpoints (requires WordPress 4.4+), an event queue is produced a
 
 ## PHP Compatibility
 
-Cron Control requires PHP 7 or greater to be able to catch fatal errors triggered by event callbacks. While the plugin may work with previous versions of PHP, internal locks may become deadlocked if callbacks fail. 
+Cron Control requires PHP 7 or greater to be able to catch fatal errors triggered by event callbacks. PHP 7 is also required to define arrays in constants (such as for adding "Internal Events"). 
 
 ## Event Concurrency
 
@@ -22,3 +22,33 @@ add_filter( 'a8c_cron_control_concurrent_event_whitelist', function( $wh ) {
 	return $wh;
 } );
 ```
+
+## Adding Internal Events
+
+**This should be done sparingly as "Internal Events" bypass certain locks and limits built into the plugin.** Overuse will lead to unexpected resource usage, and likely resource exhaustion.
+
+In `wp-config.php` or a similarly-early and appropriate place, define `CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS` as an array of arrays like:
+
+```php
+define( 'CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS', array(
+	array(
+		'schedule' => 'hourly',
+		'action'   => 'do_a_thing',
+		'callback' => '__return_true',
+	),
+) );
+```
+
+Due to the early loading (to limit additions), the `action` and `callback` generally can't directly reference any Core, plugin, or theme code. Since WordPress uses actions to trigger cron, class methods can be referenced, so long as the class name is not dynamically referenced. For example:
+
+```php
+define( 'CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS', array(
+	array(
+		'schedule' => 'hourly',
+		'action'   => 'do_a_thing',
+		'callback' => array( 'Some_Class', 'some_method' ),
+	),
+) );
+```
+
+Take care to reference the full namespace when appropriate.
