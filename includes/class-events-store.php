@@ -252,7 +252,7 @@ class Events_Store extends Singleton {
 	 */
 	public function get_option() {
 		// Use cached value when available.
-		$cached_option = wp_cache_get( self::CACHE_KEY, null, true );
+		$cached_option = $this->get_cached_option();
 
 		if ( false !== $cached_option ) {
 			return $cached_option;
@@ -312,7 +312,7 @@ class Events_Store extends Singleton {
 		uksort( $cron_array, 'strnatcasecmp' );
 
 		// Cache the results.
-		wp_cache_set( self::CACHE_KEY, $cron_array, null, 1 * \HOUR_IN_SECONDS );
+		$this->cache_option( $cron_array );
 
 		return $cron_array;
 	}
@@ -678,6 +678,109 @@ class Events_Store extends Singleton {
 		}
 
 		return $differences;
+	}
+
+	/**
+	 * Retrieve cron option from cache
+	 *
+	 * @return array|false
+	 */
+	private function get_cached_option() {
+		$cache_details = wp_cache_get( self::CACHE_KEY, null, true );
+
+		if ( ! is_array( $cache_details ) ) {
+			return false;
+		}
+
+		// Single bucket.
+		if ( isset( $cache_details['version'] ) ) {
+			return $cache_details;
+		}
+
+		// Invalid data!
+		if ( ! isset( $cache_details['incrementer'] ) ) {
+			return false;
+		}
+
+		$option_flat = array();
+
+		// Restore option from cached pieces.
+		for ( $i = 1; $i <= $cache_details['buckets']; $i++ ) {
+			$cache_key    = $this->get_cache_key_for_slice( $cache_details['incrementer'], $i );
+			$cached_slice = wp_cache_get( $cache_key, null, true );
+
+			// Bail if a chunk is missing.
+			if ( ! is_array( $cached_slice ) ) {
+				return false;
+			}
+
+			$option_flat += $cached_slice;
+		}
+
+		// Something's missing, likely due to cache eviction.
+		if ( empty( $option_flat ) || count( $option_flat ) !== $cache_details['event_count'] ) {
+			return false;
+		}
+
+		return inflate_collapsed_events_array( $option_flat );
+	}
+
+	/**
+	 * Cache cron option, accommodating large versions by splitting into chunks
+	 *
+	 * @param array $option Cron option to cache.
+	 * @return bool
+	 */
+	private function cache_option( $option ) {
+		// Determine storage requirements.
+		$option_flat        = collapse_events_array( $option );
+		$option_flat_string = maybe_serialize( $option_flat );
+		$option_size        = strlen( $option_flat_string );
+		$buckets            = (int) ceil( $option_size / CACHE_BUCKET_SIZE );
+
+		// Store in single cache key.
+		if ( 1 === $buckets ) {
+			return wp_cache_set( self::CACHE_KEY, $option, null, 1 * \HOUR_IN_SECONDS );
+		}
+
+		// Too large to cache?
+		if ( $buckets > MAX_CACHE_BUCKETS ) {
+			do_action( 'a8c_cron_control_uncacheable_cron_option', $option_size, $buckets, count( $option_flat ) );
+
+			$this->flush_internal_caches();
+			return false;
+		}
+
+		$incrementer  = md5( $option_flat_string . time() );
+		$event_count  = count( $option_flat );
+		$segment_size = (int) ceil( $event_count / $buckets );
+
+		for ( $i = 1; $i <= $buckets; $i++ ) {
+			$offset    = ( $i - 1 ) * $segment_size;
+			$slice     = array_slice( $option_flat, $offset, $segment_size );
+			$cache_key = $this->get_cache_key_for_slice( $incrementer, $i );
+
+			wp_cache_set( $cache_key, $slice, null, 1 * \HOUR_IN_SECONDS );
+		}
+
+		$option = array(
+			'incrementer' => $incrementer,
+			'buckets'     => $buckets,
+			'event_count' => count( $option_flat ),
+		);
+
+		return wp_cache_set( self::CACHE_KEY, $option, null, 1 * \HOUR_IN_SECONDS );
+	}
+
+	/**
+	 * Build cache key for a given portion of a large option
+	 *
+	 * @param string $incrementor Current cache incrementor.
+	 * @param int    $slice Slice ID.
+	 * @return string
+	 */
+	private function get_cache_key_for_slice( $incrementor, $slice ) {
+		return md5( self::CACHE_KEY . $incrementor . $slice );
 	}
 
 	/**

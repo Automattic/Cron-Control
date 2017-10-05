@@ -40,6 +40,28 @@ const LOCK_DEFAULT_LIMIT              = 10;
 const LOCK_DEFAULT_TIMEOUT_IN_MINUTES = 10;
 
 /**
+ * Limit on size of event cache objects
+ */
+$cache_bucket_size = \MB_IN_BYTES * 0.95;
+if ( defined( 'CRON_CONTROL_CACHE_BUCKET_SIZE' ) && is_numeric( \CRON_CONTROL_CACHE_BUCKET_SIZE ) ) {
+	$cache_bucket_size = absint( \CRON_CONTROL_CACHE_BUCKET_SIZE );
+	$cache_bucket_size = max( 256 * \KB_IN_BYTES, min( $cache_bucket_size, \TB_IN_BYTES ) );
+}
+define( __NAMESPACE__ . '\CACHE_BUCKET_SIZE', $cache_bucket_size );
+unset( $cache_bucket_size );
+
+/**
+ * Limit how many buckets can be created, to avoid cache exhaustion
+ */
+$max_cache_buckets = 5;
+if ( defined( 'CRON_CONTROL_MAX_CACHE_BUCKETS' ) && is_numeric( \CRON_CONTROL_MAX_CACHE_BUCKETS ) ) {
+	$max_cache_buckets = absint( \CRON_CONTROL_MAX_CACHE_BUCKETS );
+	$max_cache_buckets = max( 1, min( $max_cache_buckets, 250 ) );
+}
+define( __NAMESPACE__ . '\MAX_CACHE_BUCKETS', $max_cache_buckets );
+unset( $max_cache_buckets );
+
+/**
  * Consistent time format across plugin
  *
  * Excludes timestamp as UTC is used throughout
