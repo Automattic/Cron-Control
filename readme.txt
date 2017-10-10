@@ -4,7 +4,7 @@ Tags: cron, cron control, concurrency, parallel, async
 Requires at least: 4.4
 Tested up to: 4.9
 Requires PHP: 7.0
-Stable tag: 0.1.0
+Stable tag: 2.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -73,6 +73,12 @@ return $wh;
 ```
 
 == Changelog ==
+
+= 2.0 =
+* Support additional Internal Events
+* Break large cron queues into several caches
+* Introduce Golang runner to execute cron
+* Support concurrency for whitelisted events
 
 = 1.5 =
 * Convert from custom post type to custom table with proper indices
