@@ -60,6 +60,41 @@ function collapse_events_array( $events, $timestamp = null ) {
 }
 
 /**
+ * Convert simplified representation of cron events array to the format WordPress expects
+ *
+ * @param array $events Flattened event list.
+ * @return array
+ */
+function inflate_collapsed_events_array( $events ) {
+	$inflated = array(
+		'version' => 2, // Core versions the cron array; without this, Core will attempt to "upgrade" the value.
+	);
+
+	if ( empty( $events ) ) {
+		return $inflated;
+	}
+
+	foreach ( $events as $event ) {
+		// Object for convenience.
+		$event = (object) $event;
+
+		// Set up where this event belongs in the overall structure.
+		if ( ! isset( $inflated[ $event->timestamp ] ) ) {
+			$inflated[ $event->timestamp ] = array();
+		}
+
+		if ( ! isset( $inflated[ $event->timestamp ][ $event->action ] ) ) {
+			$inflated[ $event->timestamp ][ $event->action ] = array();
+		}
+
+		// Store this event.
+		$inflated[ $event->timestamp ][ $event->action ][ $event->instance ] = $event->args;
+	}
+
+	return $inflated;
+}
+
+/**
  * Parse request using Core's logic
  *
  * We have occasion to check the request before Core has done so, such as when preparing the environment to run a cron job

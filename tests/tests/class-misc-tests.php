@@ -32,13 +32,21 @@ class Misc_Tests extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Expected values for certain constants
+	 * Expected values for certain Core constants
 	 */
-	function test_constants() {
+	function test_core_constants() {
 		$this->assertTrue( defined( 'DISABLE_WP_CRON' ) );
 		$this->assertTrue( defined( 'ALTERNATE_WP_CRON' ) );
 
 		$this->assertTrue( constant( 'DISABLE_WP_CRON' ) );
 		$this->assertFalse( constant( 'ALTERNATE_WP_CRON' ) );
+	}
+
+	/**
+	 * Confirm that constants are properly constrained
+	 */
+	function test_event_cache_constants() {
+		$this->assertEquals( 256 * \KB_IN_BYTES, \Automattic\WP\Cron_Control\CACHE_BUCKET_SIZE );
+		$this->assertEquals( 250,                \Automattic\WP\Cron_Control\MAX_CACHE_BUCKETS );
 	}
 }
