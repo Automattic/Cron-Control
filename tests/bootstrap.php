@@ -31,7 +31,6 @@ function _manually_load_plugin() {
 	define( 'CRON_CONTROL_CACHE_BUCKET_SIZE', 0 );
 	define( 'CRON_CONTROL_MAX_CACHE_BUCKETS', PHP_INT_MAX / 2 );
 
-
 	require dirname( dirname( __FILE__ ) ) . '/cron-control.php';
 
 	// Plugin loads after `wp_install()` is called, so we compensate.
