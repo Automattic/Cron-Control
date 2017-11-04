@@ -128,7 +128,9 @@ class Events extends \WP_CLI_Command {
 
 		if ( ! is_object( $event ) ) {
 			/* translators: 1: Event ID */
-			\WP_CLI::error( sprintf( __( 'Failed to locate event %d. Please confirm that the entry exists and that the ID is that of an event.', 'automattic-cron-control' ), $args[0] ) );
+			\WP_CLI::warning( sprintf( __( 'Failed to locate event %d. Please confirm that the entry exists and that the ID is that of an event.', 'automattic-cron-control' ), $args[0] ) );
+
+			exit;
 		}
 
 		/* translators: 1: Event ID, 2: Event action, 3. Event instance */
