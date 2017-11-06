@@ -87,7 +87,9 @@ class Orchestrate_Runner extends \WP_CLI_Command {
 			$error_data = $run->get_error_data();
 
 			if ( isset( $error_data['status'] ) && 404 === $error_data['status'] ) {
-				\WP_CLI::success( $run->get_error_message() );
+				\WP_CLI::warning( $run->get_error_message() );
+
+				exit;
 			} else {
 				\WP_CLI::error( $run->get_error_message() );
 			}
