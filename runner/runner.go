@@ -396,6 +396,35 @@ func usage() {
 	os.Exit(3)
 }
 
+func waitForEpoch(whom string, epoch_sec int64) {
+	tEpochNano := epoch_sec * time.Second.Nanoseconds()
+	tEpochDelta := tEpochNano - (time.Now().UnixNano() % tEpochNano)
+	if tEpochDelta < 1*time.Second.Nanoseconds() {
+		tEpochDelta += epoch_sec * time.Second.Nanoseconds()
+	}
+	tNextEpoch := time.Now().UnixNano() + tEpochDelta
+
+	// Sleep in 3sec intervals by default, less if we are running out of time
+	tMaxDelta := 3 * time.Second.Nanoseconds()
+	tDelta := tMaxDelta
+
+	for i := tDelta; time.Now().UnixNano() < tNextEpoch; i += tDelta {
+		if i > tEpochNano*2 {
+			// if we ever loop here for more than 2 full epochs, bail out
+			logger.Printf("Error in the epoch wait loop for %s\n", whom)
+			break
+		}
+		if gRestart {
+			return
+		}
+		tDelta = tNextEpoch - time.Now().UnixNano()
+		if tDelta > tMaxDelta {
+			tDelta = tMaxDelta
+		}
+		time.Sleep(time.Duration(tDelta))
+	}
+}
+
 func setupSignalHandler() {
 	sigChan := make(chan os.Signal)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
