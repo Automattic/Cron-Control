@@ -174,6 +174,19 @@ class Events_Store extends Singleton {
 	 * Create the plugin's DB table when necessary
 	 */
 	protected function _prepare_table() {
+		/**
+		 * Allow plugins to bypass the prepare_table() process with their own.
+		 *
+		 * @param boolean $bypass
+		 *
+		 * @since TBD
+		 */
+		$bypass = apply_filters( 'a8c_cron_control_prepare_table_bypass', false );
+
+		if ( true === $bypass ) {
+			return;
+		}
+
 		// Use Core's method of creating/updating tables.
 		if ( ! function_exists( 'dbDelta' ) ) {
 			require_once ABSPATH . '/wp-admin/includes/upgrade.php';
@@ -238,6 +251,19 @@ class Events_Store extends Singleton {
 	 * @return array
 	 */
 	public function remove_multisite_table( $tables_to_drop ) {
+		/**
+		 * Allow plugins to bypass the remove_multisite_table() in case there is no table to drop.
+		 *
+		 * @param boolean $bypass
+		 *
+		 * @since TBD
+		 */
+		$bypass = apply_filters( 'a8c_cron_control_remove_multisite_table_bypass', false );
+
+		if ( true === $bypass ) {
+			return $tables_to_drop;
+		}
+
 		$tables_to_drop[] = $this->get_table_name();
 
 		return $tables_to_drop;
@@ -404,7 +430,21 @@ class Events_Store extends Singleton {
 			$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE status = %s LIMIT %d,%d;", $args['status'], $offset, $args['quantity'] ); // Cannot prepare table name. @codingStandardsIgnoreLine
 		}
 
-		$jobs = $wpdb->get_results( $query, 'OBJECT' ); // Already prepared. @codingStandardsIgnoreLine
+		/**
+		 * Allow plugins to override the get_jobs() results with their own.
+		 *
+		 * @param object[]|null $jobs   Job objects to use, otherwise return null for normal store operation.
+		 * @param array         $args   Job arguments to search by.
+		 * @param int           $page   Page used for paginating results.
+		 * @param int           $offset Offset used for paginating results.
+		 *
+		 * @since TBD
+		 */
+		$jobs = apply_filters( 'a8c_cron_control_get_jobs_override', null, $args, $page, $offset );
+
+		if ( null === $jobs ) {
+			$jobs = $wpdb->get_results( $query, 'OBJECT' ); // Already prepared. @codingStandardsIgnoreLine
+		}
 
 		if ( is_array( $jobs ) ) {
 			$jobs = array_map( array( $this, 'format_job' ), $jobs );
@@ -430,7 +470,18 @@ class Events_Store extends Singleton {
 			return false;
 		}
 
-		$job = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE ID = %d AND status = %s LIMIT 1", $jid, self::STATUS_PENDING ) ); // Cannot prepare table name. @codingStandardsIgnoreLine
+		/**
+		 * Allow plugins to override the get_job_by_id() result with their own.
+		 *
+		 * @param object|null $job Job object to use, otherwise return null for normal store operation.
+		 *
+		 * @since TBD
+		 */
+		$job = apply_filters( 'a8c_cron_control_get_job_by_id_override', null, $jid );
+
+		if ( null === $job ) {
+			$job = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE ID = %d AND status = %s LIMIT 1", $jid, self::STATUS_PENDING ) ); // Cannot prepare table name. @codingStandardsIgnoreLine
+		}
 
 		if ( is_object( $job ) && ! is_wp_error( $job ) ) {
 			$job = $this->format_job( $job );
@@ -489,8 +540,19 @@ class Events_Store extends Singleton {
 
 		$query .= ' LIMIT 1';
 
-		// Query and format results.
-		$job = $wpdb->get_row( $query ); // Already prepared. @codingStandardsIgnoreLine
+		/**
+		 * Allow plugins to override the get_job_by_attributes() result with their own.
+		 *
+		 * @param object|null $job Job object to use, otherwise return null for normal store operation.
+		 *
+		 * @since TBD
+		 */
+		$job = apply_filters( 'a8c_cron_control_get_job_by_attributes_override', null, $attrs );
+
+		if ( null === $job ) {
+			// Query and format results.
+			$job = $wpdb->get_row( $query ); // Already prepared. @codingStandardsIgnoreLine
+		}
 
 		if ( is_object( $job ) && ! is_wp_error( $job ) ) {
 			$job = $this->format_job( $job );
@@ -515,7 +577,18 @@ class Events_Store extends Singleton {
 	private function get_job_id( $timestamp, $action, $instance ) {
 		global $wpdb;
 
-		$job = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$this->get_table_name()} WHERE timestamp = %d AND action = %s AND instance = %s AND status = %s LIMIT 1;", $timestamp, $action, $instance, self::STATUS_PENDING ) ); // Cannot prepare table name. @codingStandardsIgnoreLine
+		/**
+		 * Allow plugins to override the get_job_id() result with their own.
+		 *
+		 * @param int[]|null $job Job ID to use provided as an array of IDs, otherwise return null for normal store operation.
+		 *
+		 * @since TBD
+		 */
+		$job = apply_filters( 'a8c_cron_control_get_job_id_override', null, $timestamp, $action, $instance );
+
+		if ( null === $job ) {
+			$job = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$this->get_table_name()} WHERE timestamp = %d AND action = %s AND instance = %s AND status = %s LIMIT 1;", $timestamp, $action, $instance, self::STATUS_PENDING ) ); // Cannot prepare table name. @codingStandardsIgnoreLine
+		}
 
 		return empty( $job ) ? 0 : (int) array_shift( $job );
 	}
@@ -579,13 +652,38 @@ class Events_Store extends Singleton {
 
 		// Create the post, or update an existing entry to run again in the future.
 		if ( is_int( $update_id ) && $update_id > 0 ) {
-			$wpdb->update( $this->get_table_name(), $job_post, array(
-				'ID' => $update_id,
-			) );
+			/**
+			 * Allow plugins to override the create_or_update_job() update action with their own.
+			 *
+			 * @param true|null $bypass    Bypass by returning true, otherwise return null for normal store operation.
+			 * @param array     $job_post  Job data to save.
+			 * @param int       $update_id Job ID to update data for.
+			 *
+			 * @since TBD
+			 */
+			$bypass = apply_filters( 'a8c_cron_control_create_or_update_job_update_override', null, $job_post, $update_id );
+
+			if ( null === $bypass ) {
+				$wpdb->update( $this->get_table_name(), $job_post, array(
+					'ID' => $update_id,
+				) );
+			}
 		} else {
 			$job_post['created'] = current_time( 'mysql', true );
 
-			$wpdb->insert( $this->get_table_name(), $job_post );
+			/**
+			 * Allow plugins to override the create_or_update_job() create action with their own.
+			 *
+			 * @param true|null $bypass    Bypass by returning true, otherwise return null for normal store operation.
+			 * @param array     $job_post  Job data to create.
+			 *
+			 * @since TBD
+			 */
+			$bypass = apply_filters( 'a8c_cron_control_create_or_update_job_create_override', null, $job_post );
+
+			if ( null === $bypass ) {
+				$wpdb->insert( $this->get_table_name(), $job_post );
+			}
 		}
 
 		// Delete internal cache.
@@ -639,9 +737,22 @@ class Events_Store extends Singleton {
 			'instance' => mt_rand( 1000000, 999999999 ), // Breaks unique constraint, and can be recreated from entry's remaining data.
 		);
 
-		$success = $wpdb->update( $this->get_table_name(), $updates, array(
-			'ID' => $job_id,
-		) );
+		/**
+		 * Allow plugins to override the mark_job_record_completed() action with their own.
+		 *
+		 * @param boolean|null $success Bypass by returning a boolean, otherwise return null for normal store operation.
+		 * @param array        $updates Job data to update.
+		 * @param int          $job_id  Job ID to update data for.
+		 *
+		 * @since TBD
+		 */
+		$success = apply_filters( 'a8c_cron_control_mark_job_record_completed_override', null, $updates, $job_id );
+
+		if ( null === $success ) {
+			$success = $wpdb->update( $this->get_table_name(), $updates, array(
+				'ID' => $job_id,
+			) );
+		}
 
 		// Delete internal cache.
 		// Should only be skipped during bulk operations.
@@ -831,9 +942,23 @@ class Events_Store extends Singleton {
 		}
 
 		if ( $count > 0 ) {
-			$wpdb->delete( $this->get_table_name(), array(
-				'status' => self::STATUS_COMPLETED,
-			) );
+			$delete_status = self::STATUS_COMPLETED;
+
+			/**
+			 * Allow plugins to override the purge_completed_events() delete process with their own.
+			 *
+			 * @param true|null $bypass        Bypass by returning true, otherwise return null for normal store operation.
+			 * @param string    $delete_status Status of jobs to delete.
+			 *
+			 * @since TBD
+			 */
+			$bypass = apply_filters( 'a8c_cron_control_purge_completed_events_delete_override', null, $delete_status );
+
+			if ( null === $bypass ) {
+				$wpdb->delete( $this->get_table_name(), array(
+					'status' => $delete_status,
+				) );
+			}
 		}
 	}
 
@@ -850,7 +975,21 @@ class Events_Store extends Singleton {
 			return false;
 		}
 
-		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(ID) FROM {$this->get_table_name()} WHERE status = %s", $status ) ); // Cannot prepare table name. @codingStandardsIgnoreLine
+		/**
+		 * Allow plugins to override the count_events_by_status() process with their own.
+		 *
+		 * @param int|null $count  Bypass by returning an integer, otherwise return null for normal store operation.
+		 * @param string   $status Status to get total jobs count for.
+		 *
+		 * @since TBD
+		 */
+		$count = apply_filters( 'a8c_cron_control_count_events_by_status_override', null, $status );
+
+		if ( null === $count ) {
+			$count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(ID) FROM {$this->get_table_name()} WHERE status = %s", $status ) ); // Cannot prepare table name. @codingStandardsIgnoreLine
+		}
+
+		return $count;
 	}
 }
 
