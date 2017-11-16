@@ -139,11 +139,22 @@ func retrieveSitesPeriodically(sites chan<- site) {
 func heartbeat() {
 	if heartbeatInt == 0 {
 		logger.Println("heartbeat disabled")
+		for {
+			waitForEpoch("heartbeat", 60)
+			if gRestart {
+				logger.Println("exiting heartbeat routine")
+				break
+			}
+		}
 		return
 	}
 
 	for {
 		waitForEpoch("heartbeat", heartbeatInt)
+		if gRestart {
+			logger.Println("exiting heartbeat routine")
+			break
+		}
 		successCount, errCount := atomic.LoadUint64(&eventRunSuccessCount), atomic.LoadUint64(&eventRunErrCount)
 		atomic.SwapUint64(&eventRunSuccessCount, 0)
 		atomic.SwapUint64(&eventRunErrCount, 0)
@@ -252,23 +263,27 @@ func getMultisiteSites() ([]site, error) {
 
 func queueSiteEvents(workerID int, sites <-chan site, queue chan<- event) {
 	gEventRetrieversRunning[workerID-1] = true
+OuterLoop:
 	for site := range sites {
+		if gRestart {
+			logger.Printf("exiting event retriever ID %d", workerID)
+			break
+		}
 		if debug {
 			logger.Printf("getEvents-%d processing %s", workerID, site.URL)
 		}
 
 		events, err := getSiteEvents(site.URL)
-		if err != nil {
-			time.Sleep(getEventsBreak)
-			continue
+		if err == nil && len(events) > 0 {
+			for _, event := range events {
+				if gRestart {
+					break OuterLoop
+				}
+				event.URL = site.URL
+				queue <- event
+			}
 		}
-
-		for _, event := range events {
-			event.URL = site.URL
-			queue <- event
-		}
-
-		time.Sleep(getEventsBreak)
+		time.Sleep(getEventsBreakSec)
 	}
 	// Mark this event retriever as not running for graceful exit
 	gEventRetrieversRunning[workerID-1] = false
@@ -296,6 +311,10 @@ func runEvents(workerID int, events <-chan event) {
 	gEventWorkersRunning[workerID-1] = true
 
 	for event := range events {
+		if gRestart {
+			logger.Printf("exiting event worker ID %d", workerID)
+			break
+		}
 		if now := time.Now(); event.Timestamp > int(now.Unix()) {
 			if debug {
 				logger.Printf("runEvents-%d skipping premature job %d|%s|%s for %s", workerID, event.Timestamp, event.Action, event.Instance, event.URL)
@@ -320,7 +339,12 @@ func runEvents(workerID int, events <-chan event) {
 			atomic.AddUint64(&eventRunErrCount, 1)
 		}
 
-		time.Sleep(runEventsBreak)
+		waitForEpoch("runEvents", runEventsBreakSec)
+		if gRestart {
+			logger.Printf("exiting event worker ID %d", workerID)
+			break
+		}
+
 	}
 
 	// Mark this event worker as not running for graceful exit
