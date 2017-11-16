@@ -51,6 +51,11 @@ var (
 	logger  *log.Logger
 	logDest string
 	debug   bool
+
+	gRestart                bool
+	gEventRetrieversRunning []bool
+	gEventWorkersRunning    []bool
+	gSiteRetrieverRunning   bool
 )
 
 const getEventsBreak time.Duration = time.Second
@@ -83,6 +88,9 @@ func main() {
 	sites := make(chan site)
 	events := make(chan event)
 
+	gEventRetrieversRunning = make([]bool, numGetWorkers)
+	gEventWorkersRunning = make([]bool, numRunWorkers)
+
 	go spawnEventRetrievers(sites, events)
 	go spawnEventWorkers(events)
 	go retrieveSitesPeriodically(sites)
@@ -112,6 +120,7 @@ func spawnEventWorkers(queue <-chan event) {
 
 func retrieveSitesPeriodically(sites chan<- site) {
 	loopInterval := time.Duration(getEventsInterval) * time.Second
+	gSiteRetrieverRunning = true
 
 	for range time.Tick(loopInterval) {
 		siteList, err := getSites()
@@ -123,6 +132,8 @@ func retrieveSitesPeriodically(sites chan<- site) {
 			sites <- site
 		}
 	}
+
+	gSiteRetrieverRunning = false
 }
 
 func heartbeat() {
@@ -241,6 +252,7 @@ func getMultisiteSites() ([]site, error) {
 }
 
 func queueSiteEvents(workerID int, sites <-chan site, queue chan<- event) {
+	gEventRetrieversRunning[workerID-1] = true
 	for site := range sites {
 		if debug {
 			logger.Printf("getEvents-%d processing %s", workerID, site.URL)
@@ -259,6 +271,8 @@ func queueSiteEvents(workerID int, sites <-chan site, queue chan<- event) {
 
 		time.Sleep(getEventsBreak)
 	}
+	// Mark this event retriever as not running for graceful exit
+	gEventRetrieversRunning[workerID-1] = false
 }
 
 func getSiteEvents(site string) ([]event, error) {
@@ -280,6 +294,8 @@ func getSiteEvents(site string) ([]event, error) {
 }
 
 func runEvents(workerID int, events <-chan event) {
+	gEventWorkersRunning[workerID-1] = true
+
 	for event := range events {
 		if now := time.Now(); event.Timestamp > int(now.Unix()) {
 			if debug {
@@ -307,6 +323,9 @@ func runEvents(workerID int, events <-chan event) {
 
 		time.Sleep(runEventsBreak)
 	}
+
+	// Mark this event worker as not running for graceful exit
+	gEventWorkersRunning[workerID-1] = false
 }
 
 func runWpCliCmd(subcommand []string) (string, error) {
