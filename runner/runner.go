@@ -78,8 +78,7 @@ func init() {
 func main() {
 	logger.Printf("Starting with %d event-retreival worker(s) and %d event worker(s)", numGetWorkers, numRunWorkers)
 	logger.Printf("Retrieving events every %d seconds", getEventsInterval)
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	go setupSignalHandler()
 
 	sites := make(chan site)
 	events := make(chan event)
@@ -87,10 +86,8 @@ func main() {
 	go spawnEventRetrievers(sites, events)
 	go spawnEventWorkers(events)
 	go retrieveSitesPeriodically(sites)
-	go heartbeat()
 
-	caughtSig := <-sig
-	logger.Printf("Stopping, got signal %s", caughtSig)
+	heartbeat()
 }
 
 func spawnEventRetrievers(sites <-chan site, queue chan<- event) {
@@ -378,4 +375,16 @@ func validatePath(path *string, label string) {
 func usage() {
 	flag.Usage()
 	os.Exit(3)
+}
+
+func setupSignalHandler() {
+	sigChan := make(chan os.Signal)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	for {
+		select {
+		case sig := <-sigChan:
+			logger.Printf("caught termination signal %s, scheduling shutdown\n", sig)
+			gRestart = true
+		}
+	}
 }
