@@ -174,6 +174,29 @@ func heartbeat() {
 		atomic.SwapUint64(&eventRunErrCount, 0)
 		logger.Printf("<heartbeat eventsSucceededSinceLast=%d eventsErroredSinceLast=%d>", successCount, errCount)
 	}
+
+ExitLoop:
+	for {
+		time.Sleep(time.Duration(1) * time.Second)
+		if gSiteRetrieverRunning {
+			logger.Println("site retriever is still running")
+			continue
+		}
+		for workerID, r := range gEventRetrieversRunning {
+			if true == r {
+				logger.Printf("event retriever ID %d still running\n", workerID)
+				continue ExitLoop
+			}
+		}
+		for workerID, r := range gEventWorkersRunning {
+			if true == r {
+				logger.Printf("event worker ID %d still running\n", workerID)
+				continue ExitLoop
+			}
+		}
+		logger.Println(".:sayonara:.")
+		os.Exit(0)
+	}
 }
 
 func getSites() ([]site, error) {
