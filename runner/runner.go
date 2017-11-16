@@ -93,7 +93,7 @@ func main() {
 
 	go spawnEventRetrievers(sites, events)
 	go spawnEventWorkers(events)
-	go retrieveSitesPeriodically(sites)
+	go retrieveSitesPeriodically(sites, events)
 
 	heartbeat()
 }
@@ -118,11 +118,25 @@ func spawnEventWorkers(queue <-chan event) {
 	close(workerEvents)
 }
 
-func retrieveSitesPeriodically(sites chan<- site) {
+func retrieveSitesPeriodically(sites chan<- site, queue chan<- event) {
 	gSiteRetrieverRunning = true
 
 	for {
 		waitForEpoch("retrieveSitesPeriodically", int64(getEventsInterval))
+		if gRestart {
+			// Send empty site objects to shutdown the retrievers
+			for w := 1; w <= numGetWorkers; w++ {
+				logger.Printf("sending empty site object for worker %d\n", w)
+				sites <- site{}
+			}
+			// Send empty event objects to shutdown the workers
+			for w := 1; w <= numRunWorkers; w++ {
+				logger.Printf("sending empty event for worker %d\n", w)
+				queue <- event{}
+			}
+			logger.Println("exiting site retriever")
+			break
+		}
 		siteList, err := getSites()
 		if err != nil {
 			continue
