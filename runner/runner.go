@@ -42,7 +42,7 @@ var (
 
 	getEventsInterval int
 
-	heartbeatInt int
+	heartbeatInt int64
 
 	disabledLoopCount    uint64
 	eventRunErrCount     uint64
@@ -58,8 +58,8 @@ var (
 	gSiteRetrieverRunning   bool
 )
 
-const getEventsBreak time.Duration = time.Second
-const runEventsBreak time.Duration = time.Second * 10
+const getEventsBreakSec time.Duration = time.Second
+const runEventsBreakSec int64 = 10
 
 func init() {
 	flag.StringVar(&wpCliPath, "cli", "/usr/local/bin/wp", "Path to WP-CLI binary")
@@ -68,7 +68,7 @@ func init() {
 	flag.IntVar(&numGetWorkers, "workers-get", 1, "Number of workers to retrieve events")
 	flag.IntVar(&numRunWorkers, "workers-run", 5, "Number of workers to run events")
 	flag.IntVar(&getEventsInterval, "get-events-interval", 60, "Seconds between event retrieval")
-	flag.IntVar(&heartbeatInt, "heartbeat", 60, "Heartbeat interval in seconds")
+	flag.Int64Var(&heartbeatInt, "heartbeat", 60, "Heartbeat interval in seconds")
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
 	flag.Parse()
