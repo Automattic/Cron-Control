@@ -119,10 +119,10 @@ func spawnEventWorkers(queue <-chan event) {
 }
 
 func retrieveSitesPeriodically(sites chan<- site) {
-	loopInterval := time.Duration(getEventsInterval) * time.Second
 	gSiteRetrieverRunning = true
 
-	for range time.Tick(loopInterval) {
+	for {
+		waitForEpoch("retrieveSitesPeriodically", int64(getEventsInterval))
 		siteList, err := getSites()
 		if err != nil {
 			continue
@@ -142,9 +142,8 @@ func heartbeat() {
 		return
 	}
 
-	interval := time.Duration(heartbeatInt) * time.Second
-
-	for range time.Tick(interval) {
+	for {
+		waitForEpoch("heartbeat", heartbeatInt)
 		successCount, errCount := atomic.LoadUint64(&eventRunSuccessCount), atomic.LoadUint64(&eventRunErrCount)
 		atomic.SwapUint64(&eventRunSuccessCount, 0)
 		atomic.SwapUint64(&eventRunErrCount, 0)
