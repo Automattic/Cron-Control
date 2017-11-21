@@ -298,7 +298,7 @@ func queueSiteEvents(workerID int, sites <-chan site, queue chan<- event) {
 OuterLoop:
 	for site := range sites {
 		if gRestart {
-			logger.Printf("exiting event retriever ID %d", workerID)
+			logger.Printf("exiting event retriever ID %d\n", workerID)
 			break
 		}
 		if debug {
@@ -344,7 +344,7 @@ func runEvents(workerID int, events <-chan event) {
 
 	for event := range events {
 		if gRestart {
-			logger.Printf("exiting event worker ID %d", workerID)
+			logger.Printf("exiting event worker ID %d\n", workerID)
 			break
 		}
 		if now := time.Now(); event.Timestamp > int(now.Unix()) {
@@ -374,7 +374,7 @@ func runEvents(workerID int, events <-chan event) {
 
 		waitForEpoch("runEvents", runEventsBreakSec)
 		if gRestart {
-			logger.Printf("exiting event worker ID %d", workerID)
+			logger.Printf("exiting event worker ID %d\n", workerID)
 			break
 		}
 
