@@ -295,6 +295,8 @@ func getMultisiteSites() ([]site, error) {
 
 func queueSiteEvents(workerID int, sites <-chan site, queue chan<- event) {
 	gEventRetrieversRunning[workerID-1] = true
+	logger.Printf("started retriever %d\n", workerID)
+
 OuterLoop:
 	for site := range sites {
 		if gRestart {
@@ -341,6 +343,7 @@ func getSiteEvents(site string) ([]event, error) {
 
 func runEvents(workerID int, events <-chan event) {
 	gEventWorkersRunning[workerID-1] = true
+	logger.Printf("started event worker %d\n", workerID)
 
 	for event := range events {
 		if gRestart {
