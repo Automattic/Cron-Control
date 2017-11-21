@@ -93,9 +93,9 @@ func main() {
 
 	go spawnEventRetrievers(sites, events)
 	go spawnEventWorkers(events)
-	go retrieveSitesPeriodically(sites, events)
+	go retrieveSitesPeriodically(sites)
 
-	heartbeat()
+	heartbeat(sites, events)
 }
 
 func spawnEventRetrievers(sites <-chan site, queue chan<- event) {
@@ -118,22 +118,12 @@ func spawnEventWorkers(queue <-chan event) {
 	close(workerEvents)
 }
 
-func retrieveSitesPeriodically(sites chan<- site, queue chan<- event) {
+func retrieveSitesPeriodically(sites chan<- site) {
 	gSiteRetrieverRunning = true
 
 	for {
 		waitForEpoch("retrieveSitesPeriodically", int64(getEventsInterval))
 		if gRestart {
-			// Send empty site objects to shutdown the retrievers
-			for w := 1; w <= numGetWorkers; w++ {
-				logger.Printf("sending empty site object for worker %d\n", w)
-				sites <- site{}
-			}
-			// Send empty event objects to shutdown the workers
-			for w := 1; w <= numRunWorkers; w++ {
-				logger.Printf("sending empty event for worker %d\n", w)
-				queue <- event{}
-			}
 			logger.Println("exiting site retriever")
 			break
 		}
@@ -150,7 +140,7 @@ func retrieveSitesPeriodically(sites chan<- site, queue chan<- event) {
 	gSiteRetrieverRunning = false
 }
 
-func heartbeat() {
+func heartbeat(sites chan<- site, queue chan<- event) {
 	if heartbeatInt == 0 {
 		logger.Println("heartbeat disabled")
 		for {
@@ -175,24 +165,29 @@ func heartbeat() {
 		logger.Printf("<heartbeat eventsSucceededSinceLast=%d eventsErroredSinceLast=%d>", successCount, errCount)
 	}
 
-ExitLoop:
+	var StillRunning bool
 	for {
-		time.Sleep(time.Duration(1) * time.Second)
-		if gSiteRetrieverRunning {
-			logger.Println("site retriever is still running")
-			continue
-		}
+		StillRunning = false
 		for workerID, r := range gEventRetrieversRunning {
-			if true == r {
-				logger.Printf("event retriever ID %d still running\n", workerID)
-				continue ExitLoop
+			if r {
+				logger.Printf("event retriever ID %d still running\n", workerID+1)
+				logger.Printf("sending empty site object for worker %d\n", workerID+1)
+				sites <- site{}
+				StillRunning = true
 			}
 		}
 		for workerID, r := range gEventWorkersRunning {
-			if true == r {
-				logger.Printf("event worker ID %d still running\n", workerID)
-				continue ExitLoop
+			if r {
+				logger.Printf("event worker ID %d still running\n", workerID+1)
+				StillRunning = true
+				logger.Printf("sending empty event for worker %d\n", workerID+1)
+				queue <- event{}
 			}
+		}
+		if StillRunning {
+			logger.Println("worker(s) still running, waiting")
+			time.Sleep(time.Duration(3) * time.Second)
+			continue
 		}
 		logger.Println(".:sayonara:.")
 		os.Exit(0)
