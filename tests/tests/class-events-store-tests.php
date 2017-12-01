@@ -171,4 +171,49 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$this->assertEquals( 4, $cached['buckets'] );
 		$this->assertEquals( 100, $cached['event_count'] );
 	}
+
+	/**
+	 * Test retrieving an event without requesting a status
+	 */
+	function test_get_job_by_attributes() {
+		$event = Utils::create_test_event();
+
+		$event_from_store = \Automattic\WP\Cron_Control\get_event_by_attributes( [
+			'timestamp' => $event['timestamp'],
+			'action'    => $event['action'],
+			'instance'  => md5( maybe_serialize( $event['args'] ) ),
+		] );
+
+		$this->assertInternalType( 'object', $event_from_store );
+	}
+
+	/**
+	 * Test retrieving an event with any status
+	 */
+	function test_get_job_by_attributes_with_any_status() {
+		$event = Utils::create_test_event();
+
+		$event_from_store = \Automattic\WP\Cron_Control\get_event_by_attributes( [
+			'timestamp' => $event['timestamp'],
+			'action'    => $event['action'],
+			'instance'  => md5( maybe_serialize( $event['args'] ) ),
+			'status'    => 'any',
+		] );
+
+		$this->assertInternalType( 'object', $event_from_store );
+	}
+
+	/**
+	 * Test retrieving an event with insufficient information
+	 */
+	function test_get_job_by_attributes_with_insufficient_args() {
+		$event = Utils::create_test_event();
+
+		$event_from_store = \Automattic\WP\Cron_Control\get_event_by_attributes( [
+			'timestamp' => $event['timestamp'],
+			'action'    => $event['action'],
+		] );
+
+		$this->assertFalse( $event_from_store );
+	}
 }

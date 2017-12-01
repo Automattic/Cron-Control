@@ -482,14 +482,11 @@ class Events_Store extends Singleton {
 		}
 
 		// Do not sort, otherwise index isn't used.
-		$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE timestamp = %d AND {$action_column} = %s AND instance = %s", $attrs['timestamp'], $action_value, $attrs['instance'] );  // Cannot prepare table or column names. @codingStandardsIgnoreLine
-
-		// Final query preparations.
-		if ( 'any' !== $attrs['status'] ) {
-			$query .= $wpdb->prepare( ' AND status = %s', $attrs['status'] );
+		if ( 'any' === $attrs['status'] ) {
+			$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE timestamp = %d AND {$action_column} = %s AND instance = %s LIMIT 1", $attrs['timestamp'], $action_value, $attrs['instance'] );  // Cannot prepare table or column names. @codingStandardsIgnoreLine
+		} else {
+			$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE timestamp = %d AND {$action_column} = %s AND instance = %s AND status = %s LIMIT 1", $attrs['timestamp'], $action_value, $attrs['instance'], $attrs['status'] );  // Cannot prepare table or column names. @codingStandardsIgnoreLine
 		}
-
-		$query .= ' LIMIT 1';
 
 		// Query and format results.
 		$job = $wpdb->get_row( $query ); // Already prepared. @codingStandardsIgnoreLine
