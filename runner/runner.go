@@ -56,6 +56,7 @@ var (
 	gEventRetrieversRunning []bool
 	gEventWorkersRunning    []bool
 	gSiteRetrieverRunning   bool
+	gRandomDeltaMap         map[string]int64
 )
 
 const getEventsBreakSec time.Duration = time.Second
@@ -78,6 +79,8 @@ func init() {
 	// TODO: Should check for wp-config.php instead?
 	validatePath(&wpCliPath, "WP-CLI path")
 	validatePath(&wpPath, "WordPress path")
+
+	gRandomDeltaMap = make(map[string]int64)
 }
 
 func main() {
@@ -461,7 +464,15 @@ func waitForEpoch(whom string, epoch_sec int64) {
 	if tEpochDelta < 1*time.Second.Nanoseconds() {
 		tEpochDelta += epoch_sec * time.Second.Nanoseconds()
 	}
-	tNextEpoch := time.Now().UnixNano() + tEpochDelta
+
+	// We need to offset each epoch wait by a fixed random value to prevent
+	// all Cron Runners having their epochs at exactly the same time.
+	_, found := gRandomDeltaMap[whom]
+	if !found {
+		gRandomDeltaMap[whom] = rand.Int63n(tEpochNano)
+	}
+
+	tNextEpoch := time.Now().UnixNano() + tEpochDelta + gRandomDeltaMap[whom]
 
 	// Sleep in 3sec intervals by default, less if we are running out of time
 	tMaxDelta := 3 * time.Second.Nanoseconds()
