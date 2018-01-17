@@ -59,7 +59,7 @@ var (
 	gRandomDeltaMap         map[string]int64
 )
 
-const getEventsBreakSec time.Duration = time.Second
+const getEventsBreakSec time.Duration = 1 * time.Second
 const runEventsBreakSec int64 = 10
 
 func init() {
