@@ -182,9 +182,9 @@ func heartbeat(sites chan<- site, queue chan<- event) {
 		for workerID, r := range gEventWorkersRunning {
 			if r {
 				logger.Printf("event worker ID %d still running\n", workerID+1)
-				StillRunning = true
 				logger.Printf("sending empty event for worker %d\n", workerID+1)
 				queue <- event{}
+				StillRunning = true
 			}
 		}
 		if StillRunning {
