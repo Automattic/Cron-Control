@@ -469,6 +469,7 @@ func waitForEpoch(whom string, epoch_sec int64) {
 	// all Cron Runners having their epochs at exactly the same time.
 	_, found := gRandomDeltaMap[whom]
 	if !found {
+		rand.Seed(time.Now().UnixNano() + epoch_sec)
 		gRandomDeltaMap[whom] = rand.Int63n(tEpochNano)
 	}
 
