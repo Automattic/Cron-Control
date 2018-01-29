@@ -268,11 +268,13 @@ class Events_Store extends Singleton {
 		$quantity = 100;
 
 		do {
-			$jobs = $this->get_jobs( array(
-				'status'   => self::STATUS_PENDING,
-				'quantity' => $quantity,
-				'page'     => $page++,
-			) );
+			$jobs = $this->get_jobs(
+				array(
+					'status'   => self::STATUS_PENDING,
+					'quantity' => $quantity,
+					'page'     => $page++,
+				)
+			);
 
 			// Nothing more to add.
 			if ( empty( $jobs ) ) {
@@ -390,7 +392,7 @@ class Events_Store extends Singleton {
 		}
 
 		if ( isset( $args['page'] ) ) {
-			$page  = max( 0, $args['page'] - 1 );
+			$page   = max( 0, $args['page'] - 1 );
 			$offset = $page * $args['quantity'];
 		} else {
 			$offset = 0;
@@ -456,7 +458,7 @@ class Events_Store extends Singleton {
 		}
 
 		// Validate requested status.
-		$allowed_status = self::ALLOWED_STATUSES;
+		$allowed_status   = self::ALLOWED_STATUSES;
 		$allowed_status[] = 'any';
 
 		if ( ! isset( $attrs['status'] ) || ! in_array( $attrs['status'], $allowed_status, true ) ) {
@@ -480,14 +482,11 @@ class Events_Store extends Singleton {
 		}
 
 		// Do not sort, otherwise index isn't used.
-		$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE timestamp = %d AND {$action_column} = %s AND instance = %s", $attrs['timestamp'], $action_value, $attrs['instance'] );  // Cannot prepare table or column names. @codingStandardsIgnoreLine
-
-		// Final query preparations.
-		if ( 'any' !== $attrs['status'] ) {
-			$query .= $wpdb->prepare( ' AND status = %s', $attrs['status'] );
+		if ( 'any' === $attrs['status'] ) {
+			$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE timestamp = %d AND {$action_column} = %s AND instance = %s LIMIT 1", $attrs['timestamp'], $action_value, $attrs['instance'] );  // Cannot prepare table or column names. @codingStandardsIgnoreLine
+		} else {
+			$query = $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE timestamp = %d AND {$action_column} = %s AND instance = %s AND status = %s LIMIT 1", $attrs['timestamp'], $action_value, $attrs['instance'], $attrs['status'] );  // Cannot prepare table or column names. @codingStandardsIgnoreLine
 		}
-
-		$query .= ' LIMIT 1';
 
 		// Query and format results.
 		$job = $wpdb->get_row( $query ); // Already prepared. @codingStandardsIgnoreLine
@@ -579,9 +578,11 @@ class Events_Store extends Singleton {
 
 		// Create the post, or update an existing entry to run again in the future.
 		if ( is_int( $update_id ) && $update_id > 0 ) {
-			$wpdb->update( $this->get_table_name(), $job_post, array(
-				'ID' => $update_id,
-			) );
+			$wpdb->update(
+				$this->get_table_name(), $job_post, array(
+					'ID' => $update_id,
+				)
+			);
 		} else {
 			$job_post['created'] = current_time( 'mysql', true );
 
@@ -639,9 +640,11 @@ class Events_Store extends Singleton {
 			'instance' => mt_rand( 1000000, 999999999 ), // Breaks unique constraint, and can be recreated from entry's remaining data.
 		);
 
-		$success = $wpdb->update( $this->get_table_name(), $updates, array(
-			'ID' => $job_id,
-		) );
+		$success = $wpdb->update(
+			$this->get_table_name(), $updates, array(
+				'ID' => $job_id,
+			)
+		);
 
 		// Delete internal cache.
 		// Should only be skipped during bulk operations.
@@ -817,7 +820,7 @@ class Events_Store extends Singleton {
 		// Skip count if already performed.
 		if ( $count_first ) {
 			if ( property_exists( $wpdb, 'srtm' ) ) {
-				$srtm = $wpdb->srtm;
+				$srtm       = $wpdb->srtm;
 				$wpdb->srtm = true;
 			}
 
@@ -831,9 +834,11 @@ class Events_Store extends Singleton {
 		}
 
 		if ( $count > 0 ) {
-			$wpdb->delete( $this->get_table_name(), array(
-				'status' => self::STATUS_COMPLETED,
-			) );
+			$wpdb->delete(
+				$this->get_table_name(), array(
+					'status' => self::STATUS_COMPLETED,
+				)
+			);
 		}
 	}
 
