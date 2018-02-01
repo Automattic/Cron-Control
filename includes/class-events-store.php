@@ -861,7 +861,7 @@ class Events_Store extends Singleton {
 	/**
 	 * Remove entries by schedule
 	 *
-	 * @param bool $count_first Should events be counted before they're deleted.
+	 * @param string $schedule Should events be counted before they're deleted.
 	 */
 	public function delete_events_by_schedule( $schedule ) {
 		global $wpdb;
