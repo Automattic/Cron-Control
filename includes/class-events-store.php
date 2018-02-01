@@ -885,12 +885,10 @@ class Events_Store extends Singleton {
 		$sql = '';
 
 		if ( is_null( $schedule ) ) {
-			$sql = "SELECT COUNT(ID) FROM {$this->get_table_name()} WHERE schedule IS NULL"; // Cannot prepare table name. @codingStandardsIgnoreLine
+			return (int) $wpdb->get_var( "SELECT COUNT(ID) FROM {$this->get_table_name()} WHERE schedule IS NULL" ); // Cannot prepare table name. @codingStandardsIgnoreLine
 		} else {
-			$sql = $wpdb->prepare( "SELECT COUNT(ID) FROM {$this->get_table_name()} WHERE schedule = %s", $schedule ); // Cannot prepare table name. @codingStandardsIgnoreLine
+			return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(ID) FROM {$this->get_table_name()} WHERE schedule = %s", $schedule ) ); // Cannot prepare table name. @codingStandardsIgnoreLine
 		}
-
-		return (int) $wpdb->get_var( $sql );
 	}
 }
 
