@@ -85,7 +85,7 @@ class Events extends \WP_CLI_Command {
 	 * Remove events
 	 *
 	 * @subcommand delete
-	 * @synopsis [--event_id=<event_id>] [--action=<action>] [--completed]
+	 * @synopsis [--event_id=<event_id>] [--action=<action>] [--completed] [--schedule=<schedule>]
 	 * @param array $args Array of positional arguments.
 	 * @param array $assoc_args Array of flags.
 	 */
@@ -99,6 +99,11 @@ class Events extends \WP_CLI_Command {
 		// Remove all events with a given action.
 		if ( isset( $assoc_args['action'] ) ) {
 			$this->delete_event_by_action( $args, $assoc_args );
+			return;
+		}
+
+		if ( isset( $assoc_args['schedule'] ) ) {
+			$this->delete_events_by_schedule( $args, $assoc_args );
 			return;
 		}
 
@@ -631,6 +636,27 @@ class Events extends \WP_CLI_Command {
 		\WP_CLI::confirm( sprintf( _n( 'Found %s completed event to remove. Continue?', 'Found %s completed events to remove. Continue?', $count, 'automattic-cron-control' ), number_format_i18n( $count ) ) );
 
 		\Automattic\WP\Cron_Control\Events_Store::instance()->purge_completed_events( false );
+
+		\WP_CLI::success( __( 'Entries removed', 'automattic-cron-control' ) );
+	}
+
+	/**
+	 * Delete events that have a particular schedule
+	 *
+	 * @param array $args Array of positional arguments.
+	 * @param array $assoc_args Array of flags.
+	 */
+	private function delete_events_by_schedule( $args, $assoc_args ) {
+		if ( 'null' === strtolower( $assoc_args['schedule'] ) ) {
+			$assoc_args['schedule'] = null;
+		}
+
+		$count = \Automattic\WP\Cron_Control\count_events_by_schedule( $assoc_args['schedule'] );
+
+		/* translators: 1: Event count */
+		\WP_CLI::confirm( sprintf( _n( 'Found %s single event to remove. Continue?', 'Found %s single events to remove. Continue?', $count, 'automattic-cron-control' ), number_format_i18n( $count ) ) );
+
+		\Automattic\WP\Cron_Control\Events_Store::instance()->delete_events_by_schedule( $assoc_args['schedule'] );
 
 		\WP_CLI::success( __( 'Entries removed', 'automattic-cron-control' ) );
 	}

@@ -147,6 +147,16 @@ function count_events_by_status( $status ) {
 }
 
 /**
+ * Count events with a given schedule
+ *
+ * @param string $schedule Schedule to count.
+ * @return int|false
+ */
+function count_events_by_schedule( $schedule ) {
+	return Events_Store::instance()->count_events_by_schedule( $schedule );
+}
+
+/**
  * Flush plugin's internal caches
  *
  * FOR INTERNAL USE ONLY - see WP-CLI; all other cache clearance should happen automatically through the `Events_Store` class
