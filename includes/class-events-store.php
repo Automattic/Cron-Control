@@ -859,7 +859,7 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Remove entries for non-recurring events that have been run
+	 * Remove entries by schedule
 	 *
 	 * @param bool $count_first Should events be counted before they're deleted.
 	 */
