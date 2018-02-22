@@ -216,4 +216,24 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 
 		$this->assertFalse( $event_from_store );
 	}
+
+	/**
+	 * Test deleting events by schedule
+	 */
+	function test_delete_events_by_schedule() {
+		// Single events
+		for ( $i = 1; $i <= 100; $i++ ) {
+			$timestamp = $timestamp_base + $i;
+			$action    = 'excessive_test_event_' . $i;
+			wp_schedule_single_event( $timestamp, $action, $args );
+		}
+
+		// Delete them
+		\Automattic\WP\Cron_Control\Events_Store::instance()->delete_events_by_schedule( 'null');
+
+		// Ensure we have none now
+		$count = \Automattic\WP\Cron_Control\count_events_by_schedule( null );
+
+		$this->assertEquals( $count, 0 );
+	}
 }
