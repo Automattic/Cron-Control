@@ -647,6 +647,8 @@ class Events extends \WP_CLI_Command {
 	 * @param array $assoc_args Array of flags.
 	 */
 	private function delete_events_by_schedule( $args, $assoc_args ) {
+		// If the schedule option is the string 'null', we want to delete events with
+		// no recurring schedule
 		if ( 'null' === strtolower( $assoc_args['schedule'] ) ) {
 			$assoc_args['schedule'] = null;
 		}
