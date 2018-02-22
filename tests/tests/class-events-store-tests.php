@@ -239,6 +239,6 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		// Ensure we have none now
 		$count = \Automattic\WP\Cron_Control\count_events_by_schedule( null );
 
-		$this->assertEquals( $count, 0 );
+		$this->assertEquals( 0, $count );
 	}
 }
