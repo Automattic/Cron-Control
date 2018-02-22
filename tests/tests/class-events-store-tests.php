@@ -221,6 +221,11 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 	 * Test deleting events by schedule
 	 */
 	function test_delete_events_by_schedule() {
+		$timestamp_base = time() + ( 1 * \HOUR_IN_SECONDS );
+
+		$dummy_text = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam enim ante, maximus nec nisi ut, finibus ultrices orci. Maecenas suscipit, est eu suscipit sagittis, enim massa dignissim augue, sagittis gravida dolor nulla ut mi. Phasellus venenatis bibendum cursus. Aliquam a erat purus. Nulla elit nunc, egestas eget eros iaculis, interdum tincidunt elit. Vivamus vel blandit nisl. Proin in ornare dolor, convallis porta sem. Mauris rutrum nibh et ornare egestas. Mauris ultricies diam at nunc tristique rutrum. Aliquam varius non leo vel luctus. Vestibulum sagittis scelerisque ante, non faucibus nibh accumsan sed.';
+		$args       = array_fill( 0, 15, $dummy_text );
+
 		// Single events
 		for ( $i = 1; $i <= 100; $i++ ) {
 			$timestamp = $timestamp_base + $i;
