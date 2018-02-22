@@ -866,11 +866,15 @@ class Events_Store extends Singleton {
 	public function delete_events_by_schedule( $schedule ) {
 		global $wpdb;
 
-		return $wpdb->delete(
+		$result = $wpdb->delete(
 			$this->get_table_name(), array(
 				'schedule' => $schedule,
 			)
 		);
+
+		$this->flush_internal_caches();
+
+		return $result;
 	}
 
 	/**
