@@ -234,7 +234,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		}
 
 		// Delete them
-		\Automattic\WP\Cron_Control\Events_Store::instance()->delete_events_by_schedule( 'null');
+		\Automattic\WP\Cron_Control\Events_Store::instance()->delete_events_by_schedule( null );
 
 		// Ensure we have none now
 		$count = \Automattic\WP\Cron_Control\count_events_by_schedule( null );
