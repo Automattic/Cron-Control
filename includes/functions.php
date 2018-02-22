@@ -150,7 +150,7 @@ function count_events_by_status( $status ) {
  * Count events with a given schedule
  *
  * @param string $schedule Schedule to count.
- * @return int|false
+ * @return int|null
  */
 function count_events_by_schedule( $schedule ) {
 	return Events_Store::instance()->count_events_by_schedule( $schedule );
