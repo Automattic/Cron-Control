@@ -656,7 +656,7 @@ class Events extends \WP_CLI_Command {
 		$count = \Automattic\WP\Cron_Control\count_events_by_schedule( $assoc_args['schedule'] );
 
 		/* translators: 1: Event count */
-		\WP_CLI::confirm( sprintf( _n( 'Found %s single event to remove. Continue?', 'Found %s single events to remove. Continue?', $count, 'automattic-cron-control' ), number_format_i18n( $count ) ) );
+		\WP_CLI::confirm( sprintf( _n( 'Found %s event to remove. Continue?', 'Found %s events to remove. Continue?', $count, 'automattic-cron-control' ), number_format_i18n( $count ) ) );
 
 		\Automattic\WP\Cron_Control\Events_Store::instance()->delete_events_by_schedule( $assoc_args['schedule'] );
 
