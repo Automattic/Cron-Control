@@ -40,7 +40,7 @@ class Events_Store extends Singleton {
 	 *
 	 * @var bool
 	 */
-	private $invalid_cache = false;
+	private $is_option_cache_valid = false;
 
 	/**
 	 * Whether or not event creation is temporarily blocked
@@ -264,12 +264,12 @@ class Events_Store extends Singleton {
 		// remotely multiple times per request (even from the
 		// object cache).
 		static $cron_array;
-		if ( $cron_array && ! $this->invalid_cache ) {
+		if ( $cron_array && true === $this->is_option_cache_valid ) {
 			return $cron_array;
 		}
 
 		// Use cached value when available.
-		$this->invalid_cache = false;
+		$this->is_option_cache_valid = true;
 		$cached_option = $this->get_cached_option();
 
 		if ( false !== $cached_option ) {
@@ -808,7 +808,7 @@ class Events_Store extends Singleton {
 	 * Delete the cached representation of the cron option
 	 */
 	public function flush_internal_caches() {
-		$this->invalid_cache = true;
+		$this->is_option_cache_valid = false;
 		return wp_cache_delete( self::CACHE_KEY );
 	}
 
