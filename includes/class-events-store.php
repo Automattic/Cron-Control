@@ -34,6 +34,8 @@ class Events_Store extends Singleton {
 	);
 
 	const CACHE_KEY = 'a8c_cron_ctrl_option';
+	
+	private $invalid_cache = false;
 
 	/**
 	 * Whether or not event creation is temporarily blocked
@@ -257,11 +259,12 @@ class Events_Store extends Singleton {
 		// remotely multiple times per request (even from the
 		// object cache).
 		static $cron_array;
-		if ( $cron_array ) {
+		if ( $cron_array && ! $this->invalid_cache ) {
 			return $cron_array;
 		}
 		
 		// Use cached value when available.
+		$this->invalid_cache = false;
 		$cached_option = $this->get_cached_option();
 
 		if ( false !== $cached_option ) {
@@ -800,6 +803,7 @@ class Events_Store extends Singleton {
 	 * Delete the cached representation of the cron option
 	 */
 	public function flush_internal_caches() {
+		$this->invalid_cache = true;
 		return wp_cache_delete( self::CACHE_KEY );
 	}
 
