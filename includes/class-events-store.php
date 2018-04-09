@@ -265,7 +265,7 @@ class Events_Store extends Singleton {
 
 		// Get events to re-render as the cron option.
 		$page     = 1;
-		$quantity = 100;
+		$quantity = 5000;
 
 		do {
 			$jobs = $this->get_jobs(
