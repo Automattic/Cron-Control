@@ -251,6 +251,16 @@ class Events_Store extends Singleton {
 	 * Override cron option requests with data from custom table
 	 */
 	public function get_option() {
+		
+		// If this thread has already generated the cron array,
+		// use the copy from local memory. Don't fetch this list
+		// remotely multiple times per request (even from the
+		// object cache).
+		static $cron_array;
+		if ( $cron_array ) {
+			return $cron_array;
+		}
+		
 		// Use cached value when available.
 		$cached_option = $this->get_cached_option();
 
