@@ -34,7 +34,12 @@ class Events_Store extends Singleton {
 	);
 
 	const CACHE_KEY = 'a8c_cron_ctrl_option';
-	
+
+	/**
+	 * Whether the static option cache is invalid
+	 *
+	 * @var bool
+	 */
 	private $invalid_cache = false;
 
 	/**
@@ -253,7 +258,7 @@ class Events_Store extends Singleton {
 	 * Override cron option requests with data from custom table
 	 */
 	public function get_option() {
-		
+
 		// If this thread has already generated the cron array,
 		// use the copy from local memory. Don't fetch this list
 		// remotely multiple times per request (even from the
@@ -262,7 +267,7 @@ class Events_Store extends Singleton {
 		if ( $cron_array && ! $this->invalid_cache ) {
 			return $cron_array;
 		}
-		
+
 		// Use cached value when available.
 		$this->invalid_cache = false;
 		$cached_option = $this->get_cached_option();
