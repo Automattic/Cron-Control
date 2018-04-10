@@ -58,7 +58,6 @@ class Events extends \WP_CLI_Command {
 				\WP_CLI::log( sprintf( __( 'Displaying %1$s of %2$s entries, page %3$s of %4$s', 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ), number_format_i18n( $events['total_items'] ), number_format_i18n( $events['page'] ), number_format_i18n( $events['total_pages'] ) ) );
 			}
 
-			// And reformat!
 			$format = 'table';
 			if ( isset( $assoc_args['format'] ) ) {
 				$format = $assoc_args['format'];
@@ -136,7 +135,6 @@ class Events extends \WP_CLI_Command {
 		/* translators: 1: Event ID, 2: Event action, 3. Event instance */
 		\WP_CLI::log( sprintf( __( 'Found event %1$d with action `%2$s` and instance identifier `%3$s`', 'automattic-cron-control' ), $args[0], $event->action, $event->instance ) );
 
-		// Proceed?
 		$now = time();
 		if ( $event->timestamp > $now ) {
 			/* translators: 1: Time in UTC, 2: Human time diff */
@@ -211,7 +209,6 @@ class Events extends \WP_CLI_Command {
 
 		$offset = absint( ( $page - 1 ) * $limit );
 
-		// Query!
 		$items = \Automattic\WP\Cron_Control\get_events(
 			array(
 				'status'     => $event_status,

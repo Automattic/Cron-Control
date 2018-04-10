@@ -268,8 +268,9 @@ class Events_Store extends Singleton {
 			return $cron_array;
 		}
 
-		// Use cached value when available.
 		$this->is_option_cache_valid = true;
+
+		// Use cached value when available.
 		$cached_option = $this->get_cached_option();
 
 		if ( false !== $cached_option ) {
