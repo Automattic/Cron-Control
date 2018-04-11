@@ -783,7 +783,7 @@ class Events_Store extends Singleton {
 
 		for ( $i = 1; $i <= $buckets; $i++ ) {
 			$offset    = ( $i - 1 ) * $segment_size;
-			$slice     = array_slice( $option_flat, $offset, $segment_size );
+			$slice     = array_slice( $option_flat, $offset, $segment_size, true );
 			$cache_key = $this->get_cache_key_for_slice( $incrementer, $i );
 
 			wp_cache_set( $cache_key, $slice, null, 1 * \HOUR_IN_SECONDS );
