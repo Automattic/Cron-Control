@@ -485,7 +485,6 @@ func waitForEpoch(whom string, epoch_sec int64) {
 	for i := tDelta; time.Now().UnixNano() < tNextEpoch; i += tDelta {
 		if i > tEpochNano*2 {
 			// if we ever loop here for more than 2 full epochs, bail out
-			logger.Printf("Error in the epoch wait loop for %s\n", whom)
 			break
 		}
 		if gRestart {
