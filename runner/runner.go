@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -48,9 +47,10 @@ var (
 	eventRunErrCount     uint64
 	eventRunSuccessCount uint64
 
-	logger  *log.Logger
-	logDest string
-	debug   bool
+	logger    *CronRunnerLogger
+	logDest   string
+	logFormat string
+	debug     bool
 
 	gRestart                bool
 	gEventRetrieversRunning []bool
@@ -72,6 +72,7 @@ func init() {
 	flag.Int64Var(&heartbeatInt, "heartbeat", 60, "Heartbeat interval in seconds")
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
+	flag.StringVar(&logFormat, "log-format", "text", "Log format, 'text' or 'json'. Defaults to 'text'")
 	flag.Parse()
 
 	setUpLogger()
@@ -414,23 +415,7 @@ func runWpCliCmd(subcommand []string) (string, error) {
 }
 
 func setUpLogger() {
-	logOpts := log.Ldate | log.Ltime | log.LUTC | log.Lshortfile
-
-	if logDest == "os.Stdout" {
-		logger = log.New(os.Stdout, "DEBUG: ", logOpts)
-	} else {
-		path, err := filepath.Abs(logDest)
-		if err != nil {
-			logger.Fatal(err)
-		}
-
-		logFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		logger = log.New(logFile, "", logOpts)
-	}
+	logger = NewCronRunnerLogger(logFormat, logDest)
 }
 
 func validatePath(path *string, label string) {
