@@ -62,7 +62,7 @@ func NewCronRunnerLogger(format, dest string) *CronRunnerLogger {
 
 func (crl *CronRunnerLogger) Printf(format string, v ...interface{}) {
 	if crl.Format == "json" {
-		msgStr := fmt.Sprintf(format, v)
+		msgStr := fmt.Sprintf(format, v...)
 
 		// Should be using level specific functions to set the `Level` (i.e.: `Debugf()`) but we're
 		// doing it this way fit with how `logger` is used in `runner.go`
@@ -70,12 +70,22 @@ func (crl *CronRunnerLogger) Printf(format string, v ...interface{}) {
 
 		crl.logger.Print(msg.toJsonString())
 	} else {
-		crl.logger.Printf(format, v)
+		crl.logger.Printf(format, v...)
 	}
 }
 
 func (crl *CronRunnerLogger) Println(v ...interface{}) {
-	crl.Printf(fmt.Sprintln(v...))
+	str := fmt.Sprintln(v...)
+
+	if crl.Format == "json" {
+		// Should be using level specific functions to set the `Level` (i.e.: `Debugf()`) but we're
+		// doing it this way fit with how `logger` is used in `runner.go`
+		msg := LogMessage{"DEBUG", str, crl.Type}
+
+		crl.logger.Println(msg.toJsonString())
+	} else {
+		crl.logger.Println(str)
+	}
 }
 
 /**
@@ -110,7 +120,7 @@ func (w logWriter) Write(bytes []byte) (int, error) {
 	timeStr := time.Now().UTC().Format("2006-01-02T15:04:05.999Z")
 	namespace := fmt.Sprintf("%s:%s", w.App, w.AppType)
 
-	return fmt.Printf("%s %s: "+string(bytes), timeStr, namespace)
+	return fmt.Printf("%s %s "+string(bytes), timeStr, namespace)
 }
 
 /**
@@ -139,7 +149,7 @@ func NewFileWriter(path, app, appType string) fileWriter {
 func (f fileWriter) Write(bytes []byte) (int, error) {
 	timeStr := time.Now().UTC().Format("2006-01-02T15:04:05.999Z")
 	namespace := fmt.Sprintf("%s:%s", f.App, f.AppType)
-	msg := fmt.Sprintf("%s %s: "+string(bytes), timeStr, namespace)
+	msg := fmt.Sprintf("%s %s "+string(bytes), timeStr, namespace)
 
 	return f.File.Write([]byte(msg))
 }
