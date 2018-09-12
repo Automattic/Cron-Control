@@ -103,7 +103,7 @@ func NewLogWriter(app, appType string, emulateStdLog bool) logWriter {
 
 func (w logWriter) Write(bytes []byte) (int, error) {
 	if w.EmulateStdLog {
-		// This logic is basically to emulate the original log format
+		// This logic is basically to emulate the original log format for backwards compatibility
 		timeStr := time.Now().UTC().Format("2018/09/30 08:45:04")
 
 		var shortFile string

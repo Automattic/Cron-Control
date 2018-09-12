@@ -20,6 +20,8 @@ In addition to the REST API endpoints that can be used to run events, a Go-based
   * Heartbeat interval in seconds (default `60`)
 * `-log` string
   * Log path, omit to log to Stdout (default `os.Stdout`)
+* `-log-format` string
+  * Log format, either `text` or `json` (default `text`)  
 * `-network` int
   * WordPress network ID, `0` to disable (default `0`)
 * `-workers-get` int
