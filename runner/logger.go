@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -35,7 +36,7 @@ type CronRunnerLogger struct {
 func NewCronRunnerLogger(format, dest string) *CronRunnerLogger {
 	logOpts := 0
 
-	var logWriter logWriter
+	var logWriter io.Writer
 	var logger *log.Logger
 
 	if dest == "os.Stdout" {
@@ -45,12 +46,16 @@ func NewCronRunnerLogger(format, dest string) *CronRunnerLogger {
 			// original log format
 			logWriter = NewLogWriter("cron-control", "cron-control-runner", true)
 		}
-		logger = log.New(logWriter, "", logOpts)
 	} else {
-		fileWriter := NewFileWriter(dest, "cron-control", "cron-control-runner")
-
-		logger = log.New(fileWriter, "", logOpts)
+		if format == "json" {
+			logWriter = NewFileWriter(dest, "cron-control", "cron-control-runner", false)
+		} else {
+			// original log format
+			logWriter = NewFileWriter(dest, "cron-control", "cron-control-runner", true)
+		}
 	}
+
+	logger = log.New(logWriter, "", logOpts)
 
 	return &CronRunnerLogger{
 		format,
@@ -104,15 +109,9 @@ func NewLogWriter(app, appType string, emulateStdLog bool) logWriter {
 func (w logWriter) Write(bytes []byte) (int, error) {
 	if w.EmulateStdLog {
 		// This logic is basically to emulate the original log format for backwards compatibility
-		timeStr := time.Now().UTC().Format("2018/09/30 08:45:04")
+		timeStr := time.Now().UTC().Format("2006/01/02 15:04:05")
 
-		var shortFile string
-		_, file, no, ok := runtime.Caller(5)
-		if ok {
-			shortFile = fmt.Sprintf("%s:%d", filepath.Base(file), no)
-		} else {
-			shortFile = "unknown"
-		}
+		shortFile := getCallerFileInfo()
 
 		return fmt.Printf("DEBUG: %s %s: "+string(bytes), timeStr, shortFile)
 	}
@@ -127,12 +126,13 @@ func (w logWriter) Write(bytes []byte) (int, error) {
  * Custom writer to get the format we want when logging to a file
  */
 type fileWriter struct {
-	App     string
-	AppType string
-	File    *os.File
+	App           string
+	AppType       string
+	File          *os.File
+	EmulateStdLog bool
 }
 
-func NewFileWriter(path, app, appType string) fileWriter {
+func NewFileWriter(path, app, appType string, emulateStdLog bool) fileWriter {
 	path, err := filepath.Abs(path)
 	if err != nil {
 		log.Fatal(err)
@@ -143,13 +143,36 @@ func NewFileWriter(path, app, appType string) fileWriter {
 		log.Fatal(err)
 	}
 
-	return fileWriter{app, appType, logFile}
+	return fileWriter{app, appType, logFile, emulateStdLog}
 }
 
 func (f fileWriter) Write(bytes []byte) (int, error) {
+	if f.EmulateStdLog {
+		// This logic is basically to emulate the original log format for backwards compatibility
+		timeStr := time.Now().UTC().Format("2006/01/02 15:04:05")
+
+		shortFile := getCallerFileInfo()
+
+		msg := fmt.Sprintf("DEBUG: %s %s: "+string(bytes), timeStr, shortFile)
+
+		return f.File.Write([]byte(msg))
+	}
+
 	timeStr := time.Now().UTC().Format("2006-01-02T15:04:05.999Z")
 	namespace := fmt.Sprintf("%s:%s", f.App, f.AppType)
 	msg := fmt.Sprintf("%s %s "+string(bytes), timeStr, namespace)
 
 	return f.File.Write([]byte(msg))
+}
+
+func getCallerFileInfo() string {
+	var fileInfo string
+	_, file, no, ok := runtime.Caller(6)
+	if ok {
+		fileInfo = fmt.Sprintf("%s:%d", filepath.Base(file), no)
+	} else {
+		fileInfo = "unknown"
+	}
+
+	return fileInfo
 }
