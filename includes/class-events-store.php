@@ -327,6 +327,60 @@ class Events_Store extends Singleton {
 	}
 
 	/**
+	 * Retrieve a list of IDs for a given hook, optionally filtering by arguments.
+	 *
+	 * @param array      $query_args Lookup arguments.
+	 * @param string     $hook Job action.
+	 * @param array|null $job_args Job arguments to search by.
+	 * @return array
+	 */
+	public function get_job_ids_by_hook( $query_args, $hook, $job_args ) {
+		global $wpdb;
+
+		if ( ! isset( $query_args['status'] ) ) {
+			$query_args['status'] = self::STATUS_PENDING;
+		}
+
+		if ( ! isset( $query_args['quantity'] ) || ! is_numeric( $query_args['quantity'] ) ) {
+			$query_args['quantity'] = 100;
+		}
+
+		if ( isset( $query_args['page'] ) ) {
+			$page   = max( 0, $query_args['page'] - 1 );
+			$offset = $page * $query_args['quantity'];
+		} else {
+			$offset = 0;
+		}
+
+		if ( is_array( $job_args ) ) {
+			$query = $wpdb->prepare(
+				"SELECT ID FROM {$this->get_table_name()} WHERE action = %s AND instance = %s AND status = %s LIMIT %d,%d;", // Cannot prepare table name. @codingStandardsIgnoreLine
+				$hook,
+				$this->generate_instance_identifier( $job_args ),
+				$query_args['status'],
+				$offset,
+				$query_args['quantity']
+			);
+		} else {
+			$query = $wpdb->prepare(
+				"SELECT ID FROM {$this->get_table_name()} WHERE action = %s AND status = %s LIMIT %d,%d;", // Cannot prepare table name. @codingStandardsIgnoreLine
+				$hook,
+				$query_args['status'],
+				$offset,
+				$query_args['quantity']
+			);
+		}
+
+		$jobs = $wpdb->get_col( $query ); // Already prepared. @codingStandardsIgnoreLine
+
+		if ( is_array( $jobs ) ) {
+			return array_map( 'absint', $jobs );
+		} else {
+			return [];
+		}
+	}
+
+	/**
 	 * Retrieve a single event by its ID
 	 *
 	 * @param int $jid Job ID.

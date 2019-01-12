@@ -16,8 +16,6 @@ trait Events_Store_Cron_Filters {
 	 */
 	protected function register_core_cron_filters() {
 		/**
-		 * pre_clear_scheduled_hook
-		 * pre_unschedule_hook
 		 * pre_get_scheduled_event
 		 * pre_next_scheduled
 		 * pre_get_ready_cron_jobs
@@ -27,6 +25,7 @@ trait Events_Store_Cron_Filters {
 		add_filter( 'pre_reschedule_event', [ $this, 'filter_event_rescheduling' ], 10, 2 );
 		add_filter( 'pre_unschedule_event', [ $this, 'filter_event_unscheduling' ], 10, 4 );
 		add_filter( 'pre_clear_scheduled_hook', [ $this, 'filter_clear_scheduled_hook' ], 10, 3 );
+		add_filter( 'pre_unschedule_hook', [ $this, 'filter_unchedule_hook' ], 10, 2 );
 	}
 
 	/**
@@ -127,7 +126,7 @@ trait Events_Store_Cron_Filters {
 	}
 
 	/**
-	 * Clear all actions for a given hook.
+	 * Clear all actions for a given hook with given arguments.
 	 *
 	 * @param bool|null $cleared Bool if hook was already cleared, null otherwise.
 	 * @param string    $hook Event action.
@@ -140,8 +139,66 @@ trait Events_Store_Cron_Filters {
 			return $cleared;
 		}
 
-		// TODO: need a new helper to get all job IDs by hook/args.
-		// TODO: count unscheduled and return that, or return false if fails.
-		return false;
+		return $this->do_unschedule_hook( $hook, $args );
+	}
+
+	/**
+	 * Clear all actions for a given hook, regardless of arguments.
+	 *
+	 * @param bool|null $cleared Bool if hook was already cleared, null otherwise.
+	 * @param string    $hook Event action.
+	 * @return bool|int
+	 */
+	public function filter_unchedule_hook( $cleared, $hook ) {
+		// Bail, something else already cleared this hook.
+		if ( null !== $cleared ) {
+			return $cleared;
+		}
+
+		return $this->do_unschedule_hook( $hook, null );
+	}
+
+	/**
+	 * Unschedule all events with a given hook and optional arguments.
+	 *
+	 * @param string     $hook Action to clear.
+	 * @param array|null $args Optional job arguments to filter by.
+	 * @return bool|int
+	 */
+	protected function do_unschedule_hook( $hook, $args ) {
+		$ids      = [ [] ];
+		$page     = 1;
+		$quantity = 500;
+
+		do {
+			$batch_ids = $this->get_job_ids_by_hook(
+				[
+					'page'     => $page,
+					'quantity' => $quantity,
+				],
+				$hook,
+				$args
+			);
+
+			$ids[] = $batch_ids;
+			$page ++;
+		} while ( ! empty( $batch_ids ) && count( $batch_ids ) === $quantity );
+
+		$ids = array_merge( ...$ids );
+
+		if ( empty( $ids ) ) {
+			return false;
+		}
+
+		$results = [];
+
+		foreach ( $ids as $id ) {
+			$results[] = $this->mark_job_record_completed( $id, false );
+		}
+
+		$this->flush_internal_caches();
+
+		$results = array_filter( $results );
+		return empty( $results ) ? false : count( $results );
 	}
 }
