@@ -275,7 +275,7 @@ class Events_Store extends Singleton {
 			return $job;
 		}
 
-		$instance = md5( maybe_serialize( $job->args ) );
+		$instance = $this->generate_instance_identifier( $job->args );
 		if ( 0 !== $this->get_job_id( $job->timestamp, $job->hook, $instance ) ) {
 			return false;
 		}
@@ -472,7 +472,7 @@ class Events_Store extends Singleton {
 			'timestamp'     => $timestamp,
 			'action'        => $action,
 			'action_hashed' => md5( $action ),
-			'instance'      => md5( maybe_serialize( $args['args'] ) ),
+			'instance'      => $this->generate_instance_identifier( $args['args'] ),
 			'args'          => maybe_serialize( $args['args'] ),
 			'last_modified' => current_time( 'mysql', true ),
 		);
@@ -562,6 +562,16 @@ class Events_Store extends Singleton {
 		}
 
 		return (bool) $success;
+	}
+
+	/**
+	 * Generate the same instance identifier Core uses to key array.
+	 *
+	 * @param array $args Event arguments.
+	 * @return string
+	 */
+	public function generate_instance_identifier( $args ) {
+		return md5( maybe_serialize( $args ) );
 	}
 
 	/**
