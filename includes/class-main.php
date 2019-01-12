@@ -48,6 +48,8 @@ class Main extends Singleton {
 		// Load event store and its dependencies.
 		require __DIR__ . '/constants.php';
 		require __DIR__ . '/utils.php';
+		require __DIR__ . '/trait-events-store-cron-filters.php';
+		require __DIR__ . '/trait-events-store-option-intercept.php';
 		require __DIR__ . '/class-events-store.php';
 
 		// Load dependencies for remaining classes.
