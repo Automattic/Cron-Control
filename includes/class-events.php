@@ -104,7 +104,7 @@ class Events extends Singleton {
 
 		$events = $this->get_events();
 
-		if ( empty( $events ) ) {
+		if ( empty( $events['events'] ) ) {
 			return [];
 		}
 
