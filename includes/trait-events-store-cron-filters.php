@@ -15,17 +15,13 @@ trait Events_Store_Cron_Filters {
 	 * Register hooks to intercept events before storage.
 	 */
 	protected function register_core_cron_filters() {
-		/**
-		 * pre_get_scheduled_event
-		 * pre_next_scheduled
-		 * pre_get_ready_cron_jobs
-		 */
-
 		add_filter( 'pre_schedule_event', [ $this, 'filter_event_scheduling' ], 10, 2 );
 		add_filter( 'pre_reschedule_event', [ $this, 'filter_event_rescheduling' ], 10, 2 );
 		add_filter( 'pre_unschedule_event', [ $this, 'filter_event_unscheduling' ], 10, 4 );
 		add_filter( 'pre_clear_scheduled_hook', [ $this, 'filter_clear_scheduled_hook' ], 10, 3 );
 		add_filter( 'pre_unschedule_hook', [ $this, 'filter_unchedule_hook' ], 10, 2 );
+		add_filter( 'pre_get_scheduled_event', [ $this, 'filter_event_retrieval' ], 10, 4 );
+		add_filter( 'pre_next_scheduled', [ $this, 'filter_next_scheduled' ], 10, 4 );
 	}
 
 	/**
@@ -36,7 +32,6 @@ trait Events_Store_Cron_Filters {
 	 * @return bool|null
 	 */
 	public function filter_event_scheduling( $scheduled, $event ) {
-		// Bail, something else already intercepted this event.
 		if ( null !== $scheduled ) {
 			return $scheduled;
 		}
@@ -117,7 +112,6 @@ trait Events_Store_Cron_Filters {
 	 * @return bool|null
 	 */
 	public function filter_event_unscheduling( $unscheduled, $timestamp, $hook, $args ) {
-		// Bail, something else already unscheduled this event.
 		if ( null !== $unscheduled ) {
 			return $unscheduled;
 		}
@@ -134,7 +128,6 @@ trait Events_Store_Cron_Filters {
 	 * @return bool|int
 	 */
 	public function filter_clear_scheduled_hook( $cleared, $hook, $args ) {
-		// Bail, something else already cleared this hook.
 		if ( null !== $cleared ) {
 			return $cleared;
 		}
@@ -200,5 +193,60 @@ trait Events_Store_Cron_Filters {
 
 		$results = array_filter( $results );
 		return empty( $results ) ? false : count( $results );
+	}
+
+	/**
+	 * Intercept event retrieval.
+	 *
+	 * @param \stdClass|null $retrieved \stdClass if already retrieved, null otherwise.
+	 * @param string         $hook Job action.
+	 * @param array          $args Job arguments.
+	 * @param int            $timestamp Job timestamp.
+	 * @return \stdClass|bool|null
+	 */
+	public function filter_event_retrieval( $retrieved, $hook, $args, $timestamp ) {
+		if ( null !== $retrieved ) {
+			return $retrieved;
+		}
+
+		$job = $this->get_job_by_attributes( [
+			'action'    => $hook,
+			'timestamp' => $timestamp,
+			'instance'  => $this->generate_instance_identifier( $args ),
+		] );
+
+		if ( ! $job ) {
+			return false;
+		}
+
+		$event = (object) [
+			'hook'      => $job->action,
+			'timestamp' => $job->timestamp,
+			'schedule'  => $job->schedule,
+			'args'      => maybe_unserialize( $job->args ),
+		];
+
+		if ( ! empty( $job->interval ) ) {
+			$event->interval = $job->interval;
+		}
+
+		return $event;
+	}
+
+	/**
+	 * Intercept request for event's next timestamp.
+	 *
+	 * @param int|bool|null $next Int or bool if already looked up, null otherwise.
+	 * @param string        $hook Job action.
+	 * @param array         $args Job arguments.
+	 * @return int|bool|null
+	 */
+	public function filter_next_scheduled( $next, $hook, $args ) {
+		if ( null !== $next ) {
+			return $next;
+		}
+
+		// TODO: implement!
+		return null;
 	}
 }
