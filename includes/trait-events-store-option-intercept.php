@@ -1,6 +1,10 @@
 <?php
 /**
- * Event storage for WP 5.0 and earlier.
+ * Cron option manipulation.
+ *
+ * Prior to 5.1, this was the primary way cron events
+ * were captured; 5.1 introduced filters that obviate
+ * the option.
  *
  * @package a8c_Cron_Control
  */
@@ -15,24 +19,14 @@ trait Events_Store_Option_Intercept {
 	 * Register hooks to invoke option interception.
 	 */
 	protected function register_option_intercept_hooks() {
-		global $wp_version;
-
-		// Ensure option is only read from Cron Control store.
 		add_filter( 'pre_option_cron', array( $this, 'get_option' ) );
-
-		// If new filters are not available, fall back to option update parsing.
-		$version = explode( '-', $wp_version );
-		$version = (float) array_shift( $version );
-		if ( -1 === version_compare( $version, 5.1 ) ) {
-			add_filter( 'pre_update_option_cron', array( $this, 'update_option' ), 10, 2 );
-		}
+		add_filter( 'pre_update_option_cron', array( $this, 'update_option' ), 10, 2 );
 	}
 
 	/**
 	 * Override cron option requests with data from custom table
 	 */
 	public function get_option() {
-
 		// If this thread has already generated the cron array,
 		// use the copy from local memory. Don't fetch this list
 		// remotely multiple times per request (even from the
