@@ -329,6 +329,8 @@ class Events_Store extends Singleton {
 	/**
 	 * Retrieve a list of IDs for a given hook, optionally filtering by arguments.
 	 *
+	 * For use in situations where timestamp is unknown, as all other methods require the timestamp.
+	 *
 	 * @param array      $query_args Lookup arguments.
 	 * @param string     $hook Job action.
 	 * @param array|null $job_args Job arguments to search by.

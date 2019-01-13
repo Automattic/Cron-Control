@@ -242,11 +242,20 @@ trait Events_Store_Cron_Filters {
 	 * @return int|bool|null
 	 */
 	public function filter_next_scheduled( $next, $hook, $args ) {
+		global $wpdb;
+
 		if ( null !== $next ) {
 			return $next;
 		}
 
-		// TODO: implement!
-		return null;
+		// TODO: cache this lookup?
+		$ts = $wpdb->get_var( $wpdb->prepare(
+			"SELECT timestamp FROM {$this->get_table_name()} WHERE action = %s AND instance = %s AND status = %s ORDER BY timestamp ASC LIMIT 1", // Cannot prepare table name. @codingStandardsIgnoreLine
+			$hook,
+			$this->generate_instance_identifier( $args ),
+			self::STATUS_PENDING
+		) );
+
+		return empty( $ts ) ? null : (int) $ts;
 	}
 }
