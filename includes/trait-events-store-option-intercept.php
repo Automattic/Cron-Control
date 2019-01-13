@@ -197,7 +197,7 @@ trait Events_Store_Option_Intercept {
 			return false;
 		}
 
-		$option_flat = array();
+		$option_flat = array( array() );
 
 		// Restore option from cached pieces.
 		for ( $i = 1; $i <= $cache_details['buckets']; $i++ ) {
@@ -209,8 +209,10 @@ trait Events_Store_Option_Intercept {
 				return false;
 			}
 
-			$option_flat += $cached_slice;
+			$option_flat[] = $cached_slice;
 		}
+
+		$option_flat = array_merge( ...$option_flat );
 
 		// Something's missing, likely due to cache eviction.
 		if ( empty( $option_flat ) || count( $option_flat ) !== $cache_details['event_count'] ) {
