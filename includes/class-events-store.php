@@ -15,8 +15,7 @@ class Events_Store extends Singleton {
 	 * Traits used for organizational purposes.
 	 *
 	 * WP 5.1 introduced new filters that simplify
-	 * intercepting cron actions, but support for pre-5.1
-	 * installs is necessary.
+	 * intercepting cron actions.
 	 */
 	use Events_Store_Cron_Filters;
 	use Events_Store_Option_Intercept;
