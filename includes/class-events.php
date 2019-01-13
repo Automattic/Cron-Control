@@ -51,7 +51,7 @@ class Events extends Singleton {
 		add_action( 'after_setup_theme', array( $this, 'populate_concurrent_action_whitelist' ) );
 
 		// Though blocked, ensure Core's cron execution respects plugin's curation.
-		add_filter( 'pre_get_ready_cron_jobs', [ $this, 'filter_pending_job_list' ] );
+		add_filter( 'pre_get_ready_cron_jobs', [ $this, 'filter_pending_event_list' ] );
 	}
 
 	/**
@@ -94,12 +94,12 @@ class Events extends Singleton {
 	/**
 	 * Pass curated event list to Core requests.
 	 *
-	 * @param array|null $jobs Current event list.
+	 * @param array|null $events Current event list.
 	 * @return array|null
 	 */
-	public function filter_pending_job_list( $jobs ) {
-		if ( null !== $jobs ) {
-			return $jobs;
+	public function filter_pending_event_list( $events ) {
+		if ( null !== $events ) {
+			return $events;
 		}
 
 		$events = $this->get_events();
@@ -114,7 +114,7 @@ class Events extends Singleton {
 			$event['action_hashed'] = $event['action'];
 			unset( $event['action'] );
 
-			$event_data = Events_Store::instance()->get_job_by_attributes( $event );
+			$event_data = get_event_by_attributes( $event );
 
 			if ( ! $event_data ) {
 				continue;
