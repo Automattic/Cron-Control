@@ -8,13 +8,13 @@
 namespace Automattic\WP\Cron_Control;
 
 /**
- * Trait Option_Intercept
+ * Class Option_Intercept
  */
-trait Events_Store_Cron_Filters {
+class Events_Store_Cron_Filters extends Singleton {
 	/**
 	 * Register hooks to intercept events before storage.
 	 */
-	protected function register_core_cron_filters() {
+	protected function class_init() {
 		add_filter( 'pre_schedule_event', [ $this, 'filter_event_scheduling' ], 10, 2 );
 		add_filter( 'pre_reschedule_event', [ $this, 'filter_event_rescheduling' ], 10, 2 );
 		add_filter( 'pre_unschedule_event', [ $this, 'filter_event_unscheduling' ], 10, 4 );
@@ -84,10 +84,10 @@ trait Events_Store_Cron_Filters {
 	 * @param int|null  $previous_timestamp Previous timestamp, when rescheduling a recurring event.
 	 */
 	protected function do_schedule_from_filter( $event, $previous_timestamp = null ) {
-		$existing = $this->get_job_by_attributes( [
+		$existing = get_event_by_attributes( [
 			'action'    => $event->hook,
 			'timestamp' => ! empty( $previous_timestamp ) ? $previous_timestamp : $event->timestamp,
-			'instance'  => $this->generate_instance_identifier( $event->args ),
+			'instance'  => Events_Store::instance()->generate_instance_identifier( $event->args ),
 		] );
 
 		$args = [
@@ -99,7 +99,7 @@ trait Events_Store_Cron_Filters {
 			$args['interval'] = $event->interval;
 		}
 
-		$this->create_or_update_job( $event->timestamp, $event->hook, $args, $existing ? $existing->ID : null );
+		schedule_event( $event->timestamp, $event->hook, $args, $existing ? $existing->ID : null );
 	}
 
 	/**
@@ -116,7 +116,8 @@ trait Events_Store_Cron_Filters {
 			return $unscheduled;
 		}
 
-		return $this->mark_job_completed( $timestamp, $hook, $this->generate_instance_identifier( $args ) );
+		delete_event( $timestamp, $hook, Events_Store::instance()->generate_instance_identifier( $args ) );
+		return true;
 	}
 
 	/**
@@ -143,7 +144,6 @@ trait Events_Store_Cron_Filters {
 	 * @return bool|int
 	 */
 	public function filter_unchedule_hook( $cleared, $hook ) {
-		// Bail, something else already cleared this hook.
 		if ( null !== $cleared ) {
 			return $cleared;
 		}
@@ -164,7 +164,7 @@ trait Events_Store_Cron_Filters {
 		$quantity = 500;
 
 		do {
-			$batch_ids = $this->get_job_ids_by_hook(
+			$batch_ids = Events_Store::instance()->get_job_ids_by_hook(
 				[
 					'page'     => $page,
 					'quantity' => $quantity,
@@ -186,10 +186,10 @@ trait Events_Store_Cron_Filters {
 		$results = [];
 
 		foreach ( $ids as $id ) {
-			$results[] = $this->mark_job_record_completed( $id, false );
+			$results[] = delete_event_by_id( $id, false );
 		}
 
-		$this->flush_internal_caches();
+		_flush_internal_caches();
 
 		$results = array_filter( $results );
 		return empty( $results ) ? false : count( $results );
@@ -209,10 +209,10 @@ trait Events_Store_Cron_Filters {
 			return $retrieved;
 		}
 
-		$job = $this->get_job_by_attributes( [
+		$job = get_event_by_attributes( [
 			'action'    => $hook,
 			'timestamp' => $timestamp,
-			'instance'  => $this->generate_instance_identifier( $args ),
+			'instance'  => Events_Store::instance()->generate_instance_identifier( $args ),
 		] );
 
 		if ( ! $job ) {
@@ -248,14 +248,17 @@ trait Events_Store_Cron_Filters {
 			return $next;
 		}
 
+		$table_name = Events_Store::instance()->get_table_name();
+
 		// TODO: cache this lookup?
 		$ts = $wpdb->get_var( $wpdb->prepare(
-			"SELECT timestamp FROM {$this->get_table_name()} WHERE action = %s AND instance = %s AND status = %s ORDER BY timestamp ASC LIMIT 1", // Cannot prepare table name. @codingStandardsIgnoreLine
+			"SELECT timestamp FROM {$table_name} WHERE action = %s AND instance = %s AND status = %s ORDER BY timestamp ASC LIMIT 1", // Cannot prepare table name. @codingStandardsIgnoreLine
 			$hook,
-			$this->generate_instance_identifier( $args ),
-			self::STATUS_PENDING
+			Events_Store::instance()->generate_instance_identifier( $args ),
+			Events_Store::STATUS_PENDING
 		) );
 
 		return empty( $ts ) ? null : (int) $ts;
 	}
 }
+Events_Store_Cron_Filters::instance();
