@@ -21,7 +21,6 @@ class Events_Store_Cron_Filters extends Singleton {
 		add_filter( 'pre_clear_scheduled_hook', [ $this, 'filter_clear_scheduled_hook' ], 10, 3 );
 		add_filter( 'pre_unschedule_hook', [ $this, 'filter_unchedule_hook' ], 10, 2 );
 		add_filter( 'pre_get_scheduled_event', [ $this, 'filter_event_retrieval' ], 10, 4 );
-		add_filter( 'pre_next_scheduled', [ $this, 'filter_next_scheduled' ], 10, 4 );
 	}
 
 	/**
@@ -231,34 +230,6 @@ class Events_Store_Cron_Filters extends Singleton {
 		}
 
 		return $event;
-	}
-
-	/**
-	 * Intercept request for event's next timestamp.
-	 *
-	 * @param int|bool|null $next Int or bool if already looked up, null otherwise.
-	 * @param string        $hook Job action.
-	 * @param array         $args Job arguments.
-	 * @return int|bool|null
-	 */
-	public function filter_next_scheduled( $next, $hook, $args ) {
-		global $wpdb;
-
-		if ( null !== $next ) {
-			return $next;
-		}
-
-		$table_name = Events_Store::instance()->get_table_name();
-
-		// TODO: cache this lookup?
-		$ts = $wpdb->get_var( $wpdb->prepare(
-			"SELECT timestamp FROM {$table_name} WHERE action = %s AND instance = %s AND status = %s ORDER BY timestamp ASC LIMIT 1", // Cannot prepare table name. @codingStandardsIgnoreLine
-			$hook,
-			Events_Store::instance()->generate_instance_identifier( $args ),
-			Events_Store::STATUS_PENDING
-		) );
-
-		return empty( $ts ) ? null : (int) $ts;
 	}
 }
 Events_Store_Cron_Filters::instance();
