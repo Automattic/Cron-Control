@@ -575,6 +575,28 @@ class Events_Store extends Singleton {
 	}
 
 	/**
+	 * Retrieve a hook's next-scheduled occurrence.
+	 *
+	 * @param string $hook Job hook.
+	 * @param array  $args Job arguments.
+	 * @return object|null
+	 */
+	public function get_hook_next_scheduled( $hook, $args ) {
+		global $wpdb;
+
+		$next = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$this->get_table_name()} WHERE action = %s AND instance = %s AND status = %s ORDER BY timestamp ASC LIMIT 1", // Cannot prepare table name. @codingStandardsIgnoreLine
+				$hook,
+				$this->generate_instance_identifier( $args ),
+				static::STATUS_PENDING
+			)
+		);
+
+		return is_object( $next ) ? $next : null;
+	}
+
+	/**
 	 * Get ID for given event details
 	 *
 	 * Used in situations where performance matters, which is why it exists despite duplicating `get_job_by_attributes()`

@@ -200,7 +200,7 @@ class Events_Store_Cron_Filters extends Singleton {
 	 * @param \stdClass|null $retrieved \stdClass if already retrieved, null otherwise.
 	 * @param string         $hook Job action.
 	 * @param array          $args Job arguments.
-	 * @param int            $timestamp Job timestamp.
+	 * @param int|null       $timestamp Job timestamp.
 	 * @return \stdClass|bool|null
 	 */
 	public function filter_event_retrieval( $retrieved, $hook, $args, $timestamp ) {
@@ -208,11 +208,17 @@ class Events_Store_Cron_Filters extends Singleton {
 			return $retrieved;
 		}
 
-		$job = get_event_by_attributes( [
-			'action'    => $hook,
-			'timestamp' => $timestamp,
-			'instance'  => Events_Store::instance()->generate_instance_identifier( $args ),
-		] );
+		if ( null === $timestamp ) {
+			$job = Events_Store::instance()->get_hook_next_scheduled( $hook, $args );
+		} else {
+			$job = get_event_by_attributes(
+				[
+					'action'    => $hook,
+					'timestamp' => $timestamp,
+					'instance'  => Events_Store::instance()->generate_instance_identifier( $args ),
+				]
+			);
+		}
 
 		if ( ! $job ) {
 			return false;
