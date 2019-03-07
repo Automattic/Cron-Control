@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -191,7 +192,8 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 	if "os.Stdout" == logDest {
 		logFileName = fmt.Sprintf("/tmp/wp-cli-%s", Guid)
 	} else {
-		logFileName = fmt.Sprintf("%s/wp-cli-%s", logDest, Guid)
+		logDir := path.Dir(logDest)
+		logFileName = fmt.Sprintf("%s/wp-cli-%s", logDir, Guid)
 	}
 
 	if _, err := os.Stat(logFileName); nil == err {
