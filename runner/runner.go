@@ -100,6 +100,11 @@ func main() {
 	go spawnEventWorkers(events)
 	go retrieveSitesPeriodically(sites)
 
+	// Only listen for connections from remote WP CLI commands is we have a token set
+	if 0 < len(gRemoteToken) {
+		go waitForConnect()
+	}
+
 	heartbeat(sites, events)
 }
 
