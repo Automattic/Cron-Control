@@ -57,6 +57,7 @@ var (
 	gEventWorkersRunning    []bool
 	gSiteRetrieverRunning   bool
 	gRandomDeltaMap         map[string]int64
+	gRemoteToken            string
 )
 
 const getEventsBreakSec time.Duration = 1 * time.Second
@@ -72,6 +73,7 @@ func init() {
 	flag.Int64Var(&heartbeatInt, "heartbeat", 60, "Heartbeat interval in seconds")
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
+	flag.StringVar(&gRemoteToken, "token", "", "Token to authenticate remote WP CLI requests")
 	flag.Parse()
 
 	setUpLogger()
