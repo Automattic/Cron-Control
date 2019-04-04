@@ -234,38 +234,42 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 	}
 	defer func() { _ = terminal.Restore(int(tty.Fd()), prevState) }()
 
+	var bytesRead int = 0
+	var bytesStreamed int = 0
+
 	go func() {
 		var written, read int
-		var err error
+		var err, errTty error
 		var buf []byte = make([]byte, 4096)
 
 		for {
-			read, err = tty.Read(buf)
+			read, errTty = tty.Read(buf)
+			bytesRead += read
+			if 0 < read {
+				padlock.Lock()
+				written, err = logFile.Write(buf[:read])
+				bytesStreamed += written
+				padlock.Unlock()
 
-			if nil != err {
-				if io.EOF != err {
-					logger.Printf("error reading WP CLI stdout: %s\n", err.Error())
+				if nil != err {
+					logger.Printf("error writing to the local logfile: %s\n", err.Error())
+				}
+
+				written, err = conn.Write(buf[:read])
+				if nil != err {
+					logger.Printf("error writing to client connection: %s\n", err.Error())
+					break
+				}
+				if written != read {
+					logger.Printf("error writing to client connection: %s\n", err.Error())
 					break
 				}
 			}
-			if 0 == read {
-				continue
-			}
 
-			padlock.Lock()
-			written, err = logFile.Write(buf[:read])
-			padlock.Unlock()
-			if nil != err {
-				logger.Printf("error writing to the local logfile: %s\n", err.Error())
-			}
-
-			written, err = conn.Write(buf[:read])
-			if nil != err {
-				logger.Printf("error writing to client connection: %s\n", err.Error())
-				break
-			}
-			if written != read {
-				logger.Printf("error writing to client connection: %s\n", err.Error())
+			if nil != errTty {
+				if io.EOF != errTty {
+					logger.Printf("error reading WP CLI stdout: %s\n", errTty.Error())
+				}
 				break
 			}
 		}
@@ -354,6 +358,13 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 	}()
 
 	cmd.Process.Wait()
+
+	for {
+		if bytesStreamed >= bytesRead || nil == conn {
+			break
+		}
+		time.Sleep(time.Duration(50 * time.Millisecond.Nanoseconds()))
+	}
 
 	return nil
 }
