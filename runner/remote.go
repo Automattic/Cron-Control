@@ -223,6 +223,7 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 		cmd.Process.Wait()
 		tty.Close()
 		logFile.Close()
+		conn.Close()
 	}()
 
 	prevState, err := terminal.MakeRaw(int(tty.Fd()))
@@ -268,7 +269,6 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 				break
 			}
 		}
-		conn.Close()
 	}()
 
 	go func() {
