@@ -36,7 +36,7 @@ var (
 
 func waitForConnect() {
 	padlock = &sync.Mutex{}
-	guidRegex = regexp.MustCompile("^[a-fA-F0-9]+$")
+	guidRegex = regexp.MustCompile("^[a-fA-F0-9\\-]+$")
 	if nil == guidRegex {
 		logger.Println("Failed to compile the Guid regex")
 		return
