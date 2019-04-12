@@ -37,12 +37,15 @@ In `wp-config.php` or a similarly-early and appropriate place, define `CRON_CONT
 ```
 define( 'CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS', array(
 array(
-	'schedule' => 'hourly',
-	'action'   => 'do_a_thing',
-	'callback' => '__return_true',
+	'schedule'  => 'hourly',
+	'action'    => 'do_a_thing',
+	'callback'  => '__return_true',
+	'timestamp' => strtotime( '+60 seconds' ),
 ),
 ) );
 ```
+
+The `timestamp` parameter is optional, and will default to +60 seconds if left off. Useful in cases where you would like to stagger the intial run of a new internal event across sites.
 
 Due to the early loading (to limit additions), the `action` and `callback` generally can't directly reference any Core, plugin, or theme code. Since WordPress uses actions to trigger cron, class methods can be referenced, so long as the class name is not dynamically referenced. For example:
 
