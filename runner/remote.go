@@ -181,10 +181,53 @@ func validateAndProcessCommand(calledCmd string) (string, error) {
 	return strings.Join(cmdParts, " "), nil
 }
 
+func getCleanWpCliArgumentArray(wpCliCmdString string) ([]string, error) {
+	rawArgs := strings.Fields(wpCliCmdString)
+	cleanArgs := make([]string, 0)
+	openQuote := false
+	arg := ""
+
+	for _, rawArg := range rawArgs {
+		if idx := strings.Index(rawArg, "\""); -1 != idx {
+			if idx != strings.LastIndexAny(rawArg, "\"") {
+				cleanArgs = append(cleanArgs, rawArg)
+			} else if openQuote {
+				arg = fmt.Sprintf("%s %s", arg, rawArg)
+				cleanArgs = append(cleanArgs, arg)
+				arg = ""
+				openQuote = false
+			} else {
+				arg = rawArg
+				openQuote = true
+			}
+		} else {
+			if openQuote {
+				arg = fmt.Sprintf("%s %s", arg, rawArg)
+			} else {
+				cleanArgs = append(cleanArgs, rawArg)
+			}
+		}
+	}
+
+	if openQuote {
+		return make([]string, 0), errors.New(fmt.Sprintf("WP CLI command is invalid: %s\n", wpCliCmdString))
+	}
+
+	return cleanArgs, nil
+}
+
 func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16, wpCliCmdString string) error {
 	cmdArgs := make([]string, 0)
 	cmdArgs = append(cmdArgs, strings.Fields("--path="+wpPath)...)
-	cmdArgs = append(cmdArgs, strings.Fields(wpCliCmdString)...)
+
+	cleanArgs, err := getCleanWpCliArgumentArray(wpCliCmdString)
+	if nil != err {
+		conn.Write([]byte("WP CLI command is invalid"))
+		conn.Close()
+		return errors.New("WP CLI command is invalid")
+	}
+
+	cmdArgs = append(cmdArgs, cleanArgs...)
 
 	cmd := exec.Command("/usr/local/bin/wp", cmdArgs...)
 
