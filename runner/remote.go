@@ -153,6 +153,10 @@ func authConn(conn *net.TCPConn) {
 }
 
 func validateAndProcessCommand(calledCmd string) (string, error) {
+	if 0 == len(strings.TrimSpace(calledCmd)) {
+		return "", errors.New("No WP CLI command specified")
+	}
+
 	cmdParts := strings.Fields(strings.TrimSpace(calledCmd))
 
 	for _, command := range blackListed1stLevel {
