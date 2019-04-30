@@ -159,7 +159,6 @@ class Events_Store_Cron_Filter_Tests extends \WP_UnitTestCase {
 		// Grab the scheduled event
 		$scheduled_event = Events_Store_Cron_Filters::instance()->filter_pre_get_scheduled_event( null, $event['action'], $event['args'], $event['timestamp'] );
 
-		// Needs to return the count of unscheduled hooks, to match wp_unscheduled_hook()
 		$this->assertEquals( $event['action'], $scheduled_event->hook );
 		$this->assertEquals( $event['timestamp'], $scheduled_event->timestamp );
 		$this->assertEquals( $event['args'], $scheduled_event->args );
