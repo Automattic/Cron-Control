@@ -899,7 +899,7 @@ class Events_Store extends Singleton {
 	 * @return string
 	 */
 	public function generate_instance_identifier( $args ) {
-		return md5( maybe_serialize( $args ) );
+		return md5( serialize( $args ) );
 	}
 
 	/**
