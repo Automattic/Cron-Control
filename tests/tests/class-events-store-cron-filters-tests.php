@@ -151,9 +151,9 @@ class Events_Store_Cron_Filter_Tests extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Check that we handle re_get_scheduled_event correctly
+	 * Check that we handle pre_get_scheduled_event correctly
 	 */
-	function test_re_get_scheduled_event_filter() {
+	function test_pre_get_scheduled_event_filter() {
 		$event = Utils::create_test_event();
 
 		// Grab the scheduled event
