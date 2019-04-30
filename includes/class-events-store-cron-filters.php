@@ -238,4 +238,5 @@ class Events_Store_Cron_Filters extends Singleton {
 		return $event;
 	}
 }
+
 Events_Store_Cron_Filters::instance();
