@@ -89,7 +89,7 @@ class REST_API_Tests extends \WP_UnitTestCase {
 					array(
 						'timestamp' => $ev['timestamp'],
 						'action'    => md5( $ev['action'] ),
-						'instance'  => md5( maybe_serialize( $ev['args'] ) ),
+						'instance'  => Events_Store::instance()->generate_instance_identifier( $ev['args'] ),
 					),
 				),
 				'endpoint'             => get_rest_url( null, \Automattic\WP\Cron_Control\REST_API::API_NAMESPACE . '/' . \Automattic\WP\Cron_Control\REST_API::ENDPOINT_RUN ),
@@ -104,7 +104,7 @@ class REST_API_Tests extends \WP_UnitTestCase {
 	public function test_run_event() {
 		$ev             = Utils::create_test_event();
 		$ev['action']   = md5( $ev['action'] );
-		$ev['instance'] = md5( maybe_serialize( $ev['args'] ) );
+		$ev['instance'] = Events_Store::instance()->generate_instance_identifier( $ev['args'] );
 		$ev['secret']   = \WP_CRON_CONTROL_SECRET;
 		unset( $ev['args'] );
 
