@@ -8,7 +8,7 @@
 namespace Automattic\WP\Cron_Control;
 
 /**
- * Class Option_Intercept
+ * Class Events_Store_Cron_Filters
  */
 class Events_Store_Cron_Filters extends Singleton {
 	/**
