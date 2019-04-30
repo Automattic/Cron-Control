@@ -584,7 +584,7 @@ class Events_Store extends Singleton {
 	public function get_hook_next_scheduled( $hook, $args ) {
 		global $wpdb;
 
-		$next = $wpdb->get_row(
+		$job = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT * FROM {$this->get_table_name()} WHERE action = %s AND instance = %s AND status = %s ORDER BY timestamp ASC LIMIT 1", // Cannot prepare table name. @codingStandardsIgnoreLine
 				$hook,
@@ -593,7 +593,13 @@ class Events_Store extends Singleton {
 			)
 		);
 
-		return is_object( $next ) ? $next : null;
+		if ( is_object( $job ) && ! is_wp_error( $job ) ) {
+			$job = $this->format_job( $job );
+		} else {
+			$job = null;
+		}
+
+		return $job;
 	}
 
 	/**
