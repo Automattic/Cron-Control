@@ -7,6 +7,8 @@
 
 namespace Automattic\WP\Cron_Control\Tests;
 
+use Automattic\WP\Cron_Control\Events_Store;
+
 /**
  * REST API tests
  */
