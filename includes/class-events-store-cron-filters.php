@@ -15,12 +15,12 @@ class Events_Store_Cron_Filters extends Singleton {
 	 * Register hooks to intercept events before storage.
 	 */
 	protected function class_init() {
-		add_filter( 'pre_schedule_event', [ $this, 'filter_event_scheduling' ], 10, 2 );
-		add_filter( 'pre_reschedule_event', [ $this, 'filter_event_rescheduling' ], 10, 2 );
-		add_filter( 'pre_unschedule_event', [ $this, 'filter_event_unscheduling' ], 10, 4 );
-		add_filter( 'pre_clear_scheduled_hook', [ $this, 'filter_clear_scheduled_hook' ], 10, 3 );
-		add_filter( 'pre_unschedule_hook', [ $this, 'filter_unchedule_hook' ], 10, 2 );
-		add_filter( 'pre_get_scheduled_event', [ $this, 'filter_event_retrieval' ], 10, 4 );
+		add_filter( 'pre_schedule_event', [ $this, 'filter_pre_schedule_event' ], 10, 2 );
+		add_filter( 'pre_reschedule_event', [ $this, 'filter_pre_reschedule_event' ], 10, 2 );
+		add_filter( 'pre_unschedule_event', [ $this, 'filter_pre_unschedule_event' ], 10, 4 );
+		add_filter( 'pre_clear_scheduled_hook', [ $this, 'filter_pre_clear_scheduled_hook' ], 10, 3 );
+		add_filter( 'pre_unschedule_hook', [ $this, 'filter_pre_unschedule_hook' ], 10, 2 );
+		add_filter( 'pre_get_scheduled_event', [ $this, 'filter_pre_get_scheduled_event' ], 10, 4 );
 	}
 
 	/**
@@ -30,7 +30,7 @@ class Events_Store_Cron_Filters extends Singleton {
 	 * @param \stdClass $event Event object.
 	 * @return bool|null
 	 */
-	public function filter_event_scheduling( $scheduled, $event ) {
+	public function filter_pre_schedule_event( $scheduled, $event ) {
 		if ( null !== $scheduled ) {
 			return $scheduled;
 		}
@@ -49,7 +49,7 @@ class Events_Store_Cron_Filters extends Singleton {
 	 * @param \stdClass $event Event object.
 	 * @return bool|null
 	 */
-	public function filter_event_rescheduling( $rescheduled, $event ) {
+	public function filter_pre_reschedule_event( $rescheduled, $event ) {
 		if ( null !== $rescheduled ) {
 			return $rescheduled;
 		}
@@ -110,7 +110,7 @@ class Events_Store_Cron_Filters extends Singleton {
 	 * @param array     $args Event arguments.
 	 * @return bool|null
 	 */
-	public function filter_event_unscheduling( $unscheduled, $timestamp, $hook, $args ) {
+	public function filter_pre_unschedule_event( $unscheduled, $timestamp, $hook, $args ) {
 		if ( null !== $unscheduled ) {
 			return $unscheduled;
 		}
@@ -127,7 +127,7 @@ class Events_Store_Cron_Filters extends Singleton {
 	 * @param array     $args Event arguments.
 	 * @return bool|int
 	 */
-	public function filter_clear_scheduled_hook( $cleared, $hook, $args ) {
+	public function filter_pre_clear_scheduled_hook( $cleared, $hook, $args ) {
 		if ( null !== $cleared ) {
 			return $cleared;
 		}
@@ -142,7 +142,7 @@ class Events_Store_Cron_Filters extends Singleton {
 	 * @param string    $hook Event action.
 	 * @return bool|int
 	 */
-	public function filter_unchedule_hook( $cleared, $hook ) {
+	public function filter_pre_unschedule_hook( $cleared, $hook ) {
 		if ( null !== $cleared ) {
 			return $cleared;
 		}
@@ -203,7 +203,7 @@ class Events_Store_Cron_Filters extends Singleton {
 	 * @param int|null       $timestamp Job timestamp.
 	 * @return \stdClass|bool|null
 	 */
-	public function filter_event_retrieval( $retrieved, $hook, $args, $timestamp ) {
+	public function filter_pre_get_scheduled_event( $retrieved, $hook, $args, $timestamp ) {
 		if ( null !== $retrieved ) {
 			return $retrieved;
 		}
