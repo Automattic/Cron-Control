@@ -681,7 +681,9 @@ class Events_Store extends Singleton {
 		// Create the post, or update an existing entry to run again in the future.
 		if ( is_int( $update_id ) && $update_id > 0 ) {
 			$wpdb->update(
-				$this->get_table_name(), $job_post, array(
+				$this->get_table_name(),
+				$job_post,
+				array(
 					'ID' => $update_id,
 				)
 			);
@@ -743,7 +745,9 @@ class Events_Store extends Singleton {
 		);
 
 		$success = $wpdb->update(
-			$this->get_table_name(), $updates, array(
+			$this->get_table_name(),
+			$updates,
+			array(
 				'ID' => $job_id,
 			)
 		);
@@ -950,7 +954,8 @@ class Events_Store extends Singleton {
 
 		if ( $count > 0 ) {
 			$wpdb->delete(
-				$this->get_table_name(), array(
+				$this->get_table_name(),
+				array(
 					'status' => self::STATUS_COMPLETED,
 				)
 			);

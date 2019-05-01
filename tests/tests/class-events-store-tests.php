@@ -182,11 +182,13 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 	function test_get_job_by_attributes() {
 		$event = Utils::create_test_event();
 
-		$event_from_store = \Automattic\WP\Cron_Control\get_event_by_attributes( [
-			'timestamp' => $event['timestamp'],
-			'action'    => $event['action'],
-			'instance'  => Events_Store::instance()->generate_instance_identifier( $event['args'] ),
-		] );
+		$event_from_store = \Automattic\WP\Cron_Control\get_event_by_attributes(
+			[
+				'timestamp' => $event['timestamp'],
+				'action'    => $event['action'],
+				'instance'  => Events_Store::instance()->generate_instance_identifier( $event['args'] ),
+			]
+		);
 
 		$this->assertInternalType( 'object', $event_from_store );
 	}
@@ -197,12 +199,14 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 	function test_get_job_by_attributes_with_any_status() {
 		$event = Utils::create_test_event();
 
-		$event_from_store = \Automattic\WP\Cron_Control\get_event_by_attributes( [
-			'timestamp' => $event['timestamp'],
-			'action'    => $event['action'],
-			'instance'  => Events_Store::instance()->generate_instance_identifier( $event['args'] ),
-			'status'    => 'any',
-		] );
+		$event_from_store = \Automattic\WP\Cron_Control\get_event_by_attributes(
+			[
+				'timestamp' => $event['timestamp'],
+				'action'    => $event['action'],
+				'instance'  => Events_Store::instance()->generate_instance_identifier( $event['args'] ),
+				'status'    => 'any',
+			]
+		);
 
 		$this->assertInternalType( 'object', $event_from_store );
 	}
@@ -213,10 +217,12 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 	function test_get_job_by_attributes_with_insufficient_args() {
 		$event = Utils::create_test_event();
 
-		$event_from_store = \Automattic\WP\Cron_Control\get_event_by_attributes( [
-			'timestamp' => $event['timestamp'],
-			'action'    => $event['action'],
-		] );
+		$event_from_store = \Automattic\WP\Cron_Control\get_event_by_attributes(
+			[
+				'timestamp' => $event['timestamp'],
+				'action'    => $event['action'],
+			]
+		);
 
 		$this->assertFalse( $event_from_store );
 	}
