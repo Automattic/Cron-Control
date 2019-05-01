@@ -2,6 +2,8 @@
 <ruleset name="WordPress Coding Standards for Plugins">
 	<description>Generally-applicable sniffs for WordPress plugins</description>
 
+	<config name="ignore_warnings_on_exit" value="1" />
+
 	<rule ref="WordPress-Core" />
 	<rule ref="WordPress-Docs" />
 
