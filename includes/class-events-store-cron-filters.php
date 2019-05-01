@@ -83,11 +83,13 @@ class Events_Store_Cron_Filters extends Singleton {
 	 * @param int|null  $previous_timestamp Previous timestamp, when rescheduling a recurring event.
 	 */
 	protected function do_schedule_from_filter( $event, $previous_timestamp = null ) {
-		$existing = get_event_by_attributes( [
-			'action'    => $event->hook,
-			'timestamp' => ! empty( $previous_timestamp ) ? $previous_timestamp : $event->timestamp,
-			'instance'  => Events_Store::instance()->generate_instance_identifier( $event->args ),
-		] );
+		$existing = get_event_by_attributes(
+			[
+				'action'    => $event->hook,
+				'timestamp' => ! empty( $previous_timestamp ) ? $previous_timestamp : $event->timestamp,
+				'instance'  => Events_Store::instance()->generate_instance_identifier( $event->args ),
+			]
+		);
 
 		$args = [
 			'args'     => $event->args,

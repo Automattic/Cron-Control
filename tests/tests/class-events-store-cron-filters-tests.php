@@ -60,7 +60,7 @@ class Events_Store_Cron_Filter_Tests extends \WP_UnitTestCase {
 	 * Check that we handle pre_reschedule_event correctly
 	 */
 	function test_pre_reschedule_event_filter() {
-		$event  = Utils::create_test_event();
+		$event = Utils::create_test_event();
 
 		// Ensure previous step actually scheduled it
 		$scheduled_ts = wp_next_scheduled( $event['action'], $event['args'] );
@@ -69,7 +69,7 @@ class Events_Store_Cron_Filter_Tests extends \WP_UnitTestCase {
 
 		// Reschedule it
 		$event['schedule'] = 'daily';
-		$event['hook'] = $event['action']; // What's in a name, anyway?
+		$event['hook']     = $event['action']; // What's in a name, anyway?
 
 		$return_value = Events_Store_Cron_Filters::instance()->filter_pre_reschedule_event( null, (object) $event );
 
@@ -92,7 +92,7 @@ class Events_Store_Cron_Filter_Tests extends \WP_UnitTestCase {
 	 * Check that we handle pre_unschedule_event correctly
 	 */
 	function test_pre_unschedule_event_filter() {
-		$event  = Utils::create_test_event();
+		$event = Utils::create_test_event();
 
 		// Ensure previous step actually scheduled it
 		$scheduled_ts = wp_next_scheduled( $event['action'], $event['args'] );
