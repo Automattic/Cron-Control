@@ -589,7 +589,7 @@ class Events_Store extends Singleton {
 				"SELECT * FROM {$this->get_table_name()} WHERE action = %s AND instance = %s AND status = %s ORDER BY timestamp ASC LIMIT 1", // Cannot prepare table name. @codingStandardsIgnoreLine
 				$hook,
 				$this->generate_instance_identifier( $args ),
-				static::STATUS_PENDING
+				self::STATUS_PENDING
 			)
 		);
 
