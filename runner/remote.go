@@ -355,6 +355,11 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 				continue
 			}
 
+			if 1 == size && 0x3 == data[0] {
+				logger.Println("Ctrl-C received, exiting")
+				break
+			}
+
 			if 4 < len(data) && "\xc2\x9b8;" == string(data[:4]) && 't' == data[size-1:][0] {
 				cmdParts := strings.Split(string(data[4:size]), ";")
 
