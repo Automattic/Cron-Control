@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -73,13 +74,19 @@ func authConn(conn *net.TCPConn) {
 	var Guid string
 
 	for {
-		data := make([]byte, 256)
-		conn.SetReadBuffer(len(gRemoteToken) + 2)
 		conn.SetDeadline(time.Now().Add(time.Duration(5 * time.Second.Nanoseconds())))
 
 		logger.Println("waiting for auth data")
-		size, err := conn.Read(data)
 
+		bufReader := bufio.NewReader(conn)
+		data, err := bufReader.ReadBytes('\n')
+		if nil != err {
+			logger.Printf("error handshaking: %s\n", err.Error())
+			conn.Close()
+			return
+		}
+
+		size := len(data)
 		logger.Print("received data:", string(data[:size]))
 
 		newlineChars := 1
