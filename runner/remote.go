@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kr/pty"
+	"github.com/creack/pty"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
