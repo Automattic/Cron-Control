@@ -254,7 +254,9 @@ class Events extends Singleton {
 		// Validate input data.
 		if ( empty( $timestamp ) || empty( $action ) || empty( $instance ) ) {
 			return new \WP_Error(
-				'missing-data', __( 'Invalid or incomplete request data.', 'automattic-cron-control' ), array(
+				'missing-data',
+				__( 'Invalid or incomplete request data.', 'automattic-cron-control' ),
+				array(
 					'status' => 400,
 				)
 			);
@@ -264,7 +266,9 @@ class Events extends Singleton {
 		if ( ! $force && $timestamp > time() ) {
 			return new \WP_Error(
 				/* translators: 1: Job identifier */
-				'premature', sprintf( __( 'Job with identifier `%1$s` is not scheduled to run yet.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ), array(
+				'premature',
+				sprintf( __( 'Job with identifier `%1$s` is not scheduled to run yet.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ),
+				array(
 					'status' => 403,
 				)
 			);
@@ -284,7 +288,9 @@ class Events extends Singleton {
 		if ( ! is_object( $event ) ) {
 			return new \WP_Error(
 				/* translators: 1: Job identifier */
-				'no-event', sprintf( __( 'Job with identifier `%1$s` could not be found.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ), array(
+				'no-event',
+				sprintf( __( 'Job with identifier `%1$s` could not be found.', 'automattic-cron-control' ), "$timestamp-$action-$instance" ),
+				array(
 					'status' => 404,
 				)
 			);
@@ -300,7 +306,9 @@ class Events extends Singleton {
 			if ( ! $this->can_run_event( $event ) ) {
 				return new \WP_Error(
 					/* translators: 1: Event action, 2: Event arguments */
-					'no-free-threads', sprintf( __( 'No resources available to run the job with action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event->action, maybe_serialize( $event->args ) ), array(
+					'no-free-threads',
+					sprintf( __( 'No resources available to run the job with action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event->action, maybe_serialize( $event->args ) ),
+					array(
 						'status' => 429,
 					)
 				);
