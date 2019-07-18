@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type siteInfo struct {
@@ -48,9 +50,10 @@ var (
 	eventRunErrCount     uint64
 	eventRunSuccessCount uint64
 
-	logger  *log.Logger
-	logDest string
-	debug   bool
+	logger   *log.Logger
+	logDest  string
+	logPlain bool
+	debug    bool
 
 	gRestart                bool
 	gEventRetrieversRunning []bool
@@ -71,6 +74,7 @@ func init() {
 	flag.IntVar(&getEventsInterval, "get-events-interval", 60, "Seconds between event retrieval")
 	flag.Int64Var(&heartbeatInt, "heartbeat", 60, "Heartbeat interval in seconds")
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
+	flag.BoolVar(&logPlain, "log-plaintext", false, "Log to plaintext instead of JSON")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
 	flag.Parse()
 
@@ -414,10 +418,17 @@ func runWpCliCmd(subcommand []string) (string, error) {
 }
 
 func setUpLogger() {
+	logFormatter := logrus.New()
+
+	if !logPlain {
+		logFormatter.Formatter = &logrus.JSONFormatter{}
+	}
+
 	logOpts := log.Ldate | log.Ltime | log.LUTC | log.Lshortfile
+	logger = log.New(logFormatter.Writer(), "", logOpts)
 
 	if logDest == "os.Stdout" {
-		logger = log.New(os.Stdout, "DEBUG: ", logOpts)
+		logFormatter.Out = os.Stdout
 	} else {
 		path, err := filepath.Abs(logDest)
 		if err != nil {
@@ -429,7 +440,7 @@ func setUpLogger() {
 			log.Fatal(err)
 		}
 
-		logger = log.New(logFile, "", logOpts)
+		logFormatter.Out = logFile
 	}
 }
 
