@@ -178,6 +178,7 @@ func heartbeat(sites chan<- site, queue chan<- event) {
 	}
 
 	var StillRunning bool
+	maxWaitCount := 30
 	for {
 		StillRunning = false
 		for workerID, r := range gEventRetrieversRunning {
@@ -196,9 +197,19 @@ func heartbeat(sites chan<- site, queue chan<- event) {
 				StillRunning = true
 			}
 		}
-		if StillRunning {
+
+		if 1 == len(gGUIDttys) {
+			logger.Println("there is still 1 remote WP-CLI command running")
+			StillRunning = true
+		} else if 0 < len(gGUIDttys) {
+			logger.Printf("there are still %d remote WP-CLI commands running\n", len(gGUIDttys))
+			StillRunning = true
+		}
+
+		if StillRunning && 0 < maxWaitCount {
 			logger.Println("worker(s) still running, waiting")
 			time.Sleep(time.Duration(3) * time.Second)
+			maxWaitCount--
 			continue
 		}
 		logger.Println(".:sayonara:.")
