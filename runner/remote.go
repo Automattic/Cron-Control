@@ -167,6 +167,12 @@ func authConn(conn *net.TCPConn) {
 	padlock.Unlock()
 
 	if found {
+		if "vip-go-retrieve-remote-logs" == elems[4] {
+			conn.Write([]byte(fmt.Sprintf("Not sending the logs because the WP-CLI command with GUID %s is still running", Guid)))
+			conn.Close()
+			return
+		}
+
 		// Reattach to the running WP-CLi command
 		attachWpCliCmdRemote(conn, wpCliProcess, uint16(rows), uint16(cols))
 		return
@@ -180,6 +186,12 @@ func authConn(conn *net.TCPConn) {
 		conn.Close()
 		return
 	}
+
+	if "vip-go-retrieve-remote-logs" == wpCliCmd {
+		streamLogs(conn, Guid)
+		return
+	}
+
 	runWpCliCmdRemote(conn, Guid, uint16(rows), uint16(cols), wpCliCmd)
 }
 
@@ -653,4 +665,46 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 		conn.Close()
 	}
 	return nil
+}
+
+func streamLogs(conn *net.TCPConn, Guid string) {
+	var err error
+	var logFileName string
+
+	logger.Printf("preparing to send the log file for Guid %s\n", Guid)
+
+	if "os.Stdout" == logDest {
+		logFileName = fmt.Sprintf("/tmp/wp-cli-%s", Guid)
+	} else {
+		logDir := path.Dir(logDest)
+		logFileName = fmt.Sprintf("%s/wp-cli-%s", logDir, Guid)
+	}
+
+	if _, err := os.Stat(logFileName); nil == err {
+		conn.Write([]byte(fmt.Sprintf("The WP CLI log file for Guid %s does not exist\n", Guid)))
+		logger.Printf("The logfile %s does not exist\n", logFileName)
+		conn.Close()
+		return
+	}
+
+	logFile, err := os.OpenFile(logFileName, os.O_RDONLY|os.O_SYNC, 0666)
+	if nil != err {
+		conn.Write([]byte("error reading the WP CLI log file\n"))
+		logger.Printf("error reading the WP CLI log file: %s\n", err.Error())
+		conn.Close()
+		return
+	}
+
+	var buf []byte = make([]byte, 8192)
+	var read int
+	for {
+		read, err = logFile.Read(buf)
+		if io.EOF == err {
+			break
+		}
+		conn.Write(buf[:read])
+	}
+	conn.Close()
+	logFile.Close()
+	logger.Printf("log file for Guid %s sent\n", Guid)
 }
