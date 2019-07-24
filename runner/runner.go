@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -48,9 +48,10 @@ var (
 	eventRunErrCount     uint64
 	eventRunSuccessCount uint64
 
-	logger  *log.Logger
-	logDest string
-	debug   bool
+	logger    *Logger
+	logDest   string
+	logFromat string
+	debug     bool
 
 	gRestart                bool
 	gEventRetrieversRunning []bool
@@ -72,6 +73,7 @@ func init() {
 	flag.IntVar(&getEventsInterval, "get-events-interval", 60, "Seconds between event retrieval")
 	flag.Int64Var(&heartbeatInt, "heartbeat", 60, "Heartbeat interval in seconds")
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
+	flag.StringVar(&logFromat, "log-format", "JSON", "Log format, 'Text' or 'JSON'")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
 	flag.StringVar(&gRemoteToken, "token", "", "Token to authenticate remote WP CLI requests")
 	flag.Parse()
@@ -421,23 +423,14 @@ func runWpCliCmd(subcommand []string) (string, error) {
 }
 
 func setUpLogger() {
-	logOpts := log.Ldate | log.Ltime | log.LUTC | log.Lshortfile
-
-	if logDest == "os.Stdout" {
-		logger = log.New(os.Stdout, "DEBUG: ", logOpts)
+	if "os.Stdout" == logDest {
+		logger = &Logger{FileName: "os.Stdout", Type: Text}
+	} else if "json" == strings.ToLower(logFromat) {
+		logger = &Logger{FileName: logDest, Type: JSON}
 	} else {
-		path, err := filepath.Abs(logDest)
-		if err != nil {
-			logger.Fatal(err)
-		}
-
-		logFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		logger = log.New(logFile, "", logOpts)
+		logger = &Logger{FileName: logDest, Type: Text}
 	}
+	logger.Init()
 }
 
 func validatePath(path *string, label string) {
