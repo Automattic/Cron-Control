@@ -87,7 +87,6 @@ func authConn(conn *net.TCPConn) {
 		}
 
 		size := len(data)
-		logger.Print("received data:", string(data[:size]))
 
 		newlineChars := 1
 		if 1 < size && 0xd == (data[size-2 : size-1])[0] {
