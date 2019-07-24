@@ -163,6 +163,9 @@ func validateAndProcessCommand(calledCmd string) (string, error) {
 	}
 
 	cmdParts := strings.Fields(strings.TrimSpace(calledCmd))
+	if 0 == len(cmdParts) {
+		return "", errors.New("WP CLI command not sent")
+	}
 
 	for _, command := range blackListed1stLevel {
 		if strings.ToLower(strings.TrimSpace(cmdParts[0])) == command {
