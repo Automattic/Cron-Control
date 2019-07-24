@@ -503,7 +503,7 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 		conn.Write([]byte("unable to launch the remote WP CLI process."))
 		logFile.Close()
 		conn.Close()
-		return errors.New(fmt.Sprintf("error launching the WP CLI process: %s\n", err.Error()))
+		return errors.New(fmt.Sprintf("error setting the WP CLI tty window size: %s\n", err.Error()))
 	}
 
 	defer func() {
