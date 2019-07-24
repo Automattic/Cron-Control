@@ -144,7 +144,7 @@ func authConn(conn *net.TCPConn) {
 		logger.Printf("error incorrect handshake string: %s\n", string(data[:size]))
 	}
 
-	conn.SetDeadline(time.Now().Add(time.Duration(600 * time.Second.Nanoseconds())))
+	conn.SetReadDeadline(time.Time{})
 	conn.SetKeepAlivePeriod(time.Duration(30 * time.Second.Nanoseconds()))
 	conn.SetKeepAlive(true)
 
