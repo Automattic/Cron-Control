@@ -174,7 +174,7 @@ func heartbeat(sites chan<- site, queue chan<- event) {
 		successCount, errCount := atomic.LoadUint64(&eventRunSuccessCount), atomic.LoadUint64(&eventRunErrCount)
 		atomic.SwapUint64(&eventRunSuccessCount, 0)
 		atomic.SwapUint64(&eventRunErrCount, 0)
-		logger.Printf("<heartbeat eventsSucceededSinceLast=%d eventsErroredSinceLast=%d>", successCount, errCount)
+		logger.Printf("eventsSucceededSinceLast=%d eventsErroredSinceLast=%d", successCount, errCount)
 	}
 
 	var StillRunning bool
