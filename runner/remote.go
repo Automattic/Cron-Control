@@ -114,6 +114,15 @@ func authConn(conn *net.TCPConn) {
 			return
 		}
 
+		if !guidRegex.Match([]byte(elems[1])) {
+			logger.Println("error incorrect GUID format")
+			conn.Write([]byte("error incorrect GUID format"))
+			conn.Close()
+			return
+		}
+
+		Guid = elems[1]
+
 		rows, err = strconv.ParseUint(elems[2], 10, 16)
 		if nil != err {
 			logger.Printf("error incorrect console rows setting: %s\n", err.Error())
@@ -127,16 +136,6 @@ func authConn(conn *net.TCPConn) {
 			conn.Close()
 			return
 		}
-
-		if !guidRegex.Match([]byte(elems[1])) {
-			logger.Println("error incorrect GUID format")
-			conn.Write([]byte("error incorrect GUID format"))
-			conn.Close()
-			return
-		}
-
-		Guid = elems[1]
-
 		if elems[0] == gRemoteToken {
 			logger.Println("handshake complete!")
 			break
