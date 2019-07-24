@@ -74,7 +74,7 @@ func authConn(conn *net.TCPConn) {
 	var Guid string
 
 	for {
-		conn.SetDeadline(time.Now().Add(time.Duration(5 * time.Second.Nanoseconds())))
+		conn.SetReadDeadline(time.Now().Add(time.Duration(5 * time.Second.Nanoseconds())))
 
 		logger.Println("waiting for auth data")
 
