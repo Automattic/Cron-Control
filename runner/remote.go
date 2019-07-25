@@ -465,7 +465,6 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, r
 			conn.Close()
 			return
 		}
-		defer readFile.Close()
 
 		logger.Printf("Seeking %s to %d for the catchup stream", wpcli.LogFileName, offset)
 		readFile.Seek(offset, 0)
@@ -493,6 +492,7 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, r
 			written, err = conn.Write(buf[:read])
 			if nil != err {
 				logger.Printf("error writing to client connection: %s\n", err.Error())
+				readFile.Close()
 				return
 			}
 
@@ -549,8 +549,13 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, r
 
 			case err := <-watcher.Error:
 				logger.Printf("error scanning the logfile: %s", err.Error())
+				break Watcher_Loop
 			}
 		}
+
+		logger.Println("closing watcher and readfile")
+		watcher.Close()
+		readFile.Close()
 
 		logger.Println("closing connection at the end of the file read")
 		conn.Close()
