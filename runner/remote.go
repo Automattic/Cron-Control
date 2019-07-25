@@ -95,7 +95,7 @@ func authConn(conn *net.TCPConn) {
 
 	logger.Println("waiting for auth data")
 
-	conn.SetReadDeadline(time.Now().Add(time.Duration(100 * time.Millisecond.Nanoseconds())))
+	conn.SetReadDeadline(time.Now().Add(time.Duration(5000 * time.Millisecond.Nanoseconds())))
 	bufReader := bufio.NewReader(conn)
 
 	for {
@@ -119,6 +119,8 @@ func authConn(conn *net.TCPConn) {
 		} else if 0 == bufReader.Buffered() {
 			break
 		}
+
+		conn.SetReadDeadline(time.Now().Add(time.Duration(100 * time.Millisecond.Nanoseconds())))
 	}
 
 	size := len(data)
