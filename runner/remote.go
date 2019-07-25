@@ -817,7 +817,7 @@ func streamLogs(conn *net.TCPConn, Guid string) {
 		logFileName = fmt.Sprintf("%s/wp-cli-%s", logDir, Guid)
 	}
 
-	if _, err := os.Stat(logFileName); nil == err {
+	if _, err := os.Stat(logFileName); nil != err {
 		conn.Write([]byte(fmt.Sprintf("The WP CLI log file for Guid %s does not exist\n", Guid)))
 		logger.Printf("The logfile %s does not exist\n", logFileName)
 		conn.Close()
