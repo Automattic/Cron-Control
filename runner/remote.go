@@ -76,7 +76,7 @@ func waitForConnect() {
 	for {
 		logger.Println("listening...")
 		conn, err := listener.AcceptTCP()
-		logger.Println("connection: ", conn.LocalAddr().String())
+		logger.Printf("connection from %s\n", conn.RemoteAddr().String())
 		if err != nil {
 			logger.Printf("error accepting connection: %s\n", err.Error())
 			continue
