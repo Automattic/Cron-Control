@@ -122,6 +122,7 @@ func authConn(conn *net.TCPConn) {
 
 		conn.SetReadDeadline(time.Now().Add(time.Duration(100 * time.Millisecond.Nanoseconds())))
 	}
+	buf = nil
 
 	size := len(data)
 	logger.Printf("size of handshake %d\n", size)
@@ -145,9 +146,7 @@ func authConn(conn *net.TCPConn) {
 	} else {
 		token, Guid, rows, cols, cmd, err = authenticateProtocolHeader1(string(data[:size-newlineChars]))
 	}
-	//data = nil
-
-	logger.Printf("%s : %s : %d : %d : %d : %s\n", token, Guid, rows, cols, offset, cmd)
+	data = nil
 
 	if nil != err {
 		conn.Write([]byte(err.Error()))
