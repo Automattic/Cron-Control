@@ -384,7 +384,10 @@ func processTCPConnectionData(conn *net.TCPConn, wpcli *WpCliProcess) {
 				continue
 			}
 
+			wpcli.padlock.Lock()
 			err = pty.Setsize(wpcli.Tty, &pty.Winsize{Rows: uint16(rows), Cols: uint16(cols)})
+			wpcli.padlock.Unlock()
+
 			if nil != err {
 				logger.Printf("error performing window resize: %s\n", err.Error())
 			} else {
@@ -393,7 +396,10 @@ func processTCPConnectionData(conn *net.TCPConn, wpcli *WpCliProcess) {
 			continue
 		}
 
+		wpcli.padlock.Lock()
 		written, err = wpcli.Tty.Write(data[:size])
+		wpcli.padlock.Unlock()
+
 		if nil != err {
 			if io.EOF != err {
 				logger.Printf("error writing to the WP CLI tty: %s\n", err.Error())
