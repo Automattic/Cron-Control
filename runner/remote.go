@@ -23,7 +23,6 @@ import (
 )
 
 type WpCliProcess struct {
-	Guid          string
 	Cmd           *exec.Cmd
 	Tty           *os.File
 	Running       bool
@@ -623,7 +622,6 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 
 	padlock.Lock()
 	wpcli := &WpCliProcess{}
-	wpcli.Guid = Guid
 	wpcli.Cmd = cmd
 	wpcli.BytesLogged = 0
 	wpcli.BytesStreamed = make(map[string]int64)
