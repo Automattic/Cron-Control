@@ -59,6 +59,7 @@ var (
 	gSiteRetrieverRunning   bool
 	gRandomDeltaMap         map[string]int64
 	gRemoteToken            string
+	gGuidLength             int
 )
 
 const getEventsBreakSec time.Duration = 1 * time.Second
@@ -76,6 +77,7 @@ func init() {
 	flag.StringVar(&logFromat, "log-format", "JSON", "Log format, 'Text' or 'JSON'")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
 	flag.StringVar(&gRemoteToken, "token", "", "Token to authenticate remote WP CLI requests")
+	flag.IntVar(&gGuidLength, "guid-len", 36, "Sets the Guid length in use for remote WP CLI requests")
 	flag.Parse()
 
 	setUpLogger()
