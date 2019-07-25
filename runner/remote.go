@@ -636,12 +636,7 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 		conn.Close()
 		return errors.New(fmt.Sprintf("error setting the WP CLI tty window size: %s\n", err.Error()))
 	}
-
-	defer func() {
-		cmd.Process.Kill()
-		cmd.Process.Wait()
-		tty.Close()
-	}()
+	defer tty.Close()
 
 	remoteAddress := conn.RemoteAddr().String()
 
