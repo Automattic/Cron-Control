@@ -579,7 +579,7 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 	if nil != err {
 		conn.Write([]byte("WP CLI command is invalid"))
 		conn.Close()
-		return errors.New("WP CLI command is invalid")
+		return errors.New(err.Error())
 	}
 
 	cmdArgs = append(cmdArgs, cleanArgs...)
