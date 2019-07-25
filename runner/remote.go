@@ -198,7 +198,11 @@ func authConn(conn *net.TCPConn) {
 		return
 	}
 
-	runWpCliCmdRemote(conn, Guid, uint16(rows), uint16(cols), wpCliCmd)
+	err = runWpCliCmdRemote(conn, Guid, uint16(rows), uint16(cols), wpCliCmd)
+	if nil != err {
+		logger.Println(err.Error())
+	}
+}
 
 func authenticateProtocolHeader1(dataString string) (string, string, uint16, uint16, string, error) {
 	var token, guid string
