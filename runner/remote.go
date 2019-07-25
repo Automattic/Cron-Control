@@ -342,7 +342,7 @@ func processTCPConnectionData(conn *net.TCPConn, wpcli *WpCliProcess) {
 
 	conn.SetReadBuffer(8192)
 	for {
-		size, err = (*conn).Read(data)
+		size, err = conn.Read(data)
 
 		if nil != err {
 			if io.EOF == err {
