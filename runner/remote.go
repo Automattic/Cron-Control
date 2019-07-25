@@ -359,8 +359,14 @@ func processTCPConnectionData(conn *net.TCPConn, wpcli *WpCliProcess) {
 		}
 
 		if 1 == size && 0x3 == data[0] {
-			logger.Println("Ctrl-C received, terminating the WP-CLI and exiting")
-			wpcli.Cmd.Process.Kill()
+			logger.Println("Ctrl-C received")
+			wpcli.padlock.Lock()
+			// If this is the only process, then we can stop the command
+			if 1 == len(wpcli.BytesStreamed) {
+				wpcli.Cmd.Process.Kill()
+				logger.Println("terminating the WP-CLI")
+			}
+			wpcli.padlock.Unlock()
 			break
 		}
 
