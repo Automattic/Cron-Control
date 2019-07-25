@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -28,7 +29,8 @@ type WpCliProcess struct {
 	Running       bool
 	LogFileName   string
 	BytesLogged   int64
-	BytesStreamed int64
+	BytesStreamed map[string]int64
+	padlock       *sync.Mutex
 }
 
 var (
@@ -84,79 +86,83 @@ func waitForConnect() {
 }
 
 func authConn(conn *net.TCPConn) {
-	elems := make([]string, 0)
-	var rows, cols uint64
-	var Guid string
+	var rows, cols uint16
+	var offset int64
+	var token, Guid, cmd string
+	var read int
+	var err error
+	var data []byte
+	buf := make([]byte, 65535)
+
+	logger.Println("waiting for auth data")
+
+	conn.SetReadDeadline(time.Now().Add(time.Duration(100 * time.Millisecond.Nanoseconds())))
+	bufReader := bufio.NewReader(conn)
 
 	for {
-		conn.SetReadDeadline(time.Now().Add(time.Duration(5 * time.Second.Nanoseconds())))
+		read, err = bufReader.Read(buf)
 
-		logger.Println("waiting for auth data")
-
-		bufReader := bufio.NewReader(conn)
-		data, err := bufReader.ReadBytes('\n')
-		if nil != err {
+		if nil != err && !strings.Contains(err.Error(), "i/o timeout") {
+			conn.Write([]byte("error during handshaking\n"))
 			logger.Printf("error handshaking: %s\n", err.Error())
 			conn.Close()
 			return
 		}
 
-		size := len(data)
-
-		newlineChars := 1
-		if 1 < size && 0xd == (data[size-2 : size-1])[0] {
-			newlineChars = 2
-		}
-
-		if err != nil {
-			logger.Printf("error reading handshake reply: %s\n", err.Error())
-			conn.Close()
-			return
-		}
-
-		elems = strings.Split(string(data[:size-newlineChars]), ";")
-
-		if 5 != len(elems) {
-			logger.Println("error handshake format incorrect")
-			conn.Close()
-			return
-		}
-
-		if len(elems[0]) != len(gRemoteToken) {
-			logger.Printf("error incorrect handshake reply size: %d != %d\n", len(gRemoteToken), len(elems[0]))
-			conn.Close()
-			return
-		}
-
-		if !guidRegex.Match([]byte(elems[1])) {
-			logger.Println("error incorrect GUID format")
-			conn.Write([]byte("error incorrect GUID format"))
-			conn.Close()
-			return
-		}
-
-		Guid = elems[1]
-
-		rows, err = strconv.ParseUint(elems[2], 10, 16)
-		if nil != err {
-			logger.Printf("error incorrect console rows setting: %s\n", err.Error())
-			conn.Close()
-			return
-		}
-
-		cols, err = strconv.ParseUint(elems[3], 10, 16)
-		if nil != err {
-			logger.Printf("error incorrect console columns setting: %s\n", err.Error())
-			conn.Close()
-			return
-		}
-		if elems[0] == gRemoteToken {
-			logger.Println("handshake complete!")
+		logger.Printf("read %d\n", read)
+		if 0 != read {
+			if nil == data {
+				data = make([]byte, read)
+				copy(data, buf[:read])
+			} else {
+				data = append(data, buf[:read]...)
+			}
+		} else if 0 == bufReader.Buffered() {
 			break
 		}
-
-		logger.Printf("error incorrect handshake string: %s\n", string(data[:size]))
 	}
+
+	size := len(data)
+	logger.Printf("size of handshake %d\n", size)
+
+	// This is the minimum size to determine the protocol type
+	if size < len(gRemoteToken)+gGuidLength {
+		conn.Write([]byte("Error negotiating handshake"))
+		logger.Println("error negotiating the handshake")
+		conn.Close()
+		return
+	}
+
+	newlineChars := 1
+	if 1 < size && 0xd == (data[size-2 : size-1])[0] {
+		newlineChars = 2
+	}
+
+	// Determine if the packet structure is the new version or not
+	if ';' != data[len(gRemoteToken)] {
+		token, Guid, rows, cols, offset, cmd, err = authenticateProtocolHeader2(data[:size-newlineChars])
+	} else {
+		token, Guid, rows, cols, cmd, err = authenticateProtocolHeader1(string(data[:size-newlineChars]))
+	}
+	//data = nil
+
+	logger.Printf("%s : %s : %d : %d : %d : %s\n", token, Guid, rows, cols, offset, cmd)
+
+	if nil != err {
+		conn.Write([]byte(err.Error()))
+		logger.Println(err.Error())
+		conn.Close()
+		return
+	}
+
+	if token != gRemoteToken {
+		conn.Write([]byte("invalid auth handshake"))
+		logger.Printf("error incorrect handshake string: %s\n", string(data[:size]))
+		conn.Close()
+		return
+	}
+
+	logger.Println("handshake complete!")
 
 	conn.SetReadDeadline(time.Time{})
 	conn.SetKeepAlivePeriod(time.Duration(30 * time.Second.Nanoseconds()))
@@ -167,19 +173,19 @@ func authConn(conn *net.TCPConn) {
 	padlock.Unlock()
 
 	if found {
-		if "vip-go-retrieve-remote-logs" == elems[4] {
+		if "vip-go-retrieve-remote-logs" == cmd {
 			conn.Write([]byte(fmt.Sprintf("Not sending the logs because the WP-CLI command with GUID %s is still running", Guid)))
 			conn.Close()
 			return
 		}
 
 		// Reattach to the running WP-CLi command
-		attachWpCliCmdRemote(conn, wpCliProcess, uint16(rows), uint16(cols))
+		attachWpCliCmdRemote(conn, wpCliProcess, Guid, uint16(rows), uint16(cols), int64(offset))
 		return
 	}
 
 	// The Guid is not currently running
-	wpCliCmd, err := validateAndProcessCommand(elems[4])
+	wpCliCmd, err := validateAndProcessCommand(cmd)
 	if nil != err {
 		logger.Println(err.Error())
 		conn.Write([]byte(err.Error()))
@@ -193,6 +199,70 @@ func authConn(conn *net.TCPConn) {
 	}
 
 	runWpCliCmdRemote(conn, Guid, uint16(rows), uint16(cols), wpCliCmd)
+
+func authenticateProtocolHeader1(dataString string) (string, string, uint16, uint16, string, error) {
+	var token, guid string
+	var rows, cols uint64
+	var err error
+
+	elems := strings.Split(dataString, ";")
+	if 5 > len(elems) {
+		return "", "", 0, 0, "", errors.New("error handshake format incorrect")
+	}
+
+	token = elems[0]
+	if len(token) != len(gRemoteToken) {
+		return "", "", 0, 0, "", errors.New(fmt.Sprintf("error incorrect handshake reply size: %d != %d\n", len(gRemoteToken), len(elems[0])))
+	}
+
+	guid = elems[1]
+	if !guidRegex.Match([]byte(guid)) {
+		return "", "", 0, 0, "", errors.New("error incorrect GUID format")
+	}
+
+	rows, err = strconv.ParseUint(elems[2], 10, 16)
+	if nil != err {
+		return "", "", 0, 0, "", errors.New(fmt.Sprintf("error incorrect console rows setting: %s\n", err.Error()))
+	}
+
+	cols, err = strconv.ParseUint(elems[3], 10, 16)
+	if nil != err {
+		return "", "", 0, 0, "", errors.New(fmt.Sprintf("error incorrect console columns setting: %s\n", err.Error()))
+	}
+
+	return token, guid, uint16(rows), uint16(cols), strings.Join(elems[4:], ";"), nil
+}
+
+func authenticateProtocolHeader2(data []byte) (string, string, uint16, uint16, int64, string, error) {
+	var token, guid string
+	var rows, cols uint64
+	var offset uint64
+	var err error
+
+	if len(data) < len(gRemoteToken)+gGuidLength+4+4+8 {
+		return "", "", 0, 0, 0, "", errors.New("error negotiating the v2 protocol handshake")
+	}
+
+	token = string(data[:len(gRemoteToken)])
+	guid = string(data[len(gRemoteToken) : len(gRemoteToken)+gGuidLength])
+
+	if !guidRegex.Match([]byte(guid)) {
+		return "", "", 0, 0, 0, "", errors.New("error incorrect GUID format")
+	}
+
+	rows, err = strconv.ParseUint(string(data[len(gRemoteToken)+gGuidLength:len(gRemoteToken)+gGuidLength+4]), 10, 16)
+	if nil != err {
+		return "", "", 0, 0, 0, "", errors.New(fmt.Sprintf("error incorrect console rows setting: %s\n", err.Error()))
+	}
+
+	cols, err = strconv.ParseUint(string(data[len(gRemoteToken)+gGuidLength+4:len(gRemoteToken)+gGuidLength+4+4]), 10, 16)
+	if nil != err {
+		return "", "", 0, 0, 0, "", errors.New(fmt.Sprintf("error incorrect console columns setting: %s\n", err.Error()))
+	}
+
+	offset = binary.LittleEndian.Uint64(data[len(gRemoteToken)+gGuidLength+4+4 : len(gRemoteToken)+gGuidLength+4+4+8])
+
+	return token, guid, uint16(rows), uint16(cols), int64(offset), string(data[len(gRemoteToken)+gGuidLength+4+4+8:]), nil
 }
 
 func validateAndProcessCommand(calledCmd string) (string, error) {
@@ -328,11 +398,21 @@ func processTCPConnectionData(conn *net.TCPConn, wpcli *WpCliProcess) {
 	}
 }
 
-func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, rows uint16, cols uint16) error {
-	logger.Printf("resuming %s - rows: %d, cols: %d\n", wpcli.Guid, rows, cols)
+func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, rows uint16, cols uint16, offset int64) error {
+	logger.Printf("resuming %s - rows: %d, cols: %d\n", Guid, rows, cols)
+
+	remoteAddress := conn.RemoteAddr().String()
 	connectionActive := true
 
+	wpcli.padlock.Lock()
+	if -1 == offset || offset > wpcli.BytesLogged {
+		offset = wpcli.BytesLogged
+	}
+	wpcli.BytesStreamed[remoteAddress] = offset
+
 	err := pty.Setsize(wpcli.Tty, &pty.Winsize{Rows: uint16(rows), Cols: uint16(cols)})
+	wpcli.padlock.Unlock()
+
 	if nil != err {
 		logger.Printf("error performing window resize: %s\n", err.Error())
 	} else {
@@ -358,8 +438,8 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, rows uint16, c
 		}
 		defer readFile.Close()
 
-		logger.Printf("Seeking %s to %d for the catchup stream", wpcli.LogFileName, wpcli.BytesStreamed)
-		readFile.Seek(wpcli.BytesStreamed, 0)
+		logger.Printf("Seeking %s to %d for the catchup stream", wpcli.LogFileName, offset)
+		readFile.Seek(offset, 0)
 
 	Catchup_Loop:
 		for {
@@ -385,10 +465,14 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, rows uint16, c
 				return
 			}
 
-			atomic.AddInt64(&wpcli.BytesStreamed, int64(written))
+			wpcli.padlock.Lock()
+			wpcli.BytesStreamed[remoteAddress] = wpcli.BytesStreamed[remoteAddress] + int64(written)
 
-			if wpcli.BytesStreamed == wpcli.BytesLogged {
+			if wpcli.BytesStreamed[remoteAddress] == wpcli.BytesLogged {
+				wpcli.padlock.Unlock()
 				break Catchup_Loop
+			} else {
+				wpcli.padlock.Unlock()
 			}
 		}
 
@@ -427,7 +511,11 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, rows uint16, c
 					logger.Printf("error writing to client connection: %s\n", err.Error())
 					break Watcher_Loop
 				}
-				atomic.AddInt64(&wpcli.BytesStreamed, int64(written))
+
+				wpcli.padlock.Lock()
+				wpcli.BytesStreamed[remoteAddress] += int64(written)
+				wpcli.padlock.Unlock()
+
 			case err := <-watcher.Error:
 				logger.Printf("error scanning the logfile: %s", err.Error())
 			}
@@ -448,6 +536,21 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, rows uint16, c
 	processTCPConnectionData(conn, wpcli)
 	conn.Close()
 	connectionActive = false
+
+	wpcli.padlock.Lock()
+	logger.Printf("cleaning out %s\n", remoteAddress)
+	delete(wpcli.BytesStreamed, remoteAddress)
+	if 0 == len(wpcli.BytesStreamed) {
+		logger.Printf("cleaning out %s\n", Guid)
+		wpcli.padlock.Unlock()
+		wpcli.padlock = nil
+		padlock.Lock()
+		delete(gGUIDttys, Guid)
+		padlock.Unlock()
+	} else {
+		wpcli.padlock.Unlock()
+	}
+
 	return nil
 }
 
@@ -512,15 +615,19 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 		tty.Close()
 	}()
 
+	remoteAddress := conn.RemoteAddr().String()
+
 	padlock.Lock()
 	wpcli := &WpCliProcess{}
 	wpcli.Guid = Guid
 	wpcli.Cmd = cmd
 	wpcli.BytesLogged = 0
-	wpcli.BytesStreamed = 0
+	wpcli.BytesStreamed = make(map[string]int64)
+	wpcli.BytesStreamed[remoteAddress] = 0
 	wpcli.Tty = tty
 	wpcli.LogFileName = logFileName
 	wpcli.Running = true
+	wpcli.padlock = &sync.Mutex{}
 	gGUIDttys[Guid] = wpcli
 	padlock.Unlock()
 
@@ -569,7 +676,10 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 				}
 
 				written, err = conn.Write(buf[:read])
-				atomic.AddInt64(&wpcli.BytesStreamed, int64(written))
+
+				wpcli.padlock.Lock()
+				wpcli.BytesStreamed[remoteAddress] += int64(written)
+				wpcli.padlock.Unlock()
 
 				if nil != err {
 					logger.Printf("error writing to client connection: %s\n", err.Error())
@@ -649,21 +759,32 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 	}
 
 	for {
-		if wpcli.BytesStreamed >= wpcli.BytesLogged || nil == conn {
+		if wpcli.BytesStreamed[remoteAddress] >= wpcli.BytesLogged || nil == conn {
 			break
 		}
 		time.Sleep(time.Duration(1 * time.Second.Nanoseconds()))
 		logger.Printf("waiting for remaining bytes to be written to a client: at %d - have %d\n", wpcli.BytesStreamed, wpcli.BytesLogged)
 	}
 
-	padlock.Lock()
-	delete(gGUIDttys, Guid)
-	padlock.Unlock()
-
 	if nil != conn {
 		logger.Println("closing the connection at the end")
 		conn.Close()
 	}
+
+	wpcli.padlock.Lock()
+	logger.Printf("cleaning out %s\n", remoteAddress)
+	delete(wpcli.BytesStreamed, remoteAddress)
+	if 0 == len(wpcli.BytesStreamed) {
+		logger.Printf("cleaning out %s\n", Guid)
+		wpcli.padlock.Unlock()
+		wpcli.padlock = nil
+		padlock.Lock()
+		delete(gGUIDttys, Guid)
+		padlock.Unlock()
+	} else {
+		wpcli.padlock.Unlock()
+	}
+
 	return nil
 }
 
