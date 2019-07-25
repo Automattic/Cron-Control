@@ -512,7 +512,7 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, r
 
 	Watcher_Loop:
 		for {
-			if !connectionActive || !wpcli.Running {
+			if !connectionActive {
 				logger.Println("client connection is closed, exiting this watcher loop")
 				break Watcher_Loop
 			}
