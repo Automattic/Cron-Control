@@ -657,24 +657,34 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 	if nil != err {
 		conn.Write([]byte("unable to initialize the remote WP CLI process."))
 		conn.Close()
+		logFile.Close()
 		return errors.New(fmt.Sprintf("error initializing the WP CLI process: %s\n", err.Error()))
 	}
 	defer func() { _ = terminal.Restore(int(tty.Fd()), prevState) }()
+
+	readFile, err := os.OpenFile(logFileName, os.O_RDONLY, os.ModeCharDevice)
+	if nil != err {
+		conn.Close()
+		logFile.Close()
+		return errors.New(fmt.Sprintf("error opening the read file for the stream: %s\n", err.Error()))
+	}
 
 	go func() {
 		var written, read int
 		var buf []byte = make([]byte, 8192)
 
-		readFile, err := os.OpenFile(logFileName, os.O_RDONLY, os.ModeCharDevice)
-		if nil != err {
-			logger.Printf("error opening the read file for the stream: %s\n", err.Error())
-			conn.Close()
-			return
-		}
+		// Used to monitor when the connection is disconnected or the CLI command finishes
+		ticker := time.Tick(time.Duration(1 * time.Second.Nanoseconds()))
 
 	Exit_Loop:
 		for {
+			if !wpcli.Running {
+				logger.Println("WP CLI command finished, exiting this watcher loop")
+				break Exit_Loop
+			}
 			select {
+			case <-ticker:
+				// We are just tick-tocking
 			case ev := <-watcher.Event:
 				if ev.IsDelete() {
 					break Exit_Loop
@@ -685,8 +695,10 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 
 				read, err = readFile.Read(buf)
 				if nil != err {
-					logger.Printf("error reading the log file: %s\n", err.Error())
-					continue
+					if io.EOF != err {
+						logger.Printf("error reading the log file: %s\n", err.Error())
+					}
+					break Exit_Loop
 				}
 				if 0 == read {
 					continue
@@ -710,8 +722,13 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 
 			case err := <-watcher.Error:
 				logger.Printf("error scanning the logfile %s: %s", logFileName, err.Error())
+				break Exit_Loop
 			}
 		}
+
+		logger.Println("closing watcher and read file")
+		watcher.Close()
+		readFile.Close()
 
 		if nil != conn {
 			logger.Println("closing the connection on exit of the file read")
@@ -721,7 +738,10 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 
 	err = watcher.Watch(logFileName)
 	if err != nil {
-		logger.Fatal(err)
+		conn.Close()
+		logFile.Close()
+		readFile.Close()
+		return err
 	}
 
 	go func() {
@@ -758,6 +778,7 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 				break
 			}
 		}
+		logger.Println("closing logfile")
 		logFile.Close()
 	}()
 
