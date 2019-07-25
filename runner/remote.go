@@ -417,6 +417,7 @@ func processTCPConnectionData(conn *net.TCPConn, wpcli *WpCliProcess) {
 func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, rows uint16, cols uint16, offset int64) error {
 	logger.Printf("resuming %s - rows: %d, cols: %d, offset: %d\n", Guid, rows, cols, offset)
 
+	var err error
 	remoteAddress := conn.RemoteAddr().String()
 	connectionActive := true
 
@@ -426,14 +427,17 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, r
 	}
 	wpcli.BytesStreamed[remoteAddress] = offset
 
-	err := pty.Setsize(wpcli.Tty, &pty.Winsize{Rows: uint16(rows), Cols: uint16(cols)})
-	wpcli.padlock.Unlock()
-
-	if nil != err {
-		logger.Printf("error performing window resize: %s\n", err.Error())
-	} else {
-		logger.Printf("set new window size: %dx%d\n", rows, cols)
+	// Only set the window size if this client is the only one connected, otherwise the
+	// original window size is maintained for the other client that is connected.
+	if 1 == len(wpcli.BytesStreamed) {
+		err = pty.Setsize(wpcli.Tty, &pty.Winsize{Rows: uint16(rows), Cols: uint16(cols)})
+		if nil != err {
+			logger.Printf("error performing window resize: %s\n", err.Error())
+		} else {
+			logger.Printf("set new window size: %dx%d\n", rows, cols)
+		}
 	}
+	wpcli.padlock.Unlock()
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
