@@ -792,9 +792,9 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 
 	cmd.Process.Wait()
 
-	padlock.Lock()
+	wpcli.padlock.Lock()
 	wpcli.Running = false
-	padlock.Unlock()
+	wpcli.padlock.Unlock()
 
 	if nil != cmd.Process {
 		logger.Println("terminating the wp command")
