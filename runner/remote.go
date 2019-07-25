@@ -415,7 +415,7 @@ func processTCPConnectionData(conn *net.TCPConn, wpcli *WpCliProcess) {
 }
 
 func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, rows uint16, cols uint16, offset int64) error {
-	logger.Printf("resuming %s - rows: %d, cols: %d\n", Guid, rows, cols)
+	logger.Printf("resuming %s - rows: %d, cols: %d, offset: %d\n", Guid, rows, cols, offset)
 
 	remoteAddress := conn.RemoteAddr().String()
 	connectionActive := true
