@@ -462,10 +462,12 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, r
 				logger.Println("client connection is closed, exiting this catchup loop")
 				break Catchup_Loop
 			}
-			read, err = readFile.Read(buf)
 
+			read, err = readFile.Read(buf)
 			if nil != err {
-				logger.Printf("error reading file for the catchup stream: %s\n", err.Error())
+				if io.EOF != err {
+					logger.Printf("error reading file for the catchup stream: %s\n", err.Error())
+				}
 				break Catchup_Loop
 			}
 
