@@ -697,8 +697,9 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 				if nil != err {
 					if io.EOF != err {
 						logger.Printf("error reading the log file: %s\n", err.Error())
+						break Exit_Loop
 					}
-					break Exit_Loop
+					continue
 				}
 				if 0 == read {
 					continue
