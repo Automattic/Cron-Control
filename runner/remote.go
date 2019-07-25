@@ -784,10 +784,8 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 
 	go func() {
 		processTCPConnectionData(conn, wpcli)
-
 		conn.Close()
 		conn = nil
-		logger.Printf("%+v\n", wpcli)
 	}()
 
 	cmd.Process.Wait()
