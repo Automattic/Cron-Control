@@ -446,6 +446,15 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, r
 		return errors.New(fmt.Sprintf("error reattaching to the WP CLI process: %s\n", err.Error()))
 	}
 
+	err = watcher.Watch(wpcli.LogFileName)
+	if err != nil {
+		logger.Printf("error watching the logfile: %s", err.Error())
+		conn.Write([]byte("unable to open the remote process log"))
+		conn.Close()
+		watcher.Close()
+		return errors.New(fmt.Sprintf("error watching the logfile: %s\n", err.Error()))
+	}
+
 	go func() {
 		var written, read int
 		var buf []byte = make([]byte, 8192)
@@ -546,14 +555,6 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, r
 		logger.Println("closing connection at the end of the file read")
 		conn.Close()
 	}()
-
-	err = watcher.Watch(wpcli.LogFileName)
-	if err != nil {
-		logger.Printf("error watching the logfile: %s", err.Error())
-		conn.Write([]byte("unable to open the remote process log"))
-		conn.Close()
-		return errors.New(fmt.Sprintf("error watching the logfile: %s\n", err.Error()))
-	}
 
 	processTCPConnectionData(conn, wpcli)
 	conn.Close()
