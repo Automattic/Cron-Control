@@ -120,7 +120,7 @@ func authConn(conn *net.TCPConn) {
 			break
 		}
 
-		conn.SetReadDeadline(time.Now().Add(time.Duration(100 * time.Millisecond.Nanoseconds())))
+		conn.SetReadDeadline(time.Now().Add(time.Duration(200 * time.Millisecond.Nanoseconds())))
 	}
 	buf = nil
 
