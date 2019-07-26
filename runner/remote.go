@@ -804,8 +804,8 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 		if wpcli.BytesStreamed[remoteAddress] >= wpcli.BytesLogged || nil == conn {
 			break
 		}
+		logger.Printf("waiting for remaining bytes to be written to a client: at %d - have %d\n", wpcli.BytesStreamed[remoteAddress], wpcli.BytesLogged)
 		time.Sleep(time.Duration(500 * time.Millisecond.Nanoseconds()))
-		logger.Printf("waiting for remaining bytes to be written to a client: at %d - have %d\n", wpcli.BytesStreamed, wpcli.BytesLogged)
 	}
 
 	if nil != conn {
