@@ -512,18 +512,16 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, r
 
 	Watcher_Loop:
 		for {
-			if !connectionActive {
-				logger.Println("client connection is closed, exiting this watcher loop")
-				break Watcher_Loop
-			}
-			if !wpcli.Running {
-				logger.Println("WP CLI command finished, exiting this watcher loop")
-				break Watcher_Loop
-			}
-
 			select {
 			case <-ticker:
-				// We are just tick-tocking
+				if !connectionActive {
+					logger.Println("client connection is closed, exiting this watcher loop")
+					break Watcher_Loop
+				}
+				if !wpcli.Running && wpcli.BytesStreamed[remoteAddress] >= wpcli.BytesLogged {
+					logger.Println("WP CLI command finished and all data has been written, exiting this watcher loop")
+					break Watcher_Loop
+				}
 			case ev := <-watcher.Event:
 				if ev.IsDelete() {
 					break Watcher_Loop
@@ -678,13 +676,12 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 
 	Exit_Loop:
 		for {
-			if !wpcli.Running {
-				logger.Println("WP CLI command finished, exiting this watcher loop")
-				break Exit_Loop
-			}
 			select {
 			case <-ticker:
-				// We are just tick-tocking
+				if (!wpcli.Running && wpcli.BytesStreamed[remoteAddress] >= wpcli.BytesLogged) || nil == conn {
+					logger.Println("WP CLI command finished and all data has been written, exiting this watcher loop")
+					break Exit_Loop
+				}
 			case ev := <-watcher.Event:
 				if ev.IsDelete() {
 					break Exit_Loop
