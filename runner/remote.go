@@ -788,9 +788,12 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 		conn = nil
 	}()
 
-	cmd.Process.Wait()
+	state, err := cmd.Process.Wait()
+	if nil != err {
+		logger.Printf("error from the wp command: %s\n", err.Error())
+	}
 
-	if nil != cmd.Process {
+	if !state.Exited() {
 		logger.Println("terminating the wp command")
 		cmd.Process.Kill()
 	}
