@@ -508,7 +508,7 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, r
 		}
 
 		// Used to monitor when the connection is disconnected or the CLI command finishes
-		ticker := time.Tick(time.Duration(1 * time.Second.Nanoseconds()))
+		ticker := time.Tick(time.Duration(500 * time.Millisecond.Nanoseconds()))
 
 	Watcher_Loop:
 		for {
@@ -672,7 +672,7 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 		var buf []byte = make([]byte, 8192)
 
 		// Used to monitor when the connection is disconnected or the CLI command finishes
-		ticker := time.Tick(time.Duration(1 * time.Second.Nanoseconds()))
+		ticker := time.Tick(time.Duration(500 * time.Millisecond.Nanoseconds()))
 
 	Exit_Loop:
 		for {
@@ -802,8 +802,8 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 		if wpcli.BytesStreamed[remoteAddress] >= wpcli.BytesLogged || nil == conn {
 			break
 		}
-		logger.Printf("waiting for remaining bytes to be written to a client: at %d - have %d\n", wpcli.BytesStreamed[remoteAddress], wpcli.BytesLogged)
-		time.Sleep(time.Duration(500 * time.Millisecond.Nanoseconds()))
+		logger.Printf("waiting for remaining bytes to be sent to a client: at %d - have %d\n", wpcli.BytesStreamed[remoteAddress], wpcli.BytesLogged)
+		time.Sleep(time.Duration(200 * time.Millisecond.Nanoseconds()))
 	}
 
 	if nil != conn {
