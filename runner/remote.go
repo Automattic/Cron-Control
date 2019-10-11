@@ -727,11 +727,6 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 		logger.Println("closing watcher and read file")
 		watcher.Close()
 		readFile.Close()
-
-		if nil != conn {
-			logger.Println("closing the connection on exit of the file read")
-			conn.Close()
-		}
 	}()
 
 	err = watcher.Watch(logFileName)
