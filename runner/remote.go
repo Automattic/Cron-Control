@@ -771,8 +771,15 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 				break
 			}
 		}
-		logger.Println("closing logfile")
+		logger.Println("closing logfile and marking the WP-CLI as finished")
+		logFile.Sync()
 		logFile.Close()
+
+		time.Sleep(time.Duration(50 * time.Millisecond.Nanoseconds()))
+
+		wpcli.padlock.Lock()
+		wpcli.Running = false
+		wpcli.padlock.Unlock()
 	}()
 
 	go func() {
@@ -782,10 +789,6 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 	}()
 
 	cmd.Process.Wait()
-
-	wpcli.padlock.Lock()
-	wpcli.Running = false
-	wpcli.padlock.Unlock()
 
 	if nil != cmd.Process {
 		logger.Println("terminating the wp command")
