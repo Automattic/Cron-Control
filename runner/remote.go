@@ -556,7 +556,9 @@ func attachWpCliCmdRemote(conn *net.TCPConn, wpcli *WpCliProcess, Guid string, r
 		readFile.Close()
 
 		logger.Println("closing connection at the end of the file read")
-		conn.Close()
+		if connectionActive {
+			conn.Close()
+		}
 	}()
 
 	processTCPConnectionData(conn, wpcli)
