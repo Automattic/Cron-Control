@@ -108,7 +108,6 @@ func authConn(conn *net.TCPConn) {
 			return
 		}
 
-		logger.Printf("read %d\n", read)
 		if 0 != read {
 			if nil == data {
 				data = make([]byte, read)
@@ -157,7 +156,7 @@ func authConn(conn *net.TCPConn) {
 
 	if token != gRemoteToken {
 		conn.Write([]byte("invalid auth handshake"))
-		logger.Printf("error incorrect handshake string: %s\n", string(data[:size]))
+		logger.Printf("error incorrect handshake string")
 		conn.Close()
 		return
 	}
