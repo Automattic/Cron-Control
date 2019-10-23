@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/creack/pty"
@@ -798,6 +799,15 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 		logger.Println("terminating the wp command")
 		cmd.Process.Kill()
 	}
+
+	usage := state.SysUsage().(*syscall.Rusage)
+	logger.Printf("Guid %s : max rss: %0.0f KB : user time %d.%d sec : sys time %d.%d sec",
+		Guid,
+		float64(usage.Maxrss)/1024,
+		usage.Utime.Sec,
+		usage.Utime.Usec/1e3,
+		usage.Stime.Sec,
+		usage.Stime.Usec/1e3)
 
 	for {
 		if (!wpcli.Running && wpcli.BytesStreamed[remoteAddress] >= wpcli.BytesLogged) || nil == conn {
