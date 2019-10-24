@@ -432,6 +432,27 @@ func runWpCliCmd(subcommand []string) (string, error) {
 		return wpOutStr, err
 	}
 
+	usage := wpCli.ProcessState.SysUsage().(*syscall.Rusage)
+
+	if nil != usage {
+		job_info := ""
+		for _, s := range subcommand {
+			if 0 == strings.Index(s, "--action=") {
+				job_info += strings.Replace(s, "--action=", "action: ", 1) + " "
+			} else if 0 == strings.Index(s, "--url=") {
+				job_info += strings.Replace(s, "--url=", "url: ", 1) + " "
+			}
+		}
+		if "" != job_info {
+			logger.Printf(
+				"%s: max rss: %0.0f KB : user time %0.2f sec : sys time %0.2f sec",
+				job_info,
+				float64(usage.Maxrss)/1024,
+				float64(usage.Utime.Sec)+float64(usage.Utime.Usec)/1e6,
+				float64(usage.Stime.Sec)+float64(usage.Stime.Usec)/1e6)
+		}
+	}
+
 	return wpOutStr, nil
 }
 
@@ -495,7 +516,6 @@ func waitForEpoch(whom string, epoch_sec int64) {
 	for i := tDelta; time.Now().UnixNano() < tNextEpoch; i += tDelta {
 		if i > tEpochNano*2 {
 			// if we ever loop here for more than 2 full epochs, bail out
-			logger.Printf("Error in the epoch wait loop for %s\n", whom)
 			break
 		}
 		if gRestart {

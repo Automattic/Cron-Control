@@ -806,13 +806,11 @@ func runWpCliCmdRemote(conn *net.TCPConn, Guid string, rows uint16, cols uint16,
 	}
 
 	usage := state.SysUsage().(*syscall.Rusage)
-	logger.Printf("Guid %s : max rss: %0.0f KB : user time %d.%d sec : sys time %d.%d sec",
+	logger.Printf("Guid %s : max rss: %0.0f KB : user time %0.2f sec : sys time %0.2f sec",
 		Guid,
 		float64(usage.Maxrss)/1024,
-		usage.Utime.Sec,
-		usage.Utime.Usec/1e3,
-		usage.Stime.Sec,
-		usage.Stime.Usec/1e3)
+		float64(usage.Utime.Sec)+float64(usage.Utime.Usec)/1e6,
+		float64(usage.Stime.Sec)+float64(usage.Stime.Usec)/1e6)
 
 	for {
 		if (!wpcli.Running && wpcli.BytesStreamed[remoteAddress] >= wpcli.BytesLogged) || nil == conn {
