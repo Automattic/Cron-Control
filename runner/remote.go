@@ -333,6 +333,11 @@ func getCleanWpCliArgumentArray(wpCliCmdString string) ([]string, error) {
 		return make([]string, 0), errors.New(fmt.Sprintf("WP CLI command is invalid: %s\n", wpCliCmdString))
 	}
 
+	// Remove quotes from the args
+	for i := range cleanArgs {
+		cleanArgs[i] = strings.ReplaceAll(cleanArgs[i], "\"", "")
+	}
+
 	return cleanArgs, nil
 }
 
