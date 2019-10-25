@@ -50,7 +50,7 @@ var (
 
 	logger    *Logger
 	logDest   string
-	logFromat string
+	logFormat string
 	debug     bool
 
 	gRestart                bool
@@ -74,7 +74,7 @@ func init() {
 	flag.IntVar(&getEventsInterval, "get-events-interval", 60, "Seconds between event retrieval")
 	flag.Int64Var(&heartbeatInt, "heartbeat", 60, "Heartbeat interval in seconds")
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
-	flag.StringVar(&logFromat, "log-format", "JSON", "Log format, 'Text' or 'JSON'")
+	flag.StringVar(&logFormat, "log-format", "JSON", "Log format, 'Text' or 'JSON'")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
 	flag.StringVar(&gRemoteToken, "token", "", "Token to authenticate remote WP CLI requests")
 	flag.IntVar(&gGuidLength, "guid-len", 36, "Sets the Guid length in use for remote WP CLI requests")
@@ -459,7 +459,7 @@ func runWpCliCmd(subcommand []string) (string, error) {
 func setUpLogger() {
 	if "os.Stdout" == logDest {
 		logger = &Logger{FileName: "os.Stdout", Type: Text}
-	} else if "json" == strings.ToLower(logFromat) {
+	} else if "json" == strings.ToLower(logFormat) {
 		logger = &Logger{FileName: logDest, Type: JSON}
 	} else {
 		logger = &Logger{FileName: logDest, Type: Text}
