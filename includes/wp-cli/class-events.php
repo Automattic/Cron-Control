@@ -229,7 +229,7 @@ class Events extends \WP_CLI_Command {
 		$total_items = \Automattic\WP\Cron_Control\count_events_by_status( $event_status );
 		$total_pages = ceil( $total_items / $limit );
 
-		return compact( 'status', 'limit', 'page', 'offset', 'items', 'total_items', 'total_pages' );
+		return compact( 'limit', 'page', 'offset', 'items', 'total_items', 'total_pages' );
 	}
 
 	/**
