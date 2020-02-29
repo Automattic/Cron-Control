@@ -1,4 +1,7 @@
-sudo: false
+dist: xenial
+
+services:
+  - mysql
 
 language: php
 
