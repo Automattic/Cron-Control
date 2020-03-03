@@ -24,6 +24,13 @@ class Events extends \WP_CLI_Command {
 	public function list_events( $args, $assoc_args ) {
 		$events = $this->get_events( $args, $assoc_args );
 
+		// Show the event count and abort. Works with --status flag.
+		if ( isset( $assoc_args['format'] ) && 'count' === $assoc_args['format'] ) {
+			\WP_CLI::log( $events['total_items'] );
+
+			return;
+		}
+
 		// Prevent one from requesting a page that doesn't exist.
 		// Shouldn't error when first page is requested, though, as that is handled below and is an odd behaviour otherwise.
 		if ( $events['page'] > $events['total_pages'] && $events['page'] > 1 ) {
@@ -58,14 +65,15 @@ class Events extends \WP_CLI_Command {
 				\WP_CLI::log( sprintf( __( 'Displaying %1$s of %2$s entries, page %3$s of %4$s', 'automattic-cron-control' ), number_format_i18n( $total_events_to_display ), number_format_i18n( $events['total_items'] ), number_format_i18n( $events['page'] ), number_format_i18n( $events['total_pages'] ) ) );
 			}
 
-			// And reformat!
 			$format = 'table';
 			if ( isset( $assoc_args['format'] ) ) {
 				$format = $assoc_args['format'];
 			}
 
 			\WP_CLI\Utils\format_items(
-				$format, $events_for_display, array(
+				$format,
+				$events_for_display,
+				array(
 					'ID',
 					'action',
 					'instance',
@@ -141,7 +149,6 @@ class Events extends \WP_CLI_Command {
 		/* translators: 1: Event ID, 2: Event action, 3. Event instance */
 		\WP_CLI::log( sprintf( __( 'Found event %1$d with action `%2$s` and instance identifier `%3$s`', 'automattic-cron-control' ), $args[0], $event->action, $event->instance ) );
 
-		// Proceed?
 		$now = time();
 		if ( $event->timestamp > $now ) {
 			/* translators: 1: Time in UTC, 2: Human time diff */
@@ -216,7 +223,6 @@ class Events extends \WP_CLI_Command {
 
 		$offset = absint( ( $page - 1 ) * $limit );
 
-		// Query!
 		$items = \Automattic\WP\Cron_Control\get_events(
 			array(
 				'status'     => $event_status,
@@ -235,7 +241,7 @@ class Events extends \WP_CLI_Command {
 		$total_items = \Automattic\WP\Cron_Control\count_events_by_status( $event_status );
 		$total_pages = ceil( $total_items / $limit );
 
-		return compact( 'status', 'limit', 'page', 'offset', 'items', 'total_items', 'total_pages' );
+		return compact( 'limit', 'page', 'offset', 'items', 'total_items', 'total_pages' );
 	}
 
 	/**
@@ -522,7 +528,9 @@ class Events extends \WP_CLI_Command {
 			}
 
 			\WP_CLI\Utils\format_items(
-				'table', $events_to_delete, array(
+				'table',
+				$events_to_delete,
+				array(
 					'ID',
 					'created',
 					'last_modified',
@@ -593,7 +601,8 @@ class Events extends \WP_CLI_Command {
 			// Limit just to failed deletes when many events are removed.
 			if ( count( $events_deleted ) > $assoc_args['limit'] ) {
 				$events_deleted = array_filter(
-					$events_deleted, function( $event ) {
+					$events_deleted,
+					function( $event ) {
 						if ( 'no' === $event['deleted'] ) {
 							return $event;
 						} else {
@@ -612,7 +621,9 @@ class Events extends \WP_CLI_Command {
 			// Don't display a table if there's nothing to display.
 			if ( count( $events_deleted ) > 0 ) {
 				\WP_CLI\Utils\format_items(
-					'table', $events_deleted, array(
+					'table',
+					$events_deleted,
+					array(
 						'ID',
 						'deleted',
 					)
