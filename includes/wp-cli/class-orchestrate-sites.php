@@ -22,33 +22,31 @@ class Orchestrate_Sites extends \WP_CLI_Command {
 		], $assoc_args );
 
 		$this->heartbeat( $assoc_args[ 'heartbeat_interval' ] );
-
 		$hosts = $this->get_hosts();
 
 		// Use 2 hosts per site
 		$num_groups = count( $hosts ) / 2;
 		if ( $num_groups < 2 ) {
-			return $this->display_sites( 1, 0 );
+			// Every host runs every site
+			return $this->display_sites();
 		}
 
 		$id = array_search( gethostname(), $hosts );
-		$group = $id % $num_groups;
-		$this->display_sites( $num_groups, $group );
+		$this->display_sites( $num_groups, $id % $num_groups );
 	}
 
-	private function display_sites( $num_groups, $group ) {
+	private function display_sites( $num_groups = 1, $group = 0 ) {
 		$sites = get_sites( [ 'number' => 10000 ] );
-		if ( $num_groups > 1 ) {
-			$sites = array_filter( $sites, function( $id ) use ( $num_groups, $group ) {
-				return $id % $num_groups === $group;
-			}, ARRAY_FILTER_USE_KEY );
-		}
+
+		// Only return sites in our group
+		$sites = array_filter( $sites, function( $id ) use ( $num_groups, $group ) {
+			return $id % $num_groups === $group;
+		}, ARRAY_FILTER_USE_KEY );
 
 		$sites = array_map( function( $site ) {
 			$site->url = get_home_url( $site->blog_id );
 			return $site;
 		}, $sites );
-
 
 		$assoc_args = [
 			'fields' => 'url',
