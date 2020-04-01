@@ -273,7 +273,7 @@ func shouldGetSites(disabled int) bool {
 }
 
 func getMultisiteSites() ([]site, error) {
-	raw, err := runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
+	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "sites", "list"})
 	if err != nil {
 		return nil, err
 	}
