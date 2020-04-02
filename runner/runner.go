@@ -52,6 +52,8 @@ var (
 	logDest string
 	debug   bool
 
+	smartSiteList bool
+
 	gRestart                bool
 	gEventRetrieversRunning []bool
 	gEventWorkersRunning    []bool
@@ -72,6 +74,7 @@ func init() {
 	flag.Int64Var(&heartbeatInt, "heartbeat", 60, "Heartbeat interval in seconds")
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
+	flag.BoolVar(&smartSiteList, "smart-site-list", false, "Use the `wp cron-control orchestrate` command instead of `wp site list`")
 	flag.Parse()
 
 	setUpLogger()
@@ -273,7 +276,14 @@ func shouldGetSites(disabled int) bool {
 }
 
 func getMultisiteSites() ([]site, error) {
-	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "sites", "list"})
+	var raw string
+	var err error
+	if smartSiteList {
+		raw, err = runWpCliCmd([]string{"cron-control", "orchestrate", "sites", "list"})
+	} else {
+		raw, err = runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
+	}
+
 	if err != nil {
 		return nil, err
 	}
