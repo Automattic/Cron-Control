@@ -43,6 +43,7 @@ class Orchestrate_Sites extends \WP_CLI_Command {
 			return $id % $num_groups === $group;
 		}, ARRAY_FILTER_USE_KEY );
 
+		// Add the site URL to each site object
 		$sites = array_map( function( $site ) {
 			$site->url = get_home_url( $site->blog_id );
 			return $site;
