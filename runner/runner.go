@@ -53,6 +53,8 @@ var (
 	logFormat string
 	debug     bool
 
+	smartSiteList bool
+
 	gRestart                bool
 	gEventRetrieversRunning []bool
 	gEventWorkersRunning    []bool
@@ -76,6 +78,7 @@ func init() {
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
 	flag.StringVar(&logFormat, "log-format", "JSON", "Log format, 'Text' or 'JSON'")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
+	flag.BoolVar(&smartSiteList, "smart-site-list", false, "Use the `wp cron-control orchestrate` command instead of `wp site list`")
 	flag.StringVar(&gRemoteToken, "token", "", "Token to authenticate remote WP CLI requests")
 	flag.IntVar(&gGuidLength, "guid-len", 36, "Sets the Guid length in use for remote WP CLI requests")
 	flag.Parse()
@@ -295,7 +298,14 @@ func shouldGetSites(disabled int) bool {
 }
 
 func getMultisiteSites() ([]site, error) {
-	raw, err := runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
+	var raw string
+	var err error
+	if smartSiteList {
+		raw, err = runWpCliCmd([]string{"cron-control", "orchestrate", "sites", "list", fmt.Sprintf("--get-events-interval=%d", getEventsInterval)})
+	} else {
+		raw, err = runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
+	}
+
 	if err != nil {
 		return nil, err
 	}
