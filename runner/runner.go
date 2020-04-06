@@ -301,7 +301,7 @@ func getMultisiteSites() ([]site, error) {
 	var raw string
 	var err error
 	if smartSiteList {
-		raw, err = runWpCliCmd([]string{"cron-control", "orchestrate", "sites", "list"})
+		raw, err = runWpCliCmd([]string{"cron-control", "orchestrate", "sites", "list", fmt.Sprintf("--get-events-interval=%d", getEventsInterval)})
 	} else {
 		raw, err = runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
 	}
