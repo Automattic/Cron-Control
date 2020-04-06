@@ -16,12 +16,18 @@ namespace Automattic\WP\Cron_Control\CLI;
 class Orchestrate_Sites extends \WP_CLI_Command {
 	const RUNNER_HOST_HEARTBEAT_KEY = 'a8c_cron_control_host_heartbeats';
 
-	public function list( $assoc_args ) {
-		$assoc_args = wp_parse_args( [
-			'heartbeat_interval' => 60,
-		], $assoc_args );
+	/**
+	 * List sites
+	 *
+	 * [--get-events-interval=<duration>]
+	 * : The polling interval used by the runner to retrieve events and sites
+	 */
+	public function list( $args, $assoc_args ) {
+		$assoc_args = wp_parse_args( $assoc_args, [
+			'get-events-interval' => 60,
+		] );
 
-		$this->heartbeat( $assoc_args[ 'heartbeat_interval' ] );
+		$this->heartbeat( intval( $assoc_args[ 'get-events-interval' ] ) );
 		$hosts = $this->get_hosts();
 
 		// Use 2 hosts per site
