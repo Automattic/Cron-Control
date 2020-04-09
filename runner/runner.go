@@ -179,7 +179,7 @@ func heartbeat(sites chan<- site, queue chan<- event) {
 
 		if smartSiteList {
 			logger.Println("heartbeat")
-			runWpCliCmd([]string{"cron-control", "orchestrate", "sites", "heartbeat", fmt.Sprintf("--heartbeat-interval=%d", getEventsInterval)})
+			runWpCliCmd([]string{"cron-control", "orchestrate", "sites", "heartbeat", fmt.Sprintf("--heartbeat-interval=%d", heartbeatInt)})
 		}
 
 		successCount, errCount := atomic.LoadUint64(&eventRunSuccessCount), atomic.LoadUint64(&eventRunErrCount)
