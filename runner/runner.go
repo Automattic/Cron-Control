@@ -176,6 +176,12 @@ func heartbeat(sites chan<- site, queue chan<- event) {
 			logger.Println("exiting heartbeat routine")
 			break
 		}
+
+		if smartSiteList {
+			logger.Println("heartbeat")
+			runWpCliCmd([]string{"cron-control", "orchestrate", "sites", "heartbeat", fmt.Sprintf("--heartbeat-interval=%d", getEventsInterval)})
+		}
+
 		successCount, errCount := atomic.LoadUint64(&eventRunSuccessCount), atomic.LoadUint64(&eventRunErrCount)
 		atomic.SwapUint64(&eventRunSuccessCount, 0)
 		atomic.SwapUint64(&eventRunErrCount, 0)
@@ -301,7 +307,7 @@ func getMultisiteSites() ([]site, error) {
 	var raw string
 	var err error
 	if smartSiteList {
-		raw, err = runWpCliCmd([]string{"cron-control", "orchestrate", "sites", "list", fmt.Sprintf("--get-events-interval=%d", getEventsInterval)})
+		raw, err = runWpCliCmd([]string{"cron-control", "orchestrate", "sites", "list"})
 	} else {
 		raw, err = runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
 	}
