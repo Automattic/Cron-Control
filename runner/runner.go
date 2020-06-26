@@ -78,7 +78,7 @@ func init() {
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
 	flag.StringVar(&logFormat, "log-format", "JSON", "Log format, 'Text' or 'JSON'")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
-	flag.BoolVar(&smartSiteList, "smart-site-list", false, "Use the `wp cron-control orchestrate` command instead of `wp site list`")
+	flag.BoolVar(&smartSiteList, "smart-site-list", true, "Use the `wp cron-control orchestrate` command instead of `wp site list`")
 	flag.StringVar(&gRemoteToken, "token", "", "Token to authenticate remote WP CLI requests")
 	flag.IntVar(&gGuidLength, "guid-len", 36, "Sets the Guid length in use for remote WP CLI requests")
 	flag.Parse()
