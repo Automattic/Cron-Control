@@ -619,8 +619,8 @@ class Events_Store extends Singleton {
 	}
 
 	private function get_cached_job( $action, $instance ) {
-		$key = md5( $action + $instance );
-		return wp_cache_get( 'cron_control_job_' + $key );
+		$key = md5( $action . $instance );
+		return wp_cache_get( 'cron_control_job_' . $key );
 	}
 
 	private function cache_job( $action, $instance, $job ) {
@@ -628,12 +628,12 @@ class Events_Store extends Singleton {
 			return false;
 		}
 
-		$key = md5( $action + $instance );
-		return wp_cache_set( 'cron_control_job_' + $key, $job, null, JOB_QUEUE_WINDOW_IN_SECONDS );
+		$key = md5( $action . $instance );
+		return wp_cache_set( 'cron_control_job_' . $key, $job, null, JOB_QUEUE_WINDOW_IN_SECONDS );
 	}
 
 	private function clear_cached_job( $action, $instance ) {
-		$key = md5( $action + $instance );
+		$key = md5( $action . $instance );
 		return wp_cache_delete( $key );
 	}
 
