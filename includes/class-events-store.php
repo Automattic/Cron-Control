@@ -639,7 +639,7 @@ class Events_Store extends Singleton {
 
 	private function clear_cached_job( $action, $instance ) {
 		$key = md5( $action . $instance );
-		return wp_cache_delete( $key );
+		return wp_cache_delete( 'cron_control_job_' . $key );
 	}
 
 	/**
