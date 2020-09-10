@@ -60,7 +60,7 @@ class Internal_Events extends Singleton {
 	private function prepare_internal_events() {
 		$internal_events = array(
 			array(
-				'schedule' => 'a8c_cron_control_five_minute',
+				'schedule' => 'a8c_cron_control_minute',
 				'action'   => 'a8c_cron_control_force_publish_missed_schedules',
 				'callback' => array( $this, 'force_publish_missed_schedules' ),
 			),
@@ -106,9 +106,9 @@ class Internal_Events extends Singleton {
 	 */
 	private function prepare_internal_events_schedules() {
 		$internal_events_schedules = array(
-			'a8c_cron_control_five_minute'      => array(
-				'interval' => 5 * MINUTE_IN_SECONDS,
-				'display'  => __( 'Cron Control internal job - every 5 minutes', 'automattic-cron-control' ),
+			'a8c_cron_control_minute'      => array(
+				'interval' => 2 * MINUTE_IN_SECONDS,
+				'display'  => __( 'Cron Control internal job - every 2 minutes (used to be 1 minute)', 'automattic-cron-control' ),
 			),
 			'a8c_cron_control_ten_minutes' => array(
 				'interval' => 10 * MINUTE_IN_SECONDS,
