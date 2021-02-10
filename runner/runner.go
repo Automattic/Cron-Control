@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -47,6 +49,7 @@ var (
 	disabledLoopCount    uint64
 	eventRunErrCount     uint64
 	eventRunSuccessCount uint64
+	busyEventWorkers     int32
 
 	logger    *Logger
 	logDest   string
@@ -61,6 +64,7 @@ var (
 	gSiteRetrieverRunning   bool
 	gRandomDeltaMap         map[string]int64
 	gRemoteToken            string
+	gMetricsListenAddr      string
 	gGuidLength             int
 )
 
@@ -81,6 +85,7 @@ func init() {
 	flag.BoolVar(&smartSiteList, "smart-site-list", false, "Use the `wp cron-control orchestrate` command instead of `wp site list`")
 	flag.StringVar(&gRemoteToken, "token", "", "Token to authenticate remote WP CLI requests")
 	flag.IntVar(&gGuidLength, "guid-len", 36, "Sets the Guid length in use for remote WP CLI requests")
+	flag.StringVar(&gMetricsListenAddr, "metrics-listen-addr", "", "Listen address for prometheus metrics (e.g. :4444); if set, can scrape http://:4444/metrics.")
 	flag.Parse()
 
 	setUpLogger()
@@ -102,6 +107,16 @@ func main() {
 
 	gEventRetrieversRunning = make([]bool, numGetWorkers)
 	gEventWorkersRunning = make([]bool, numRunWorkers)
+
+	if gMetricsListenAddr != "" {
+		InitializeMetrics()
+		http.Handle("/metrics", promhttp.Handler())
+		go (func() {
+			logger.Printf("Listening for metrics on %q", gMetricsListenAddr)
+			err := http.ListenAndServe(gMetricsListenAddr, nil)
+			logger.Printf("Metrics server terminated: %v", err)
+		})()
+	}
 
 	go spawnEventRetrievers(sites, events)
 	go spawnEventWorkers(events)
@@ -144,11 +159,15 @@ func retrieveSitesPeriodically(sites chan<- site) {
 			logger.Println("exiting site retriever")
 			break
 		}
+		t0 := time.Now()
 		siteList, err := getSites()
+		duration := time.Since(t0)
 		if err != nil {
+			Metrics.RecordGetSites(false, duration)
 			continue
 		}
 
+		Metrics.RecordGetSites(true, duration)
 		for _, site := range siteList {
 			sites <- site
 		}
@@ -348,7 +367,9 @@ OuterLoop:
 			logger.Printf("getEvents-%d processing %s", workerID, site.URL)
 		}
 
+		t0 := time.Now()
 		events, err := getSiteEvents(site.URL)
+		Metrics.RecordGetSiteEvents(site.URL, err == nil, time.Since(t0), len(events))
 		if err == nil && len(events) > 0 {
 			for _, event := range events {
 				if gRestart {
@@ -391,20 +412,24 @@ func runEvents(workerID int, events <-chan event) {
 			logger.Printf("exiting event worker ID %d\n", workerID)
 			break
 		}
-		if now := time.Now(); event.Timestamp > int(now.Unix()) {
+		t0 := time.Now()
+		if event.Timestamp > int(t0.Unix()) {
 			if debug {
 				logger.Printf("runEvents-%d skipping premature job %d|%s|%s for %s", workerID, event.Timestamp, event.Action, event.Instance, event.URL)
 			}
-
+			Metrics.RecordRunEvent(event.URL, false, "premature", time.Since(t0))
 			continue
 		}
+
+		// this worker is now considered busy:
+		Metrics.RecordRunWorkerStats(atomic.AddInt32(&busyEventWorkers, 1), int32(numRunWorkers))
 
 		subcommand := []string{"cron-control", "orchestrate", "runner-only", "run", fmt.Sprintf("--timestamp=%d", event.Timestamp),
 			fmt.Sprintf("--action=%s", event.Action), fmt.Sprintf("--instance=%s", event.Instance), fmt.Sprintf("--url=%s", event.URL)}
 
 		_, err := runWpCliCmd(subcommand)
-
 		if err == nil {
+			Metrics.RecordRunEvent(event.URL, true, "ok", time.Since(t0))
 			if heartbeatInt > 0 {
 				atomic.AddUint64(&eventRunSuccessCount, 1)
 			}
@@ -412,11 +437,20 @@ func runEvents(workerID int, events <-chan event) {
 			if debug {
 				logger.Printf("runEvents-%d finished job %d|%s|%s for %s", workerID, event.Timestamp, event.Action, event.Instance, event.URL)
 			}
-		} else if heartbeatInt > 0 {
-			atomic.AddUint64(&eventRunErrCount, 1)
+		} else {
+			Metrics.RecordRunEvent(event.URL, false, "error", time.Since(t0))
+			if heartbeatInt > 0 {
+				atomic.AddUint64(&eventRunErrCount, 1)
+			}
 		}
 
 		waitForEpoch("runEvents", runEventsBreakSec)
+
+		// this worker is now considered "idle". we explicitly include the above waitForEpoch in the "busy" time
+		// even though it is wasted, since it is time this worker could not be doing something else.
+		// my gut feeling is that the above wait is not needed, but, alas, here we are.
+		Metrics.RecordRunWorkerStats(atomic.AddInt32(&busyEventWorkers, -1), int32(numRunWorkers))
+
 		if gRestart {
 			logger.Printf("exiting event worker ID %d\n", workerID)
 			break
@@ -439,18 +473,9 @@ func runWpCliCmd(subcommand []string) (string, error) {
 	wpOut, err := wpCli.CombinedOutput()
 	wpOutStr := string(wpOut)
 
-	if err != nil {
-		if debug {
-			logger.Printf("%s - %s", err, wpOutStr)
-			logger.Println(fmt.Sprintf("%+v", subcommand))
-		}
-
-		return wpOutStr, err
-	}
-
-	usage := wpCli.ProcessState.SysUsage().(*syscall.Rusage)
-
-	if nil != usage {
+	// always log stats, even in case of an error:
+	if stats, ok := wpCli.ProcessState.SysUsage().(*syscall.Rusage); ok && stats != nil {
+		Metrics.RecordWpCliUsage(err == nil, stats)
 		job_info := ""
 		for _, s := range subcommand {
 			if 0 == strings.Index(s, "--action=") {
@@ -463,11 +488,21 @@ func runWpCliCmd(subcommand []string) (string, error) {
 			logger.Printf(
 				"%s: max rss: %0.0f KB : user time %0.2f sec : sys time %0.2f sec",
 				job_info,
-				float64(usage.Maxrss)/1024,
-				float64(usage.Utime.Sec)+float64(usage.Utime.Usec)/1e6,
-				float64(usage.Stime.Sec)+float64(usage.Stime.Usec)/1e6)
+				float64(stats.Maxrss)/1024,
+				float64(stats.Utime.Sec)+float64(stats.Utime.Usec)/1e6,
+				float64(stats.Stime.Sec)+float64(stats.Stime.Usec)/1e6)
 		}
 	}
+
+	if err != nil {
+		if debug {
+			logger.Printf("%s - %s", err, wpOutStr)
+			logger.Println(fmt.Sprintf("%+v", subcommand))
+		}
+
+		return wpOutStr, err
+	}
+
 
 	return wpOutStr, nil
 }
