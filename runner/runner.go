@@ -57,6 +57,7 @@ var (
 	debug     bool
 
 	smartSiteList bool
+	useWebsockets bool
 
 	gRestart                bool
 	gEventRetrieversRunning []bool
@@ -83,6 +84,7 @@ func init() {
 	flag.StringVar(&logFormat, "log-format", "JSON", "Log format, 'Text' or 'JSON'")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
 	flag.BoolVar(&smartSiteList, "smart-site-list", false, "Use the `wp cron-control orchestrate` command instead of `wp site list`")
+	flag.BoolVar(&useWebsockets, "use-websockets", false, "Use the websocket listener instead of raw tcp")
 	flag.StringVar(&gRemoteToken, "token", "", "Token to authenticate remote WP CLI requests")
 	flag.IntVar(&gGuidLength, "guid-len", 36, "Sets the Guid length in use for remote WP CLI requests")
 	flag.StringVar(&gMetricsListenAddr, "metrics-listen-addr", "", "Listen address for prometheus metrics (e.g. :4444); if set, can scrape http://:4444/metrics.")
