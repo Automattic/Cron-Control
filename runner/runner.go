@@ -471,9 +471,19 @@ func runWpCliCmd(subcommand []string) (string, error) {
 		subcommand = append(subcommand, fmt.Sprintf("--network=%d", wpNetwork))
 	}
 
+	var stdout, stderr strings.Builder
 	wpCli := exec.Command(wpCliPath, subcommand...)
-	wpOut, err := wpCli.CombinedOutput()
-	wpOutStr := string(wpOut)
+	wpCli.Stdout = &stdout
+	wpCli.Stderr = &stderr
+	err := wpCli.Run()
+	wpOutStr := stdout.String()
+	if stderr.Len() > 0 {
+		stderrStr := strings.TrimSpace(stderr.String())
+		if len(stderrStr) > 0 {
+			logger.Printf("STDERR for command[%s]: %s", strings.Join(subcommand, " "), stderrStr)
+		}
+	}
+
 
 	// always log stats, even in case of an error:
 	if stats, ok := wpCli.ProcessState.SysUsage().(*syscall.Rusage); ok && stats != nil {
