@@ -15,6 +15,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+	
+	"github.com/yookoala/gofast"
 )
 
 type siteInfo struct {
@@ -55,6 +57,11 @@ var (
 	logDest   string
 	logFormat string
 	debug     bool
+	
+	fpm bool
+	fpmProtocol string
+	fpmAddress string
+	fpmPool *gofast.ClientPool
 
 	smartSiteList bool
 	useWebsockets bool
@@ -83,6 +90,9 @@ func init() {
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
 	flag.StringVar(&logFormat, "log-format", "JSON", "Log format, 'Text' or 'JSON'")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
+	flag.BoolVar(&fpm, "fpm", false, "Use FPM to run jobs")
+	flag.StringVar(&fpmProtocol, "fpm-protocol", "unix", "network protocol (tcp / tcp4 / tcp6) or if it is a unix socket, 'unix'")
+	flag.StringVar(&fpmAddress, "fpm-address", "/var/run/fastcgi.sock", "IP:port, or the socket path of the fastcgi process")
 	flag.BoolVar(&smartSiteList, "smart-site-list", false, "Use the `wp cron-control orchestrate` command instead of `wp site list`")
 	flag.BoolVar(&useWebsockets, "use-websockets", false, "Use the websocket listener instead of raw tcp")
 	flag.StringVar(&gRemoteToken, "token", "", "Token to authenticate remote WP CLI requests")
@@ -92,9 +102,13 @@ func init() {
 
 	setUpLogger()
 
-	// TODO: Should check for wp-config.php instead?
-	validatePath(&wpCliPath, "WP-CLI path")
-	validatePath(&wpPath, "WordPress path")
+	if !fpm {
+		// TODO: Should check for wp-config.php instead?
+		validatePath(&wpCliPath, "WP-CLI path")
+		validatePath(&wpPath, "WordPress path")
+	} else {
+		setUpFpmPool()
+	}
 
 	gRandomDeltaMap = make(map[string]int64)
 }
@@ -110,7 +124,7 @@ func main() {
 	gEventRetrieversRunning = make([]bool, numGetWorkers)
 	gEventWorkersRunning = make([]bool, numRunWorkers)
 
-	if gMetricsListenAddr != "" {
+	if !fpm && gMetricsListenAddr != "" {
 		InitializeMetrics()
 		http.Handle("/metrics", promhttp.Handler())
 		go (func() {
@@ -200,7 +214,7 @@ func heartbeat(sites chan<- site, queue chan<- event) {
 
 		if smartSiteList {
 			logger.Println("heartbeat")
-			runWpCliCmd([]string{"cron-control", "orchestrate", "sites", "heartbeat", fmt.Sprintf("--heartbeat-interval=%d", heartbeatInt)})
+			runWpCmd([]string{"cron-control", "orchestrate", "sites", "heartbeat", fmt.Sprintf("--heartbeat-interval=%d", heartbeatInt)})
 		}
 
 		successCount, errCount := atomic.LoadUint64(&eventRunSuccessCount), atomic.LoadUint64(&eventRunErrCount)
@@ -276,7 +290,7 @@ func getSites() ([]site, error) {
 }
 
 func getInstanceInfo() (siteInfo, error) {
-	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "runner-only", "get-info", "--format=json"})
+	raw, err := runWpCmd([]string{"cron-control", "orchestrate", "runner-only", "get-info", "--format=json"})
 	if err != nil {
 		return siteInfo{}, err
 	}
@@ -328,9 +342,9 @@ func getMultisiteSites() ([]site, error) {
 	var raw string
 	var err error
 	if smartSiteList {
-		raw, err = runWpCliCmd([]string{"cron-control", "orchestrate", "sites", "list"})
+		raw, err = runWpCmd([]string{"cron-control", "orchestrate", "sites", "list"})
 	} else {
-		raw, err = runWpCliCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
+		raw, err = runWpCmd([]string{"site", "list", "--fields=url", "--archived=false", "--deleted=false", "--spam=false", "--format=json"})
 	}
 
 	if err != nil {
@@ -388,7 +402,7 @@ OuterLoop:
 }
 
 func getSiteEvents(site string) ([]event, error) {
-	raw, err := runWpCliCmd([]string{"cron-control", "orchestrate", "runner-only", "list-due-batch", fmt.Sprintf("--url=%s", site), "--format=json"})
+	raw, err := runWpCmd([]string{"cron-control", "orchestrate", "runner-only", "list-due-batch", fmt.Sprintf("--url=%s", site), "--format=json"})
 	if err != nil {
 		return nil, err
 	}
@@ -429,7 +443,7 @@ func runEvents(workerID int, events <-chan event) {
 		subcommand := []string{"cron-control", "orchestrate", "runner-only", "run", fmt.Sprintf("--timestamp=%d", event.Timestamp),
 			fmt.Sprintf("--action=%s", event.Action), fmt.Sprintf("--instance=%s", event.Instance), fmt.Sprintf("--url=%s", event.URL)}
 
-		_, err := runWpCliCmd(subcommand)
+		_, err := runWpCmd(subcommand)
 		if err == nil {
 			Metrics.RecordRunEvent(event.URL, true, "ok", time.Since(t0))
 			if heartbeatInt > 0 {
@@ -462,6 +476,67 @@ func runEvents(workerID int, events <-chan event) {
 
 	// Mark this event worker as not running for graceful exit
 	gEventWorkersRunning[workerID-1] = false
+}
+
+func runWpCmd(subcommand []string) (string, error) {
+	if fpm {
+		return runWpFpmCmd(subcommand)
+	} else {
+		return runWpCliCmd(subcommand)
+	}
+}
+
+func runWpFpmCmd(subcommand []string) (string, error) {
+	fpmClient := getFpmClient()
+	
+	
+}
+
+func getFpmClient() (fpmClient *gofast.Client) {
+	fpmClient, err := fpmPool.CreateClient()
+	if fpmClient == nil {
+		logger.Printf("Unexpected result spawning FPM client: nil. Expected gofast.Client.\n")
+	}
+	if err != nil {
+		logger.Printf("Unexpected error spawning FPM client: %s\n", err.Error())
+	}
+	return fpmClient
+}
+
+func buildFpmRequest(r *http.Request) (request *gofast.Request) {
+	request = gofast.NewRequest(r)
+	request.Params["GATEWAY_INTERFACE"] = "FastCGI/1.0"
+	request.Params["REQUEST_METHOD"] = r.Method
+	request.Params["SCRIPT_FILENAME"] = "/var/www/fpm.php"
+	request.Params["CONTENT_TYPE"] = r.Header.Get("Content-Type")
+	request.Params["CONTENT_LENGTH"] = r.Header.Get("Content-Length")
+	
+	request.Params["SCRIPT_FILENAME"] = "/var/www/fpm.php"
+	request.Params["SERVER_PORT"] = serverPort
+	request.Params["SERVER_NAME"] = r.Host
+	request.Params["SERVER_PROTOCOL"] = r.Proto
+	request.Params["SERVER_SOFTWARE"] = "gofast"
+	request.Params["REDIRECT_STATUS"] = "200"
+	
+	request.Params["REQUEST_URI"] = r.RequestURI
+	request.Params["QUERY_STRING"] = r.URL.RawQuery
+	return
+}
+
+func buildFpmQuery(subcommand []string) string {
+	queryData := url.Values{}
+	for _, s := range subcommand {
+		kv := strings.Split(strings.TrimPrefix(s, "--"), "=")
+		k := kv[0]
+		v := "true"
+		if len(kv) == 2 {
+			v = kv[1]
+		} else if len(kv) > 2 {
+			fmt.Println("that doesn't look right")
+		}
+		queryData.Add(k, v)
+	}
+	return queryData.Encode()
 }
 
 func runWpCliCmd(subcommand []string) (string, error) {
@@ -528,6 +603,15 @@ func setUpLogger() {
 		logger = &Logger{FileName: logDest, Type: Text}
 	}
 	logger.Init()
+}
+
+func setUpFpmPool() {
+	connFactory := gofast.SimpleConnFactory(fpmProtocol, fpmAddress)
+	fpmPool = gofast.NewClientPool(
+		gofast.SimpleClientFactory(connFactory),
+		fpmPoolSize,
+		fpmClientExpire
+	)
 }
 
 func validatePath(path *string, label string) {
