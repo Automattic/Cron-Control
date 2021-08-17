@@ -16,7 +16,7 @@ import (
 	"syscall"
 	"time"
 	
-	"github.com/yookoala/gofast"
+	fcgiclient "github.com/tomasen/fcgi_client"
 )
 
 type siteInfo struct {
@@ -59,9 +59,7 @@ var (
 	debug     bool
 	
 	fpm bool
-	fpmProtocol string
-	fpmAddress string
-	fpmPool *gofast.ClientPool
+	fpmUrl *url.URL
 
 	smartSiteList bool
 	useWebsockets bool
@@ -91,8 +89,7 @@ func init() {
 	flag.StringVar(&logFormat, "log-format", "JSON", "Log format, 'Text' or 'JSON'")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
 	flag.BoolVar(&fpm, "fpm", false, "Use FPM to run jobs")
-	flag.StringVar(&fpmProtocol, "fpm-protocol", "unix", "network protocol (tcp / tcp4 / tcp6) or if it is a unix socket, 'unix'")
-	flag.StringVar(&fpmAddress, "fpm-address", "/var/run/fastcgi.sock", "IP:port, or the socket path of the fastcgi process")
+	flag.StringVar(&fpmUrl, "fpm-url", "unix:///var/run/fastcgi.sock", "Url for the php-fpm server or socket")
 	flag.BoolVar(&smartSiteList, "smart-site-list", false, "Use the `wp cron-control orchestrate` command instead of `wp site list`")
 	flag.BoolVar(&useWebsockets, "use-websockets", false, "Use the websocket listener instead of raw tcp")
 	flag.StringVar(&gRemoteToken, "token", "", "Token to authenticate remote WP CLI requests")
@@ -106,8 +103,6 @@ func init() {
 		// TODO: Should check for wp-config.php instead?
 		validatePath(&wpCliPath, "WP-CLI path")
 		validatePath(&wpPath, "WordPress path")
-	} else {
-		setUpFpmPool()
 	}
 
 	gRandomDeltaMap = make(map[string]int64)
@@ -124,7 +119,7 @@ func main() {
 	gEventRetrieversRunning = make([]bool, numGetWorkers)
 	gEventWorkersRunning = make([]bool, numRunWorkers)
 
-	if !fpm && gMetricsListenAddr != "" {
+	if gMetricsListenAddr != "" {
 		InitializeMetrics()
 		http.Handle("/metrics", promhttp.Handler())
 		go (func() {
@@ -487,40 +482,43 @@ func runWpCmd(subcommand []string) (string, error) {
 }
 
 func runWpFpmCmd(subcommand []string) (string, error) {
-	fpmClient := getFpmClient()
 	
+	path := fpmUrl.Path
+	host := fpmUrl.Host
 	
-}
-
-func getFpmClient() (fpmClient *gofast.Client) {
-	fpmClient, err := fpmPool.CreateClient()
-	if fpmClient == nil {
-		logger.Printf("Unexpected result spawning FPM client: nil. Expected gofast.Client.\n")
+	if path == "" || fpmUrl.Scheme == "unix" {
+		path = fpmUrl.Fragment
 	}
+	
+	if fpmUrl.Scheme == "unix" {
+		host = fpmUrl.Path
+	}
+	
+	fcgi, err := fcgiclient.Dial(fpmUrl.Scheme, host)
 	if err != nil {
-		logger.Printf("Unexpected error spawning FPM client: %s\n", err.Error())
+		log.Printf("fastcgi Dial failed: %s\n", err)
 	}
-	return fpmClient
+
+	resp, err := fcgi.PostForm(buildFpmEnv(), buildFpmQuery(subcommand))
+	if err != nil {
+		logger.Printf("Failed to POST to FPM: %s\n", err)
+	}
+
+	content, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logger.Printf("Could not read FPM response: %s\n", err)
+	}
+	logger.Printf("content: %s\n", string(content))
 }
 
-func buildFpmRequest(r *http.Request) (request *gofast.Request) {
-	request = gofast.NewRequest(r)
-	request.Params["GATEWAY_INTERFACE"] = "FastCGI/1.0"
-	request.Params["REQUEST_METHOD"] = r.Method
-	request.Params["SCRIPT_FILENAME"] = "/var/www/fpm.php"
-	request.Params["CONTENT_TYPE"] = r.Header.Get("Content-Type")
-	request.Params["CONTENT_LENGTH"] = r.Header.Get("Content-Length")
-	
-	request.Params["SCRIPT_FILENAME"] = "/var/www/fpm.php"
-	request.Params["SERVER_PORT"] = serverPort
-	request.Params["SERVER_NAME"] = r.Host
-	request.Params["SERVER_PROTOCOL"] = r.Proto
-	request.Params["SERVER_SOFTWARE"] = "gofast"
-	request.Params["REDIRECT_STATUS"] = "200"
-	
-	request.Params["REQUEST_URI"] = r.RequestURI
-	request.Params["QUERY_STRING"] = r.URL.RawQuery
-	return
+func buildFpmEnv() (map[string]string) {
+	env := make(map[string]string)
+	// Need to create this script for injection in wpvip-operator
+	env["SCRIPT_FILENAME"] = "/var/www/fpm.php"
+	env["GATEWAY_INTERFACE"] = "FastCGI/1.0"
+	env["REQUEST_METHOD"] = "POST"
+	env["CONTENT_TYPE"] = "application/x-www-form-urlencoded"
+	return env
 }
 
 func buildFpmQuery(subcommand []string) string {
@@ -603,15 +601,6 @@ func setUpLogger() {
 		logger = &Logger{FileName: logDest, Type: Text}
 	}
 	logger.Init()
-}
-
-func setUpFpmPool() {
-	connFactory := gofast.SimpleConnFactory(fpmProtocol, fpmAddress)
-	fpmPool = gofast.NewClientPool(
-		gofast.SimpleClientFactory(connFactory),
-		fpmPoolSize,
-		fpmClientExpire
-	)
 }
 
 func validatePath(path *string, label string) {
