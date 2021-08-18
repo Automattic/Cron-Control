@@ -513,8 +513,13 @@ func runWpFpmCmd(subcommand []string) (string, error) {
 
 func buildFpmEnv() (map[string]string) {
 	env := make(map[string]string)
-	// Need to create this script for injection in wpvip-operator
-	env["SCRIPT_FILENAME"] = "/var/www/fpm.php"
+	// Need to run the following in an init container:
+	// mkdir $WP_CLI_ROOT && \
+	// cp /usr/local/bin/wp /tmp/wp.phar && \
+	// phar extract -f /tmp/wp.phar $WP_CLI_ROOT
+	env["WP_CLI_ROOT"] = "/usr/local/wp-cli"
+	// This script needs to be injected into $WP_CLI_ROOT by wpvip-operator
+	env["SCRIPT_FILENAME"] = "/usr/local/wp-cli/fpm-cron-runner.php"
 	env["GATEWAY_INTERFACE"] = "FastCGI/1.0"
 	env["REQUEST_METHOD"] = "POST"
 	env["CONTENT_TYPE"] = "application/x-www-form-urlencoded"
@@ -524,15 +529,18 @@ func buildFpmEnv() (map[string]string) {
 func buildFpmQuery(subcommand []string) string {
 	queryData := url.Values{}
 	for _, s := range subcommand {
-		kv := strings.Split(strings.TrimPrefix(s, "--"), "=")
+		kv := strings.Split(s, "=")
 		k := kv[0]
-		v := "true"
-		if len(kv) == 2 {
-			v = kv[1]
+		v  := ""
+		if len(kv) == 1 && strings.HasPrefix(k, "--") {
+			queryData.Add(kv[0], "true")
+		} else if len(kv) == 1 {
+			queryData.Add("subcommands", kv[0])
+		} else if len(kv) == 2 {
+			queryData.Add(kv[0], kv[1])
 		} else if len(kv) > 2 {
 			fmt.Println("that doesn't look right")
 		}
-		queryData.Add(k, v)
 	}
 	return queryData.Encode()
 }
