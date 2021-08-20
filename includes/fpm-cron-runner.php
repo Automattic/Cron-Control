@@ -44,6 +44,7 @@ if ! in_array( $subcommand, $allowed_subcommands, true ) {
 	// phpcs:ignore
 	$_SERVER['argv'] = $cli_args;
 
+	define( 'WP_CLI_ROOT', 'phar:///usr/local/bin/wp.phar/vendor/wp-cli/wp-cli' );
 	define( 'STDIN', fopen( 'php://input', 'r' ) );
 	define( 'STDOUT', fopen( 'php://output', 'w' ) );
 	define( 'STDERR', fopen( 'php://output', 'w' ) );
