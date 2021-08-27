@@ -516,13 +516,15 @@ func runWpFpmCmd(subcommand []string) (string, error) {
 		return "", err
 	}
 	defer (func() { _ = resp.Body.Close() })()
-
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		logger.Printf("Could not read FPM response: %v", err)
 		return "", err
 	}
-	return string(content), nil
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("error from fcgi: http %s", resp.Status)
+	}
+	return string(content), err
 }
 
 func buildFpmEnv() map[string]string {
