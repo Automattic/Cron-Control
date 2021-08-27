@@ -496,6 +496,7 @@ func runWpFpmCmd(subcommand []string) (string, error) {
 	fcgi, err := fcgiclient.Dial(fpmUrl.Scheme, host)
 	if err != nil {
 		log.Printf("fastcgi Dial failed: %s\n", err)
+		return "", err
 	}
 	
 	defer fcgi.Close()
@@ -503,11 +504,13 @@ func runWpFpmCmd(subcommand []string) (string, error) {
 	resp, err := fcgi.PostForm(buildFpmEnv(), buildFpmQuery(subcommand))
 	if err != nil {
 		logger.Printf("Failed to POST to FPM: %s\n", err)
+		return "", err
 	}
 
 	content, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		logger.Printf("Could not read FPM response: %s\n", err)
+		return "", err
 	}
 	logger.Printf("content: %s\n", string(content))
 }
