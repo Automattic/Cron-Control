@@ -523,7 +523,7 @@ func buildFpmEnv() (map[string]string) {
 	// phar extract -f /tmp/wp.phar $WP_CLI_ROOT
 	env["WP_CLI_ROOT"] = "/usr/local/wp-cli"
 	// This script needs to be injected into $WP_CLI_ROOT by wpvip-operator
-	env["SCRIPT_FILENAME"] = "/var/www/wp-content/mu-plugins/cron-control/includes/fpm-cron-runner.php"
+	env["SCRIPT_FILENAME"] = "/var/www/fpm-cron-runner.php"
 	env["GATEWAY_INTERFACE"] = "FastCGI/1.0"
 	env["REQUEST_METHOD"] = "POST"
 	env["CONTENT_TYPE"] = "application/x-www-form-urlencoded"
