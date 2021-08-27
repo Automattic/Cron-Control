@@ -5,8 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -15,7 +17,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
-	
+
 	fcgiclient "github.com/tomasen/fcgi_client"
 )
 
@@ -57,8 +59,7 @@ var (
 	logDest   string
 	logFormat string
 	debug     bool
-	
-	fpm bool
+
 	fpmUrl *url.URL
 
 	smartSiteList bool
@@ -78,6 +79,7 @@ const getEventsBreakSec time.Duration = 1 * time.Second
 const runEventsBreakSec int64 = 10
 
 func init() {
+	fpmUrlStr := ""
 	flag.StringVar(&wpCliPath, "cli", "/usr/local/bin/wp", "Path to WP-CLI binary")
 	flag.IntVar(&wpNetwork, "network", 0, "WordPress network ID, `0` to disable")
 	flag.StringVar(&wpPath, "wp", "/var/www/html", "Path to WordPress installation")
@@ -88,7 +90,7 @@ func init() {
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
 	flag.StringVar(&logFormat, "log-format", "JSON", "Log format, 'Text' or 'JSON'")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
-	flag.StringVar(&fpmUrl, "fpm-url", "", "Url for the php-fpm server or socket (e.g. unix:///var/run/fastcgi.sock)")
+	flag.StringVar(&fpmUrlStr, "fpm-url", fpmUrlStr, "Url for the php-fpm server or socket (e.g. unix:///var/run/fastcgi.sock)")
 	flag.BoolVar(&smartSiteList, "smart-site-list", false, "Use the `wp cron-control orchestrate` command instead of `wp site list`")
 	flag.BoolVar(&useWebsockets, "use-websockets", false, "Use the websocket listener instead of raw tcp")
 	flag.StringVar(&gRemoteToken, "token", "", "Token to authenticate remote WP CLI requests")
@@ -98,10 +100,17 @@ func init() {
 
 	setUpLogger()
 
-	if fpmUrl != "" {
-		// TODO: Should check for wp-config.php instead?
-		validatePath(&wpCliPath, "WP-CLI path")
-		validatePath(&wpPath, "WordPress path")
+	// NEED to do this regardless of fpm because remote.go still will invoke wp-cli directly!
+	validatePath(&wpCliPath, "WP-CLI path")
+	validatePath(&wpPath, "WordPress path")
+
+	if fpmUrlStr != "" {
+		var err error
+		fpmUrl, err = url.Parse(fpmUrlStr)
+		if err != nil || fpmUrl == nil {
+			logger.Printf("error parsing FPM url %q: %v", fpmUrlStr, err)
+			panic(err)
+		}
 	}
 
 	gRandomDeltaMap = make(map[string]int64)
@@ -473,7 +482,7 @@ func runEvents(workerID int, events <-chan event) {
 }
 
 func runWpCmd(subcommand []string) (string, error) {
-	if fpmUrl != "" {
+	if fpmUrl != nil {
 		return runWpFpmCmd(subcommand)
 	} else {
 		return runWpCliCmd(subcommand)
@@ -481,41 +490,42 @@ func runWpCmd(subcommand []string) (string, error) {
 }
 
 func runWpFpmCmd(subcommand []string) (string, error) {
-	
+
 	path := fpmUrl.Path
 	host := fpmUrl.Host
-	
+
 	if path == "" || fpmUrl.Scheme == "unix" {
 		path = fpmUrl.Fragment
 	}
-	
+
 	if fpmUrl.Scheme == "unix" {
 		host = fpmUrl.Path
 	}
-	
+
 	fcgi, err := fcgiclient.Dial(fpmUrl.Scheme, host)
 	if err != nil {
-		log.Printf("fastcgi Dial failed: %s\n", err)
+		logger.Printf("fastcgi Dial failed: %v", err)
 		return "", err
 	}
-	
+
 	defer fcgi.Close()
 
 	resp, err := fcgi.PostForm(buildFpmEnv(), buildFpmQuery(subcommand))
 	if err != nil {
-		logger.Printf("Failed to POST to FPM: %s\n", err)
+		logger.Printf("Failed to POST to FPM: %v", err)
 		return "", err
 	}
+	defer (func() { _ = resp.Body.Close() })()
 
-	content, err = ioutil.ReadAll(resp.Body)
+	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logger.Printf("Could not read FPM response: %s\n", err)
+		logger.Printf("Could not read FPM response: %v", err)
 		return "", err
 	}
-	logger.Printf("content: %s\n", string(content))
+	return string(content), nil
 }
 
-func buildFpmEnv() (map[string]string) {
+func buildFpmEnv() map[string]string {
 	env := make(map[string]string)
 	// Need to run the following in an init container:
 	// mkdir $WP_CLI_ROOT && \
@@ -530,23 +540,19 @@ func buildFpmEnv() (map[string]string) {
 	return env
 }
 
-func buildFpmQuery(subcommand []string) string {
+func buildFpmQuery(subcommand []string) url.Values {
 	queryData := url.Values{}
 	for _, s := range subcommand {
-		kv := strings.Split(s, "=")
-		k := kv[0]
-		v  := ""
-		if len(kv) == 1 && strings.HasPrefix(k, "--") {
+		kv := strings.SplitN(s, "=", 2)
+		if len(kv) == 1 && strings.HasPrefix(kv[0], "--") {
 			queryData.Add(kv[0], "true")
 		} else if len(kv) == 1 {
 			queryData.Add("subcommands", kv[0])
 		} else if len(kv) == 2 {
 			queryData.Add(kv[0], kv[1])
-		} else if len(kv) > 2 {
-			fmt.Println("that doesn't look right")
 		}
 	}
-	return queryData.Encode()
+	return queryData
 }
 
 func runWpCliCmd(subcommand []string) (string, error) {
@@ -568,7 +574,6 @@ func runWpCliCmd(subcommand []string) (string, error) {
 			logger.Printf("STDERR for command[%s]: %s", strings.Join(subcommand, " "), stderrStr)
 		}
 	}
-
 
 	// always log stats, even in case of an error:
 	if stats, ok := wpCli.ProcessState.SysUsage().(*syscall.Rusage); ok && stats != nil {
@@ -599,7 +604,6 @@ func runWpCliCmd(subcommand []string) (string, error) {
 
 		return wpOutStr, err
 	}
-
 
 	return wpOutStr, nil
 }
