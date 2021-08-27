@@ -88,8 +88,7 @@ func init() {
 	flag.StringVar(&logDest, "log", "os.Stdout", "Log path, omit to log to Stdout")
 	flag.StringVar(&logFormat, "log-format", "JSON", "Log format, 'Text' or 'JSON'")
 	flag.BoolVar(&debug, "debug", false, "Include additional log data for debugging")
-	flag.BoolVar(&fpm, "fpm", false, "Use FPM to run jobs")
-	flag.StringVar(&fpmUrl, "fpm-url", "unix:///var/run/fastcgi.sock", "Url for the php-fpm server or socket")
+	flag.StringVar(&fpmUrl, "fpm-url", "", "Url for the php-fpm server or socket (e.g. unix:///var/run/fastcgi.sock)")
 	flag.BoolVar(&smartSiteList, "smart-site-list", false, "Use the `wp cron-control orchestrate` command instead of `wp site list`")
 	flag.BoolVar(&useWebsockets, "use-websockets", false, "Use the websocket listener instead of raw tcp")
 	flag.StringVar(&gRemoteToken, "token", "", "Token to authenticate remote WP CLI requests")
@@ -99,7 +98,7 @@ func init() {
 
 	setUpLogger()
 
-	if !fpm {
+	if fpmUrl != "" {
 		// TODO: Should check for wp-config.php instead?
 		validatePath(&wpCliPath, "WP-CLI path")
 		validatePath(&wpPath, "WordPress path")
@@ -474,7 +473,7 @@ func runEvents(workerID int, events <-chan event) {
 }
 
 func runWpCmd(subcommand []string) (string, error) {
-	if fpm {
+	if fpmUrl != "" {
 		return runWpFpmCmd(subcommand)
 	} else {
 		return runWpCliCmd(subcommand)
@@ -498,6 +497,8 @@ func runWpFpmCmd(subcommand []string) (string, error) {
 	if err != nil {
 		log.Printf("fastcgi Dial failed: %s\n", err)
 	}
+	
+	defer fcgi.Close()
 
 	resp, err := fcgi.PostForm(buildFpmEnv(), buildFpmQuery(subcommand))
 	if err != nil {
