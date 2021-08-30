@@ -536,6 +536,9 @@ func runWpFpmCmd(subcommand []string) (string, error) {
 		logger.Printf("Could not read FPM response: %v", err)
 		return "", err
 	}
+	if debug {
+		logger.Printf("FPM http response: %d [%s]: %s", resp.StatusCode, resp.Status, string(content))
+	}
 	if resp.StatusCode != 200 {
 		err = fmt.Errorf("error from fcgi: http %s", resp.Status)
 	}
