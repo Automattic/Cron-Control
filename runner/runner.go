@@ -489,6 +489,16 @@ func runWpCmd(subcommand []string) (string, error) {
 	}
 }
 
+func fpmEnv() map[string]string {
+	return map[string]string{
+		"WP_CLI_ROOT":       "/usr/local/wp-cli",
+		"SCRIPT_FILENAME":   "/var/wpvip/fpm-cron-runner.php",
+		"GATEWAY_INTERFACE": "FastCGI/1.0",
+		"REQUEST_METHOD":    "POST",
+		"CONTENT_TYPE":      "application/x-www-form-urlencoded",
+	}
+}
+
 func runWpFpmCmd(subcommand []string) (string, error) {
 
 	path := fpmUrl.Path
@@ -510,7 +520,12 @@ func runWpFpmCmd(subcommand []string) (string, error) {
 
 	defer fcgi.Close()
 
-	resp, err := fcgi.PostForm(buildFpmEnv(), buildFpmQuery(subcommand))
+	args, err := buildFpmQuery(subcommand)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := fcgi.PostForm(fpmEnv(), args)
 	if err != nil {
 		logger.Printf("Failed to POST to FPM: %v", err)
 		return "", err
@@ -527,34 +542,14 @@ func runWpFpmCmd(subcommand []string) (string, error) {
 	return string(content), err
 }
 
-func buildFpmEnv() map[string]string {
-	env := make(map[string]string)
-	// Need to run the following in an init container:
-	// mkdir $WP_CLI_ROOT && \
-	// cp /usr/local/bin/wp /tmp/wp.phar && \
-	// phar extract -f /tmp/wp.phar $WP_CLI_ROOT
-	env["WP_CLI_ROOT"] = "/usr/local/wp-cli"
-	// This script needs to be injected into $WP_CLI_ROOT by wpvip-operator
-	env["SCRIPT_FILENAME"] = "/var/wpvip/fpm-cron-runner.php"
-	env["GATEWAY_INTERFACE"] = "FastCGI/1.0"
-	env["REQUEST_METHOD"] = "POST"
-	env["CONTENT_TYPE"] = "application/x-www-form-urlencoded"
-	return env
-}
-
-func buildFpmQuery(subcommand []string) url.Values {
-	queryData := url.Values{}
-	for _, s := range subcommand {
-		kv := strings.SplitN(s, "=", 2)
-		if len(kv) == 1 && strings.HasPrefix(kv[0], "--") {
-			queryData.Add(kv[0], "true")
-		} else if len(kv) == 1 {
-			queryData.Add("subcommands", kv[0])
-		} else if len(kv) == 2 {
-			queryData.Add(kv[0], kv[1])
-		}
+func buildFpmQuery(subcommand []string) (url.Values, error) {
+	jsonBytes, err := json.Marshal(subcommand)
+	if err != nil {
+		return nil, err
 	}
-	return queryData
+	return url.Values{
+		"payload": []string{string(jsonBytes)},
+	}, nil
 }
 
 func runWpCliCmd(subcommand []string) (string, error) {
