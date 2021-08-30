@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -482,6 +481,11 @@ func runEvents(workerID int, events <-chan event) {
 }
 
 func runWpCmd(subcommand []string) (string, error) {
+	// `--quiet`` included to prevent WP-CLI commands from generating invalid JSON
+	subcommand = append(subcommand, "--allow-root", "--quiet", fmt.Sprintf("--path=%s", wpPath))
+	if wpNetwork > 0 {
+		subcommand = append(subcommand, fmt.Sprintf("--network=%d", wpNetwork))
+	}
 	if fpmUrl != nil {
 		return runWpFpmCmd(subcommand)
 	} else {
@@ -531,18 +535,23 @@ func runWpFpmCmd(subcommand []string) (string, error) {
 		return "", err
 	}
 	defer (func() { _ = resp.Body.Close() })()
-	content, err := ioutil.ReadAll(resp.Body)
+	var res struct {
+		Buf string `json:"buf"`
+		Stdout  string `json:"stdout"`
+		Stderr string `json:"stderr"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&res)
 	if err != nil {
-		logger.Printf("Could not read FPM response: %v", err)
+		logger.Printf("Could not decode FPM response: %v", err)
 		return "", err
 	}
 	if debug {
-		logger.Printf("FPM http response: %d [%s]: %s", resp.StatusCode, resp.Status, string(content))
+		logger.Printf("FPM http response: %d [%s]: %+v", resp.StatusCode, resp.Status, res)
 	}
 	if resp.StatusCode != 200 {
 		err = fmt.Errorf("error from fcgi: http %s", resp.Status)
 	}
-	return string(content), err
+	return res.Buf, err
 }
 
 func buildFpmQuery(subcommand []string) (url.Values, error) {
@@ -556,12 +565,6 @@ func buildFpmQuery(subcommand []string) (url.Values, error) {
 }
 
 func runWpCliCmd(subcommand []string) (string, error) {
-	// `--quiet`` included to prevent WP-CLI commands from generating invalid JSON
-	subcommand = append(subcommand, "--allow-root", "--quiet", fmt.Sprintf("--path=%s", wpPath))
-	if wpNetwork > 0 {
-		subcommand = append(subcommand, fmt.Sprintf("--network=%d", wpNetwork))
-	}
-
 	var stdout, stderr strings.Builder
 	wpCli := exec.Command(wpCliPath, subcommand...)
 	wpCli.Stdout = &stdout
