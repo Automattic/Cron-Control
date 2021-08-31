@@ -487,7 +487,7 @@ func runWpCmd(subcommand []string) (string, error) {
 		subcommand = append(subcommand, fmt.Sprintf("--network=%d", wpNetwork))
 	}
 	if fpmUrl != nil {
-		return runWpFpmCmd(subcommand)
+		return runWpFpmCmdWithMetrics(subcommand)
 	} else {
 		return runWpCliCmd(subcommand)
 	}
@@ -503,7 +503,15 @@ func fpmEnv() map[string]string {
 	}
 }
 
-func runWpFpmCmd(subcommand []string) (string, error) {
+func runWpFpmCmdWithMetrics(subcommand []string) (string, error) {
+	t0 := time.Now()
+	res, err := runWpFpmCmdSafe(subcommand)
+	elapsed := time.Since(t0)
+	Metrics.RecordFpmTiming(elapsed, err != nil)
+	return res, err
+}
+
+func runWpFpmCmdSafe(subcommand []string) (string, error) {
 
 	path := fpmUrl.Path
 	host := fpmUrl.Host
@@ -537,8 +545,8 @@ func runWpFpmCmd(subcommand []string) (string, error) {
 	defer (func() { _ = resp.Body.Close() })()
 
 	var res struct {
-		Buf string `json:"buf"`
-		Stdout  string `json:"stdout"`
+		Buf    string `json:"buf"`
+		Stdout string `json:"stdout"`
 		Stderr string `json:"stderr"`
 	}
 	err = json.NewDecoder(resp.Body).Decode(&res)
