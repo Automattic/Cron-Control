@@ -37,6 +37,10 @@ type event struct {
 	Instance  string
 }
 
+func (e event) String() string {
+	return fmt.Sprintf("event(url=%q, ts=%d, action=%q, instance=%q)", e.URL, e.Timestamp, e.Action, e.Instance)
+}
+
 var (
 	wpCliPath string
 	wpNetwork int
@@ -67,7 +71,6 @@ var (
 	gRestart                bool
 	gEventRetrieversRunning []bool
 	gEventWorkersRunning    []bool
-	gSiteRetrieverRunning   bool
 	gRandomDeltaMap         map[string]int64
 	gRemoteToken            string
 	gMetricsListenAddr      string
@@ -110,6 +113,7 @@ func init() {
 			logger.Printf("error parsing FPM url %q: %v", fpmUrlStr, err)
 			panic(err)
 		}
+		logger.Printf("Using FPM runtime at %q", fpmUrlStr)
 	}
 
 	gRandomDeltaMap = make(map[string]int64)
@@ -136,8 +140,12 @@ func main() {
 		})()
 	}
 
-	go spawnEventRetrievers(sites, events)
-	go spawnEventWorkers(events)
+	for w := 1; w <= numGetWorkers; w++ {
+		go queueSiteEvents(w, sites, events)
+	}
+	for w := 1; w <= numRunWorkers; w++ {
+		go runEvents(w, events)
+	}
 	go retrieveSitesPeriodically(sites)
 
 	// Only listen for connections from remote WP CLI commands is we have a token set
@@ -148,38 +156,18 @@ func main() {
 	heartbeat(sites, events)
 }
 
-func spawnEventRetrievers(sites <-chan site, queue chan<- event) {
-	for w := 1; w <= numGetWorkers; w++ {
-		go queueSiteEvents(w, sites, queue)
-	}
-}
-
-func spawnEventWorkers(queue <-chan event) {
-	workerEvents := make(chan event)
-
-	for w := 1; w <= numRunWorkers; w++ {
-		go runEvents(w, workerEvents)
-	}
-
-	for event := range queue {
-		workerEvents <- event
-	}
-
-	close(workerEvents)
-}
-
 func retrieveSitesPeriodically(sites chan<- site) {
-	gSiteRetrieverRunning = true
-
 	for {
-		waitForEpoch("retrieveSitesPeriodically", int64(getEventsInterval))
+		waitForEpoch("siteRetriever", "retrieveSitesPeriodically", int64(getEventsInterval))
 		if gRestart {
-			logger.Println("exiting site retriever")
+			logger.Println("siteRetriever: exiting")
 			break
 		}
 		t0 := time.Now()
+		logger.Printf("siteRetriever: listing sites...")
 		siteList, err := getSites()
 		duration := time.Since(t0)
+		logger.Printf("siteRetriever: listed %d sites in %v, err=%v", len(siteList), duration, err)
 		if err != nil {
 			Metrics.RecordGetSites(false, duration)
 			continue
@@ -190,15 +178,13 @@ func retrieveSitesPeriodically(sites chan<- site) {
 			sites <- site
 		}
 	}
-
-	gSiteRetrieverRunning = false
 }
 
 func heartbeat(sites chan<- site, queue chan<- event) {
 	if heartbeatInt == 0 {
-		logger.Println("heartbeat disabled")
+		logger.Println("heartbeater: heartbeat disabled")
 		for {
-			waitForEpoch("heartbeat", 60)
+			waitForEpoch("heartbeater", "heartbeat", 60)
 			if gRestart {
 				logger.Println("exiting heartbeat routine")
 				break
@@ -208,21 +194,21 @@ func heartbeat(sites chan<- site, queue chan<- event) {
 	}
 
 	for {
-		waitForEpoch("heartbeat", heartbeatInt)
+		waitForEpoch("heartbeat", "heartbeat", heartbeatInt)
 		if gRestart {
-			logger.Println("exiting heartbeat routine")
+			logger.Println("heartbeater: exiting heartbeat routine")
 			break
 		}
 
 		if smartSiteList {
-			logger.Println("heartbeat")
+			logger.Println("heartbeater: heartbeat")
 			runWpCmd([]string{"cron-control", "orchestrate", "sites", "heartbeat", fmt.Sprintf("--heartbeat-interval=%d", heartbeatInt)})
 		}
 
 		successCount, errCount := atomic.LoadUint64(&eventRunSuccessCount), atomic.LoadUint64(&eventRunErrCount)
 		atomic.SwapUint64(&eventRunSuccessCount, 0)
 		atomic.SwapUint64(&eventRunErrCount, 0)
-		logger.Printf("eventsSucceededSinceLast=%d eventsErroredSinceLast=%d", successCount, errCount)
+		logger.Printf("heartbeater: eventsSucceededSinceLast=%d eventsErroredSinceLast=%d", successCount, errCount)
 	}
 
 	var StillRunning bool
@@ -231,32 +217,29 @@ func heartbeat(sites chan<- site, queue chan<- event) {
 		StillRunning = false
 		for workerID, r := range gEventRetrieversRunning {
 			if r {
-				logger.Printf("event retriever ID %d still running\n", workerID+1)
-				logger.Printf("sending empty site object for worker %d\n", workerID+1)
+				logger.Printf("heartbeater (shutdown): event retriever ID %d still running\n", workerID+1)
+				logger.Printf("heartbeater (shutdown):sending empty site object for worker %d\n", workerID+1)
 				sites <- site{}
 				StillRunning = true
 			}
 		}
 		for workerID, r := range gEventWorkersRunning {
 			if r {
-				logger.Printf("event worker ID %d still running\n", workerID+1)
-				logger.Printf("sending empty event for worker %d\n", workerID+1)
+				logger.Printf("heartbeater (shutdown):event worker ID %d still running\n", workerID+1)
+				logger.Printf("heartbeater (shutdown):sending empty event for worker %d\n", workerID+1)
 				queue <- event{}
 				StillRunning = true
 			}
 		}
 
-		if 1 == len(gGUIDttys) {
-			logger.Println("there is still 1 remote WP-CLI command running")
-			StillRunning = true
-		} else if 0 < len(gGUIDttys) {
-			logger.Printf("there are still %d remote WP-CLI commands running\n", len(gGUIDttys))
+		if 0 < len(gGUIDttys) {
+			logger.Printf("heartbeater (shutdown): there are still %d remote WP-CLI commands running\n", len(gGUIDttys))
 			StillRunning = true
 		}
 
 		if StillRunning && 0 < maxWaitCount {
 			logger.Println("worker(s) still running, waiting")
-			time.Sleep(time.Duration(3) * time.Second)
+			time.Sleep(1 * time.Second)
 			maxWaitCount--
 			continue
 		}
@@ -373,34 +356,33 @@ func getMultisiteSites() ([]site, error) {
 
 func queueSiteEvents(workerID int, sites <-chan site, queue chan<- event) {
 	gEventRetrieversRunning[workerID-1] = true
-	logger.Printf("started retriever %d\n", workerID)
+	logger.Printf("getEvents-%d: started retrieving events", workerID)
 
-OuterLoop:
+	defer (func() {
+		logger.Printf("getEvents-%d: deferred exit", workerID)
+		gEventRetrieversRunning[workerID-1] = false
+	})()
+
 	for site := range sites {
 		if gRestart {
-			logger.Printf("exiting event retriever ID %d\n", workerID)
-			break
+			return
 		}
-		if debug {
-			logger.Printf("getEvents-%d processing %s", workerID, site.URL)
-		}
+		logger.Printf("getEvents-%d: retrieving events for site %s", workerID, site.URL)
 
 		t0 := time.Now()
 		events, err := getSiteEvents(site.URL)
 		Metrics.RecordGetSiteEvents(site.URL, err == nil, time.Since(t0), len(events))
+		logger.Printf("getEvents-%d: got %d events for site %s; err=%v", workerID, len(events), site.URL, err)
 		if err == nil && len(events) > 0 {
 			for _, event := range events {
-				if gRestart {
-					break OuterLoop
-				}
 				event.URL = site.URL
+				logger.Printf("getEvents-%d: enqueueing event %v", workerID, event)
 				queue <- event
 			}
 		}
 		time.Sleep(getEventsBreakSec)
 	}
-	// Mark this event retriever as not running for graceful exit
-	gEventRetrieversRunning[workerID-1] = false
+
 }
 
 func getSiteEvents(site string) ([]event, error) {
@@ -423,17 +405,17 @@ func getSiteEvents(site string) ([]event, error) {
 
 func runEvents(workerID int, events <-chan event) {
 	gEventWorkersRunning[workerID-1] = true
-	logger.Printf("started event worker %d\n", workerID)
+	logger.Printf("runEvents-%d: started", workerID)
 
 	for event := range events {
 		if gRestart {
-			logger.Printf("exiting event worker ID %d\n", workerID)
+			logger.Printf("runEvents-%d: exiting", workerID)
 			break
 		}
 		t0 := time.Now()
 		if event.Timestamp > int(t0.Unix()) {
 			if debug {
-				logger.Printf("runEvents-%d skipping premature job %d|%s|%s for %s", workerID, event.Timestamp, event.Action, event.Instance, event.URL)
+				logger.Printf("runEvents-%d: skipping premature job %v", workerID, event)
 			}
 			Metrics.RecordRunEvent(event.URL, false, "premature", time.Since(t0))
 			continue
@@ -446,23 +428,21 @@ func runEvents(workerID int, events <-chan event) {
 			fmt.Sprintf("--action=%s", event.Action), fmt.Sprintf("--instance=%s", event.Instance), fmt.Sprintf("--url=%s", event.URL)}
 
 		_, err := runWpCmd(subcommand)
+		duration := time.Since(t0)
+		logger.Printf("runEvents-%d: finished job %v after %v; err=%v", workerID, event, duration, err)
 		if err == nil {
-			Metrics.RecordRunEvent(event.URL, true, "ok", time.Since(t0))
+			Metrics.RecordRunEvent(event.URL, true, "ok", duration)
 			if heartbeatInt > 0 {
 				atomic.AddUint64(&eventRunSuccessCount, 1)
 			}
-
-			if debug {
-				logger.Printf("runEvents-%d finished job %d|%s|%s for %s", workerID, event.Timestamp, event.Action, event.Instance, event.URL)
-			}
 		} else {
-			Metrics.RecordRunEvent(event.URL, false, "error", time.Since(t0))
+			Metrics.RecordRunEvent(event.URL, false, "error", duration)
 			if heartbeatInt > 0 {
 				atomic.AddUint64(&eventRunErrCount, 1)
 			}
 		}
 
-		waitForEpoch("runEvents", runEventsBreakSec)
+		waitForEpoch(fmt.Sprintf("runEvents-%d", workerID), "runEvents", runEventsBreakSec)
 
 		// this worker is now considered "idle". we explicitly include the above waitForEpoch in the "busy" time
 		// even though it is wasted, since it is time this worker could not be doing something else.
@@ -470,7 +450,7 @@ func runEvents(workerID int, events <-chan event) {
 		Metrics.RecordRunWorkerStats(atomic.AddInt32(&busyEventWorkers, -1), int32(numRunWorkers))
 
 		if gRestart {
-			logger.Printf("exiting event worker ID %d\n", workerID)
+			logger.Printf("runEvents-%d: exiting", workerID)
 			break
 		}
 
@@ -656,7 +636,7 @@ func usage() {
 	os.Exit(3)
 }
 
-func waitForEpoch(whom string, epoch_sec int64) {
+func waitForEpoch(waiter, whom string, epoch_sec int64) {
 	tEpochNano := epoch_sec * time.Second.Nanoseconds()
 	tEpochDelta := tEpochNano - (time.Now().UnixNano() % tEpochNano)
 	if tEpochDelta < 1*time.Second.Nanoseconds() {
@@ -672,6 +652,10 @@ func waitForEpoch(whom string, epoch_sec int64) {
 	}
 
 	tNextEpoch := time.Now().UnixNano() + tEpochDelta + gRandomDeltaMap[whom]
+
+	if totalWait := time.Unix(0, tNextEpoch).Sub(time.Now()); totalWait > 1 * time.Second {
+		logger.Printf("%s: LONG wait (%v) for epoch %q", waiter, totalWait, whom)
+	}
 
 	// Sleep in 3sec intervals by default, less if we are running out of time
 	tMaxDelta := 3 * time.Second.Nanoseconds()
