@@ -122,7 +122,7 @@ func init() {
 }
 
 func main() {
-	logger.Printf("Starting with %d event-retreival worker(s) and %d event worker(s)", numGetWorkers, numRunWorkers)
+	logger.Printf("Starting with %d event-retrieval worker(s) and %d event worker(s)", numGetWorkers, numRunWorkers)
 	logger.Printf("Retrieving events every %d seconds", getEventsInterval)
 	go setupSignalHandler()
 
@@ -196,7 +196,7 @@ func heartbeat(sites chan<- site, queue chan<- event) {
 	}
 
 	for {
-		waitForEpoch("heartbeat", "heartbeat", heartbeatInt)
+		waitForEpoch("heartbeater", "heartbeat", heartbeatInt)
 		if gRestart {
 			logger.Println("heartbeater: exiting heartbeat routine")
 			break
@@ -519,6 +519,7 @@ func runWpFpmCmdSafe(subcommand []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer (func(){ _ = fpmClient.Close() })()
 
 	args, err := buildFpmQuery(subcommand)
 	if err != nil {
