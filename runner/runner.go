@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -17,7 +18,7 @@ import (
 	"syscall"
 	"time"
 
-	fcgiclient "github.com/tomasen/fcgi_client"
+	"github.com/yookoala/gofast"
 )
 
 type siteInfo struct {
@@ -63,7 +64,7 @@ var (
 	logFormat string
 	debug     bool
 
-	fpmUrl *url.URL
+	fpm gofast.ClientFactory
 
 	smartSiteList bool
 	useWebsockets bool
@@ -108,19 +109,20 @@ func init() {
 
 	if fpmUrlStr != "" {
 		var err error
-		fpmUrl, err = url.Parse(fpmUrlStr)
-		if err != nil || fpmUrl == nil {
+		fpmUrl, err := url.Parse(fpmUrlStr)
+		if err != nil || fpmUrl == nil || fpmUrl.Scheme != "unix" || fpmUrl.Path == "" {
 			logger.Printf("error parsing FPM url %q: %v", fpmUrlStr, err)
 			panic(err)
 		}
 		logger.Printf("Using FPM runtime at %q", fpmUrlStr)
+		fpm = gofast.SimpleClientFactory(gofast.SimpleConnFactory(fpmUrl.Scheme, fpmUrl.Path))
 	}
 
 	gRandomDeltaMap = make(map[string]int64)
 }
 
 func main() {
-	logger.Printf("Starting with %d event-retreival worker(s) and %d event worker(s)", numGetWorkers, numRunWorkers)
+	logger.Printf("Starting with %d event-retrieval worker(s) and %d event worker(s)", numGetWorkers, numRunWorkers)
 	logger.Printf("Retrieving events every %d seconds", getEventsInterval)
 	go setupSignalHandler()
 
@@ -194,7 +196,7 @@ func heartbeat(sites chan<- site, queue chan<- event) {
 	}
 
 	for {
-		waitForEpoch("heartbeat", "heartbeat", heartbeatInt)
+		waitForEpoch("heartbeater", "heartbeat", heartbeatInt)
 		if gRestart {
 			logger.Println("heartbeater: exiting heartbeat routine")
 			break
@@ -466,20 +468,19 @@ func runWpCmd(subcommand []string) (string, error) {
 	if wpNetwork > 0 {
 		subcommand = append(subcommand, fmt.Sprintf("--network=%d", wpNetwork))
 	}
-	if fpmUrl != nil {
+	if fpm != nil {
 		return runWpFpmCmdWithMetrics(subcommand)
 	} else {
 		return runWpCliCmd(subcommand)
 	}
 }
 
-func fpmEnv() map[string]string {
+func fpmEnv(args url.Values) map[string]string {
 	return map[string]string{
-		"WP_CLI_ROOT":       "/usr/local/wp-cli",
+		"REQUEST_METHOD":    "GET",
 		"SCRIPT_FILENAME":   "/var/wpvip/fpm-cron-runner.php",
 		"GATEWAY_INTERFACE": "FastCGI/1.0",
-		"REQUEST_METHOD":    "POST",
-		"CONTENT_TYPE":      "application/x-www-form-urlencoded",
+		"QUERY_STRING":      args.Encode(),
 	}
 }
 
@@ -491,55 +492,77 @@ func runWpFpmCmdWithMetrics(subcommand []string) (string, error) {
 	return res, err
 }
 
+type fakeHttpResponseWriter struct {
+	Dest       io.Writer
+	LastStatus int
+	Headers    http.Header
+}
+
+func (f *fakeHttpResponseWriter) Header() http.Header {
+	if f.Headers == nil {
+		f.Headers = http.Header{}
+	}
+	return f.Headers
+}
+
+func (f *fakeHttpResponseWriter) Write(bytes []byte) (int, error) {
+	return f.Dest.Write(bytes)
+}
+
+func (f *fakeHttpResponseWriter) WriteHeader(statusCode int) {
+	f.LastStatus = statusCode
+}
+
 func runWpFpmCmdSafe(subcommand []string) (string, error) {
 
-	path := fpmUrl.Path
-	host := fpmUrl.Host
-
-	if path == "" || fpmUrl.Scheme == "unix" {
-		path = fpmUrl.Fragment
-	}
-
-	if fpmUrl.Scheme == "unix" {
-		host = fpmUrl.Path
-	}
-
-	fcgi, err := fcgiclient.Dial(fpmUrl.Scheme, host)
+	fpmClient, err := fpm()
 	if err != nil {
-		logger.Printf("fastcgi Dial failed: %v", err)
 		return "", err
 	}
-
-	defer fcgi.Close()
+	defer (func(){ _ = fpmClient.Close() })()
 
 	args, err := buildFpmQuery(subcommand)
 	if err != nil {
 		return "", err
 	}
 
-	resp, err := fcgi.PostForm(fpmEnv(), args)
+	fcgiReq := gofast.NewRequest(nil)
+	fcgiReq.Params = fpmEnv(args)
+
+	fcgiResp, err := fpmClient.Do(fcgiReq)
 	if err != nil {
-		logger.Printf("Failed to POST to FPM: %v", err)
 		return "", err
 	}
-	defer (func() { _ = resp.Body.Close() })()
+	defer fcgiResp.Close()
+
+	stdErr := &strings.Builder{}
+	stdOut := &strings.Builder{}
+	hrw := &fakeHttpResponseWriter{Dest: stdOut}
+
+	if err = fcgiResp.WriteTo(hrw, stdErr); err != nil {
+		return "", err
+	}
+
+	if hrw.LastStatus != http.StatusOK {
+		return "", fmt.Errorf("fpm error: lastStatus=%d, headers=%v, stdout=%q, stderr=%q", hrw.LastStatus, hrw.Headers, stdOut.String(), stdErr.String())
+	}
 
 	var res struct {
 		Buf    string `json:"buf"`
 		Stdout string `json:"stdout"`
 		Stderr string `json:"stderr"`
 	}
-	err = json.NewDecoder(resp.Body).Decode(&res)
+
+	err = json.Unmarshal([]byte(stdOut.String()), &res)
+
 	if debug {
-		logger.Printf("FPM http response: %d [%s] headers=%v: %+v err=%v", resp.StatusCode, resp.Status, resp.Header, res, err)
+		logger.Printf("fpm result: lastStatus=%d, headers=%v, stdout=%q, stderr=%q, res=%+v, err=%v", hrw.LastStatus, hrw.Headers, stdOut.String(), stdErr.String(), res, err)
 	}
+
 	if err != nil {
-		logger.Printf("Could not decode FPM response: %v", err)
-		return "", err
+		return "", fmt.Errorf("fpm error: could not decode json response from %q: err=%v", stdOut.String(), err)
 	}
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("error from fcgi: http %s", resp.Status)
-	}
+
 	return res.Buf, err
 }
 
@@ -653,7 +676,7 @@ func waitForEpoch(waiter, whom string, epoch_sec int64) {
 
 	tNextEpoch := time.Now().UnixNano() + tEpochDelta + gRandomDeltaMap[whom]
 
-	if totalWait := time.Unix(0, tNextEpoch).Sub(time.Now()); totalWait > 1 * time.Second {
+	if totalWait := time.Unix(0, tNextEpoch).Sub(time.Now()); totalWait > 1*time.Second {
 		logger.Printf("%s: LONG wait (%v) for epoch %q", waiter, totalWait, whom)
 	}
 
