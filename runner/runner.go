@@ -513,6 +513,10 @@ func (f *fakeHttpResponseWriter) WriteHeader(statusCode int) {
 	f.LastStatus = statusCode
 }
 
+type SiteUrl struct {
+	Url string `json:"url"`
+}
+
 func runWpFpmCmdSafe(subcommand []string) (string, error) {
 
 	fpmClient, err := fpm()
@@ -553,10 +557,24 @@ func runWpFpmCmdSafe(subcommand []string) (string, error) {
 		Stderr string `json:"stderr"`
 	}
 
-	err = json.Unmarshal([]byte(stdOut.String()), &res)
+	stdOutStr := stdOut.String()
+	err = json.Unmarshal([]byte(stdOutStr), &res)
 
 	if debug {
-		logger.Printf("fpm result: lastStatus=%d, headers=%v, stdout=%q, stderr=%q, res=%+v, err=%v", hrw.LastStatus, hrw.Headers, stdOut.String(), stdErr.String(), res, err)
+		logger.Printf("fpm result: lastStatus=%d, headers=%v, stdout=%q, stderr=%q, res=%+v, err=%v", hrw.LastStatus, hrw.Headers, stdOutStr, stdErr.String(), res, err)
+	}
+
+	if err != nil {
+		if idx := strings.Index(stdOutStr, `[{"url":`); idx >= 0 {
+			var urls []SiteUrl
+			// if a site manages to escape the output buffering, this will try to find the output anyways...
+			err = json.NewDecoder(strings.NewReader(stdOutStr[idx:])).Decode(&urls)
+			if err == nil {
+				var buf []byte
+				buf, err = json.Marshal(&urls)
+				res.Buf = string(buf)
+			}
+		}
 	}
 
 	if err != nil {
