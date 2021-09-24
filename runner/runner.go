@@ -547,8 +547,9 @@ func runWpFpmCmdSafe(subcommand []string) (string, error) {
 		return "", err
 	}
 
+	stdOutStr := stdOut.String()
 	if hrw.LastStatus != http.StatusOK {
-		return "", fmt.Errorf("fpm error: lastStatus=%d, headers=%v, stdout=%q, stderr=%q", hrw.LastStatus, hrw.Headers, stdOut.String(), stdErr.String())
+		return "", fmt.Errorf("fpm error: lastStatus=%d, headers=%v, stdout=%q, stderr=%q", hrw.LastStatus, hrw.Headers, stdOutStr, stdErr.String())
 	}
 
 	var res struct {
@@ -557,7 +558,6 @@ func runWpFpmCmdSafe(subcommand []string) (string, error) {
 		Stderr string `json:"stderr"`
 	}
 
-	stdOutStr := stdOut.String()
 	err = json.Unmarshal([]byte(stdOutStr), &res)
 
 	if debug {
@@ -578,7 +578,7 @@ func runWpFpmCmdSafe(subcommand []string) (string, error) {
 	}
 
 	if err != nil {
-		return "", fmt.Errorf("fpm error: could not decode json response from %q: err=%v", stdOut.String(), err)
+		return "", fmt.Errorf("fpm error: could not decode json response from %q: err=%v", stdOutStr, err)
 	}
 
 	return res.Buf, err
