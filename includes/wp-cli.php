@@ -64,7 +64,7 @@ function stop_the_insanity() {
 	$wp_object_cache->memcache_debug = array();
 	$wp_object_cache->cache          = array();
 
-	if ( is_callable( $wp_object_cache, '__remoteset' ) ) {
+	if ( method_exists( $wp_object_cache, '__remoteset' ) ) {
 		$wp_object_cache->__remoteset();
 	}
 }
