@@ -30,7 +30,7 @@ class Orchestrate_Runner extends \WP_CLI_Command {
 			\WP_CLI::error( __( 'Automatic event execution is disabled', 'automattic-cron-control' ) );
 		}
 
-		// Control how many events are fetched
+		// Control how many events are fetched. Note that internal events can exceed this cap.
 		$queue_size = \WP_CLI\Utils\get_flag_value( $assoc_args, 'queue-size', null );
 		if ( ! is_numeric( $queue_size ) ) {
 			$queue_size = null;

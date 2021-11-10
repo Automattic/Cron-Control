@@ -91,7 +91,7 @@ class Events extends Singleton {
 	/**
 	 * List events pending for the current period
 	 *
-	 * @param array $job_queue_size   Maximum number of events to return.
+	 * @param array $job_queue_size   Maximum number of events to return (excludes internal events).
 	 * @param array $job_queue_window How many seconds into the future events should be fetched.
 	 * @return array
 	 */
@@ -188,7 +188,7 @@ class Events extends Singleton {
 	}
 
 	/**
-	 * Trim events queue down to the limit set by JOB_QUEUE_SIZE
+	 * Trim events queue down to a specific limit.
 	 *
 	 * @param array $events         List of events to be run in the current period.
 	 * @param array $max_queue_size Maximum number of events to return.
