@@ -76,7 +76,7 @@ class Main extends Singleton {
 			if ( defined( $constant ) ) {
 				if ( constant( $constant ) !== $expected_value ) {
 					/* translators: 1: Plugin name, 2: Constant name */
-					error_log( sprintf( __( '%1$s: %2$s set to unexpected value; must be corrected for proper behaviour.', 'automattic-cron-control' ), 'Cron Control', $constant ) );
+					trigger_error( sprintf( __( '%1$s: %2$s set to unexpected value; must be corrected for proper behaviour.', 'automattic-cron-control' ), 'Cron Control', $constant ), E_USER_WARNING );
 				}
 			} else {
 				define( $constant, $expected_value );
