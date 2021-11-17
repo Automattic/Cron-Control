@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cron Control 2.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/Cron-Control\n"
-"POT-Creation-Date: 2021-11-17 13:35:45+00:00\n"
+"POT-Creation-Date: 2021-11-17 19:45:06+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -90,11 +90,11 @@ msgstr ""
 msgid "Automatic event execution is disabled until %1$s UTC (%2$d)."
 msgstr ""
 
-#: includes/class-rest-api.php:135
+#: includes/class-rest-api.php:137
 msgid "Cron Control REST API endpoints are disabled"
 msgstr ""
 
-#: includes/class-rest-api.php:146
+#: includes/class-rest-api.php:150
 msgid "Secret must be specified with all requests"
 msgstr ""
 
