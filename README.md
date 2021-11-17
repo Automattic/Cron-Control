@@ -1,12 +1,12 @@
 # Cron Control #
-**Contributors:** automattic, ethitter
-**Tags:** cron, cron control, concurrency, parallel, async
-**Requires at least:** 4.4
-**Tested up to:** 5.0
-**Requires PHP:** 7.0
-**Stable tag:** 2.0
-**License:** GPLv2 or later
-**License URI:** http://www.gnu.org/licenses/gpl-2.0.html
+**Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [ethitter](https://profiles.wordpress.org/ethitter/)  
+**Tags:** cron, cron control, concurrency, parallel, async  
+**Requires at least:** 4.4  
+**Tested up to:** 5.0  
+**Requires PHP:** 7.0  
+**Stable tag:** 2.0  
+**License:** GPLv2 or later  
+**License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
 
 Execute WordPress cron events in parallel, with custom event storage for high-volume cron.
 
@@ -18,7 +18,7 @@ Using REST API endpoints (requires WordPress 4.4+), or a Golang daemon, an event
 
 ## Installation ##
 
-1. Define `WP_CRON_CONTROL_SECRET` in `wp-config.php`, set to `false` to disable the REST API interface.
+1. Define `WP_CRON_CONTROL_SECRET` in `wp-config.php`
 1. Upload the `cron-control` directory to the `/wp-content/mu-plugins/` directory
 1. Create a file at `/wp-content/mu-plugins/cron-control.php` to load `/wp-content/mu-plugins/cron-control/cron-control.php`
 
