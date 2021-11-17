@@ -6,7 +6,7 @@ GOOS       ?= linux
 GOARCH     ?= amd64
 
 all:
-	docker run --rm -v "$(CURDIR)/..:/workspace" -w "/workspace/runner" \
+	docker run --rm -v "$(CURDIR)/..:/workspace" -w "/workspace/runner" -it \
 		-e "GOOS=$(GOOS)" -e "GOARCH=$(GOARCH)" -e "CGO_ENABLED=0" \
 		"$(GO_IMAGE)" \
 		go build -o "../bin/$(EXECUTABLE)" ./...
