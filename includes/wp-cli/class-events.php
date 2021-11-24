@@ -342,13 +342,13 @@ class Events extends \WP_CLI_Command {
 
 		// array of time period chunks
 		$chunks = array(
-			array( 60 * 60 * 24 * 365 , \_n_noop( '%s year', '%s years' ) ),
-			array( 60 * 60 * 24 * 30 , \_n_noop( '%s month', '%s months' ) ),
-			array( 60 * 60 * 24 * 7, \_n_noop( '%s week', '%s weeks' ) ),
-			array( 60 * 60 * 24 , \_n_noop( '%s day', '%s days' ) ),
-			array( 60 * 60 , \_n_noop( '%s hour', '%s hours' ) ),
-			array( 60 , \_n_noop( '%s minute', '%s minutes' ) ),
-			array(  1 , \_n_noop( '%s second', '%s seconds' ) ),
+			array( 60 * 60 * 24 * 365 , \_n_noop( '%s year', '%s years', 'automattic-cron-control' ) ),
+			array( 60 * 60 * 24 * 30 , \_n_noop( '%s month', '%s months', 'automattic-cron-control' ) ),
+			array( 60 * 60 * 24 * 7, \_n_noop( '%s week', '%s weeks', 'automattic-cron-control' ) ),
+			array( 60 * 60 * 24 , \_n_noop( '%s day', '%s days', 'automattic-cron-control' ) ),
+			array( 60 * 60 , \_n_noop( '%s hour', '%s hours', 'automattic-cron-control' ) ),
+			array( 60 , \_n_noop( '%s minute', '%s minutes', 'automattic-cron-control' ) ),
+			array(  1 , \_n_noop( '%s second', '%s seconds', 'automattic-cron-control' ) ),
 		);
 
 		// we only want to output two chunks of time here, eg:
@@ -368,7 +368,7 @@ class Events extends \WP_CLI_Command {
 		}
 
 		// set output var
-		$output = sprintf( \_n( $name[0], $name[1], $count ), $count );
+		$output = sprintf( \_n( $name[0], $name[1], $count, 'automattic-cron-control' ), $count );
 
 		// step two: the second chunk
 		if ( $i + 1 < $j ) {
@@ -377,7 +377,7 @@ class Events extends \WP_CLI_Command {
 
 			if ( ( $count2 = floor( ( $since - ( $seconds * $count ) ) / $seconds2 ) ) != 0 ) {
 				// add to output var
-				$output .= ' ' . sprintf( \_n( $name2[0], $name2[1], $count2 ), $count2 );
+				$output .= ' ' . sprintf( \_n( $name2[0], $name2[1], $count2, 'automattic-cron-control' ), $count2 );
 			}
 		}
 
