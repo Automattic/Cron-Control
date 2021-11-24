@@ -1,12 +1,6 @@
 <?php
 /**
  * Test the Event's class.
- *
- * @package a8c_Cron_Control
- * @phpcs:disable Squiz.Commenting.ClassComment.Missing
- * @phpcs:disable Squiz.Commenting.VariableComment.Missing
- * @phpcs:disable Squiz.Commenting.FunctionComment.Missing
- * @phpcs:disable WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
  */
 
 namespace Automattic\WP\Cron_Control\Tests;
