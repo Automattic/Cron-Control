@@ -27,11 +27,8 @@ class Events_Store extends Singleton {
 	const STATUS_PENDING   = 'pending';
 	const STATUS_RUNNING   = 'running';
 	const STATUS_COMPLETED = 'complete';
-	const ALLOWED_STATUSES = array(
-		self::STATUS_PENDING,
-		self::STATUS_RUNNING,
-		self::STATUS_COMPLETED,
-	);
+	const ACTIVE_STATUSES  = [ self::STATUS_PENDING, self::STATUS_RUNNING ];
+	const ALLOWED_STATUSES = [ self::STATUS_PENDING, self::STATUS_RUNNING, self::STATUS_COMPLETED ];
 
 	const CACHE_KEY = 'a8c_cron_ctrl_option';
 
@@ -881,6 +878,315 @@ class Events_Store extends Singleton {
 		}
 
 		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(ID) FROM {$this->get_table_name()} WHERE status = %s", $status ) ); // Cannot prepare table name. @codingStandardsIgnoreLine
+	}
+
+	/*
+	|--------------------------------------------------------------------------
+	| New event's store methods. The above may be deprecated in the future.
+	| But notably, the below is also internal-usage only. See comments about alternatives.
+	|--------------------------------------------------------------------------
+	*/
+
+	/**
+	 * Create an event.
+	 * For internal use only, please use Event:save() as this method does not validate.
+	 *
+	 * @param array $row_data The row data used to create the event.
+	 * @return int The newly created event ID, 0 if creation failed.
+	 */
+	public static function _create_event( array $row_data ): int {
+		global $wpdb;
+
+		if ( empty( $row_data ) ) {
+			return 0;
+		}
+
+		$row_data['created']       = current_time( 'mysql', true );
+		$row_data['last_modified'] = current_time( 'mysql', true );
+
+		$result = $wpdb->insert( self::table_name(), $row_data, self::row_formatting( $row_data ) );
+
+		self::flush_event_cache();
+		return false === $result ? 0 : $wpdb->insert_id;
+	}
+
+	/**
+	 * Update an event.
+	 * For internal use only, please use Event::save() as this does not validate.
+	 *
+	 * @param int   $event_id The ID of the event being updated.
+	 * @param array $row_data The row data used to update the event.
+	 * @return bool True if update was successful, false otherwise.
+	 */
+	public static function _update_event( int $event_id, array $row_data ): bool {
+		global $wpdb;
+
+		if ( empty( $event_id ) || empty( $row_data ) ) {
+			return 0;
+		}
+
+		$row_data['last_modified'] = current_time( 'mysql', true );
+
+		$where  = [ 'ID' => $event_id ];
+		$result = $wpdb->update( self::table_name(), $row_data, $where, self::row_formatting( $row_data ), self::row_formatting( $where ) );
+
+		self::flush_event_cache();
+		return false !== $result;
+	}
+
+	/**
+	 * Get raw event data by an ID.
+	 * For internal use only, please use Event::get( $id ).
+	 *
+	 * Currently no need for caching here really,
+	 * the action/instance/timestamp combination is the query that often happens on the FE.
+	 * So perhaps room for enhacement there later.
+	 *
+	 * @param int $id The ID of the event being retrieved.
+	 * @return object|null Raw event object if successful, false otherwise.
+	 */
+	public static function _get_event_raw( int $id ): ?object {
+		if ( $id <= 0 ) {
+			return null;
+		}
+
+		global $wpdb;
+		$table_name = self::table_name();
+
+		// Cannot prepare table name. @codingStandardsIgnoreLine
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_name} WHERE id = %d", $id ) );
+
+		return is_object( $row ) ? $row : null;
+	}
+
+	/**
+	 * Get raw events data based on various available query args.
+	 * For internal use only, please use Event::get( $args ) or Events::query( $args ).
+	 *
+	 * @param array $args Argument list for the query.
+	 * @return array Array of raw event objects.
+	 */
+	public static function _query_events_raw( array $args = [] ): array {
+		global $wpdb;
+
+		$valid_args = [
+			'action' => [
+				'default'    => null,
+				'validation' => 'is_string',
+			],
+			'action_hashed' => [
+				'default'    => null,
+				'validation' => 'is_string',
+			],
+			'args' => [
+				'default'    => null,
+				'validation' => 'is_array',
+			],
+			'instance' => [
+				'default'    => null,
+				'validation' => 'is_string',
+			],
+			'timestamp' => [
+				'default'    => null,
+				'validation' => fn( $ts ) => self::validate_timestamp( $ts ),
+			],
+			'schedule' => [
+				'default'    => null,
+				'validation' => 'is_string',
+			],
+			'status' => [
+				'default'    => self::ACTIVE_STATUSES,
+				'validation' => fn( $status ) => self::validate_status( $status ),
+			],
+			'limit' => [
+				'default'    => 1,
+				'validation' => 'is_int',
+			],
+			'page' => [
+				'default'    => 1,
+				'validation' => fn( $page ) => is_int( $page ) && $page >= 1,
+			],
+			'order' => [
+				'default'    => 'ASC',
+				'validation' => fn( $order ) => is_string( $order ) && in_array( strtoupper( $order ), [ 'ASC', 'DESC'], true ),
+			],
+		];
+
+		$parsed_args = wp_parse_args( $args, [
+			'action'        => $valid_args['action']['default'],
+			'action_hashed' => $valid_args['action_hashed']['default'],
+			'args'          => $valid_args['args']['default'],
+			'instance'      => $valid_args['instance']['default'],
+			'timestamp'     => $valid_args['timestamp']['default'],
+			'schedule'      => $valid_args['schedule']['default'],
+			'status'        => $valid_args['status']['default'],
+			'limit'         => $valid_args['limit']['default'],
+			'page'          => $valid_args['page']['default'],
+			'order'          => $valid_args['order']['default'],
+		] );
+
+		foreach ( $valid_args as $arg_name => $arg_checks ) {
+			if ( $parsed_args[ $arg_name ] !== $arg_checks['default'] ) {
+				// The arg was changed from the default, let's validate it.
+				if ( ! call_user_func( $arg_checks['validation'], $parsed_args[ $arg_name ] ) ) {
+					trigger_error( 'Invalid arguments passed in for the events query', E_USER_NOTICE );
+					return [];
+				}
+			}
+		}
+
+		$table = self::table_name();
+		$sql = "SELECT * FROM `{$table}` WHERE 1=1";
+		$placeholders = [];
+
+		// Timestamp can be:
+		if ( ! is_null( $parsed_args['timestamp'] ) ) {
+			// 1) A direct integer.
+			if ( is_int( $parsed_args['timestamp'] ) ) {
+				$sql .= ' AND timestamp = %d';
+				$placeholders[] = $parsed_args['timestamp'];
+			}
+
+			// 2) Or a request for everything that is "due now".
+			if ( 'due_now' === $parsed_args['timestamp'] ) {
+				$sql .= ' AND timestamp <= %d';
+				$placeholders[] = time();
+			}
+
+			// 3) Or a range between two timestamps.
+			if ( is_array( $parsed_args['timestamp'] ) ) {
+				$sql .= ' AND timestamp >= %d AND timestamp <= %d';
+				$placeholders[] = $parsed_args['timestamp']['from'];
+				$placeholders[] = $parsed_args['timestamp']['to'];
+			}
+		}
+
+		if ( ! is_null( $parsed_args['action'] ) ) {
+			$sql .= ' AND action = %s';
+			$placeholders[] = $parsed_args['action'];
+		}
+
+		if ( ! is_null( $parsed_args['action_hashed'] ) ) {
+			// TODO: Deprecate this query arg later once all is converted to the new API.
+			$sql .= ' AND action_hashed = %s';
+			$placeholders[] = $parsed_args['action_hashed'];
+		}
+
+		if ( ! is_null( $parsed_args['args'] ) ) {
+			// Rather than query args directly, convert to the hash so we can utilize index.
+			$instance = Event::create_instance_hash( $parsed_args['args'] );
+			$sql .= ' AND instance = %s';
+			$placeholders[] = $instance;
+		} elseif ( ! is_null( $parsed_args['instance'] ) ) {
+			// TODO: Deprecate this query arg later once all is converted to the new API.
+			$sql .= ' AND instance = %s';
+			$placeholders[] = $parsed_args['instance'];
+		}
+
+		if ( ! is_null( $parsed_args['schedule'] ) ) {
+			$sql .= ' AND schedule = %s';
+			$placeholders[] = $parsed_args['schedule'];
+		}
+
+		$requested_any_status = is_string( $parsed_args['status'] ) ? 'any' === strtolower( $parsed_args['status'] ) : false;
+		if ( ! $requested_any_status ) {
+			if ( is_array( $parsed_args['status'] ) ) {
+				$statuses = array_map( 'strtolower', $parsed_args['status'] );
+				$sql .= ' AND status IN (' . implode( ',', array_fill( 0, count( $statuses ), '%s' ) ) . ')';
+				$placeholders = array_merge( $placeholders, $statuses );
+			} elseif ( is_string( $parsed_args['status'] ) ) {
+				$sql .= ' AND status = %s';
+				$placeholders[] = strtolower( $parsed_args['status'] );
+			}
+		}
+
+		// TODO: adjust for situations where we don't need to sort.
+		$sql .= ' ORDER BY timestamp';
+		$sql .= strtoupper( $parsed_args['order'] ) === 'ASC' ? ' ASC' : ' DESC';
+
+		// Skip paging/limits if "-1" was passed to get all events.
+		if ( $parsed_args['limit'] >= 1 ) {
+			$sql .= ' LIMIT %d';
+			$placeholders[] = $parsed_args['limit'];
+
+			if ( ! is_null( $parsed_args['page'] ) ) {
+				$offset = $parsed_args['limit'] * ( $parsed_args['page'] - 1 );
+				if ( $offset > 0 ) {
+					$sql .= ' OFFSET %d';
+					$placeholders[] = $offset;
+				}
+			}
+		}
+
+		$last_changed = wp_cache_get_last_changed( 'cron-control-events' );
+		$query_hash   = sha1( serialize( [ $sql, $placeholders ] ) ) . "::{$last_changed}";
+
+		$results = wp_cache_get( "events::{$query_hash}", 'cron-control-events' );
+		if ( false === $results ) {
+			// Already prepared @codingStandardsIgnoreLine
+			$results = $wpdb->get_results( $wpdb->prepare( $sql, $placeholders ) );
+			$results = is_array( $results ) ? $results : [];
+
+			wp_cache_set( "events::{$query_hash}", $results, 'cron-control-events' );
+		}
+
+		return $results;
+	}
+
+	private static function validate_status( $status ): bool {
+		$allowed_string_statuses = array_merge( self::ALLOWED_STATUSES, [ 'any' ] );
+
+		if ( is_string( $status ) && in_array( strtolower( $status ), $allowed_string_statuses, true ) ) {
+			return true;
+		}
+
+		if ( is_array( $status ) ) {
+			$statuses = array_map( 'strtolower', $status );
+			return empty( array_diff( $statuses, self::ALLOWED_STATUSES ) );
+		}
+
+		return false;
+	}
+
+	private static function validate_timestamp( $ts ): bool {
+		if ( is_int( $ts ) ) {
+			return true;
+		}
+
+		if ( is_string( $ts ) ) {
+			return 'due_now' === $ts;
+		}
+
+		if ( is_array( $ts ) ) {
+			return isset( $ts['from'], $ts['to'] ) && is_int( $ts['from'] ) && is_int( $ts['to'] );
+		}
+
+		return false;
+	}
+
+	private static function row_formatting( array $row ): array {
+		$int_formats = [ 'ID', 'interval', 'timestamp' ];
+
+		$formatting = [];
+		foreach ( $row as $field => $value ) {
+			if ( in_array( $field, $int_formats, true ) ) {
+				$formatting[] = '%d';
+			} else {
+				// Strings for all the rest.
+				$formatting[] = '%s';
+			}
+		}
+
+		return $formatting;
+	}
+
+	private static function flush_event_cache() {
+		wp_cache_set( 'last_changed', microtime(), 'cron-control-events' );
+	}
+
+	private static function table_name(): string {
+		global $wpdb;
+		return $wpdb->prefix . self::TABLE_SUFFIX;
 	}
 }
 
