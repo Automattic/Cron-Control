@@ -19,6 +19,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+	"encoding/json"
 
 	"github.com/creack/pty"
 	"github.com/howeyc/fsnotify"
@@ -364,7 +365,9 @@ func getCleanWpCliArgumentArray(wpCliCmdString string) ([]string, error) {
 
 	// Remove quotes from the args
 	for i := range cleanArgs {
-		cleanArgs[i] = strings.ReplaceAll(cleanArgs[i], "\"", "")
+		if( ! isJSON( cleanArgs[i])) { //don't alter JSON arguments
+			cleanArgs[i] = strings.ReplaceAll(cleanArgs[i], "\"", "")
+		}
 	}
 
 	return cleanArgs, nil
@@ -913,4 +916,9 @@ func streamLogs(conn net.Conn, Guid string) {
 	conn.Close()
 	logFile.Close()
 	logger.Printf("log file for Guid %s sent\n", Guid)
+}
+
+func isJSON(str string) bool {
+    var js json.RawMessage
+    return json.Unmarshal([]byte(str), &js) == nil
 }
