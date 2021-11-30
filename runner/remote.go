@@ -332,7 +332,7 @@ func validateAndProcessCommand(calledCmd string) (string, error) {
 }
 
 func getCleanWpCliArgumentArray(wpCliCmdString string) ([]string, error) {
-	rawArgs := strings.Fields(wpCliCmdString)
+	rawArgs := tokenizeString(wpCliCmdString)
 	cleanArgs := make([]string, 0)
 	openQuote := false
 	arg := ""
@@ -917,6 +917,23 @@ func streamLogs(conn net.Conn, Guid string) {
 	logFile.Close()
 	logger.Printf("log file for Guid %s sent\n", Guid)
 }
+/*
+Splits a string into an array based on whitespace except when that whitepace is inside double qoutes or escaped quotes
+*/
+func tokenizeString( rawString string) [] string {
+	quoted := false
+	var prevRune rune
+	tokenized := strings.FieldsFunc(rawString, func(r rune) bool {
+		if r == '"' && prevRune != '\\' {
+			quoted = !quoted
+		}
+		prevRune = r;
+		return !quoted && r == ' '
+	})
+	out := strings.Join(tokenized, ", ")
+	return tokenized;
+}
+
 
 func isJSON(str string) bool {
     var js json.RawMessage
