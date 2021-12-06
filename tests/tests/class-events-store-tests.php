@@ -7,6 +7,9 @@
 
 namespace Automattic\WP\Cron_Control\Tests;
 
+use Automattic\WP\Cron_Control\Events_Store;
+use Automattic\WP\Cron_Control\Event;
+
 /**
  * Events Store Tests
  */
@@ -221,5 +224,193 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		);
 
 		$this->assertFalse( $event_from_store );
+	}
+
+	/*
+	|--------------------------------------------------------------------------
+	| New event's store methods. The above may be deprecated in the future.
+	|--------------------------------------------------------------------------
+	| These are pretty extensively covered in the Event() testing already.
+	*/
+
+	function test_event_creation() {
+		// We don't validate fields here, so not much to test other than return values.
+		$result = Events_Store::_create_event( [
+			'status'        => Events_Store::STATUS_PENDING,
+			'action'        => 'test_raw_event',
+			'action_hashed' => md5( 'test_raw_event' ),
+			'timestamp'     => 1637447873,
+			'args'          => serialize( [] ),
+			'instance'      => Event::create_instance_hash( [] ),
+		] );
+		$this->assertTrue( is_int( $result ) && $result > 0, 'event was inserted' );
+
+		$empty_result = Events_Store::_create_event( [] );
+		$this->assertTrue( 0 === $empty_result, 'empty event was not inserted' );
+	}
+
+	function test_event_updates() {
+		// Make a valid event.
+		$event = new Event();
+		$event->set_action( 'test_get_action' );
+		$event->set_timestamp( 1637447875 );
+		$event->save();
+
+		$result = Events_Store::_update_event( $event->get_id(), [ 'timestamp' => 1637447875 + 100 ] );
+		$this->assertTrue( $result, 'event was updated' );
+
+		// Spot check the updated property.
+		$raw_event = Events_Store::_get_event_raw( $event->get_id() );
+		$this->assertEquals( 1637447875 + 100, $raw_event->timestamp );
+
+		$failed_result = Events_Store::_update_event( $event->get_id(), [] );
+		$this->assertFalse( $failed_result, 'event was not updated due to invalid args' );
+	}
+
+	function test_get_raw_event() {
+		$result = Events_Store::_get_event_raw( -1 );
+		$this->assertNull( $result, 'returns null when given invalid ID' );
+
+		$result = Events_Store::_get_event_raw( PHP_INT_MAX );
+		$this->assertNull( $result, 'returns null when given an non-existant ID' );
+
+		// Event w/ all defaults.
+		$this->run_get_raw_event_test( [
+			'creation_args' => [
+				'action'    => 'test_event',
+				'timestamp' => 1637447873,
+			],
+			'expected_data' => [
+				'status'    => Events_Store::STATUS_PENDING,
+				'action'    => 'test_event',
+				'args'      => [],
+				'schedule'  => null,
+				'interval'  => 0,
+				'timestamp' => 1637447873,
+			],
+		] );
+
+		// Event w/ all non-defaults.
+		$this->run_get_raw_event_test( [
+			'creation_args' => [
+				'status'    => Events_Store::STATUS_COMPLETED,
+				'action'    => 'test_event',
+				'args'      => [ 'some' => 'data' ],
+				'schedule'  => 'hourly',
+				'interval'  => HOUR_IN_SECONDS,
+				'timestamp' => 1637447873,
+			],
+			'expected_data' => [
+				'status'    => Events_Store::STATUS_COMPLETED,
+				'action'    => 'test_event',
+				'args'      => [ 'some' => 'data' ],
+				'schedule'  => 'hourly',
+				'interval'  => HOUR_IN_SECONDS,
+				'timestamp' => 1637447873,
+			],
+		] );
+	}
+
+	private function run_get_raw_event_test( array $event_data ) {
+		// Create test event.
+		$test_event = new Event();
+		Utils::apply_event_props( $test_event, $event_data['creation_args'] );
+		$save_result = $test_event->save();
+
+		// Check if we got expected values from the DB.
+		$raw_event = Events_Store::_get_event_raw( $test_event->get_id() );
+		$expected_data = $event_data['expected_data'];
+		$expected_data['id'] = $test_event->get_id();
+		Utils::assert_event_raw_data_equals( $raw_event, $expected_data, $this );
+	}
+
+	public function test_query_raw_events() {
+		$args = [
+			'status'    => Events_Store::STATUS_PENDING,
+			'action'    => 'test_query_raw_events',
+			'args'      => [ 'some' => 'data' ],
+			'schedule'  => 'hourly',
+			'interval'  => HOUR_IN_SECONDS,
+		];
+
+		$event_one   = $this->create_test_event( array_merge( $args, [ 'timestamp' => 1 ] ) );
+		$event_two   = $this->create_test_event( array_merge( $args, [ 'timestamp' => 2 ] ) );
+		$event_three = $this->create_test_event( array_merge( $args, [ 'timestamp' => 3 ] ) );
+		$event_four  = $this->create_test_event( array_merge( $args, [ 'timestamp' => 4 ] ) );
+
+		// Should give us just the first event that has the oldest timestamp.
+		$result = Events_Store::_query_events_raw( [
+			'status'   => [ Events_Store::STATUS_PENDING ],
+			'action'   => 'test_query_raw_events',
+			'args'     => [ 'some' => 'data' ],
+			'schedule' => 'hourly',
+		] );
+
+		$this->assertEquals( 1, count( $result ), 'returns one event w/ oldest timestamp' );
+		$this->assertEquals( $event_one->get_timestamp(), $result[0]->timestamp, 'found the right event' );
+
+		// Should give two events now, in desc order
+		$result = Events_Store::_query_events_raw( [
+			'status'   => [ Events_Store::STATUS_PENDING ],
+			'action'   => 'test_query_raw_events',
+			'args'     => [ 'some' => 'data' ],
+			'schedule' => 'hourly',
+			'limit'    => 2,
+			'order'    => 'desc',
+		] );
+
+		$this->assertEquals( 2, count( $result ), 'returned 2 events' );
+		$this->assertEquals( $event_four->get_timestamp(), $result[0]->timestamp, 'found the right event' );
+		$this->assertEquals( $event_three->get_timestamp(), $result[1]->timestamp, 'found the right event' );
+
+		// Should find just the middle two events that match the timeframe.
+		$result = Events_Store::_query_events_raw( [
+			'status'    => [ Events_Store::STATUS_PENDING ],
+			'action'    => 'test_query_raw_events',
+			'args'      => [ 'some' => 'data' ],
+			'schedule'  => 'hourly',
+			'limit'     => 100,
+			'timestamp' => [ 'from' => 2, 'to' => 3 ],
+		] );
+
+		$this->assertEquals( 2, count( $result ), 'returned middle events that match the timeframe' );
+		$this->assertEquals( $event_two->get_timestamp(), $result[0]->timestamp, 'found the right event' );
+		$this->assertEquals( $event_three->get_timestamp(), $result[1]->timestamp, 'found the right event' );
+
+		$event_five = $this->create_test_event( array_merge( $args, [ 'timestamp' => time() + 5 ] ) );
+
+		// Should find all but the last event that is not due yet.
+		$result = Events_Store::_query_events_raw( [
+			'status'    => [ Events_Store::STATUS_PENDING ],
+			'action'    => 'test_query_raw_events',
+			'args'      => [ 'some' => 'data' ],
+			'schedule'  => 'hourly',
+			'limit'     => 100,
+			'timestamp' => 'due_now',
+		] );
+
+		$this->assertEquals( 4, count( $result ), 'returned all due now events' );
+		$this->assertEquals( $event_one->get_timestamp(), $result[0]->timestamp, 'found the right event' );
+		$this->assertEquals( $event_four->get_timestamp(), $result[3]->timestamp, 'found the right event' );
+
+		// Grab the second page.
+		$result = Events_Store::_query_events_raw( [
+			'status'   => [ Events_Store::STATUS_PENDING ],
+			'action'   => 'test_query_raw_events',
+			'args'     => [ 'some' => 'data' ],
+			'schedule' => 'hourly',
+			'limit'    => 1,
+			'page'     => 2,
+		] );
+
+		$this->assertEquals( 1, count( $result ), 'returned event from second page' );
+		$this->assertEquals( $event_two->get_timestamp(), $result[0]->timestamp, 'found the right event' );
+	}
+
+	private function create_test_event( $props ) {
+		$event = new Event();
+		Utils::apply_event_props( $event, $props );
+		$event->save();
+		return $event;
 	}
 }
