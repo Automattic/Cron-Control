@@ -149,33 +149,6 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test event-cache splitting
-	 */
-	function test_excessive_event_creation() {
-		$timestamp_base = time() + ( 1 * \HOUR_IN_SECONDS );
-
-		$dummy_text = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam enim ante, maximus nec nisi ut, finibus ultrices orci. Maecenas suscipit, est eu suscipit sagittis, enim massa dignissim augue, sagittis gravida dolor nulla ut mi. Phasellus venenatis bibendum cursus. Aliquam a erat purus. Nulla elit nunc, egestas eget eros iaculis, interdum tincidunt elit. Vivamus vel blandit nisl. Proin in ornare dolor, convallis porta sem. Mauris rutrum nibh et ornare egestas. Mauris ultricies diam at nunc tristique rutrum. Aliquam varius non leo vel luctus. Vestibulum sagittis scelerisque ante, non faucibus nibh accumsan sed.';
-		$args       = array_fill( 0, 15, $dummy_text );
-
-		for ( $i = 1; $i <= 100; $i++ ) {
-			$timestamp = $timestamp_base + $i;
-			$action    = 'excessive_test_event_' . $i;
-			wp_schedule_single_event( $timestamp, $action, $args );
-		}
-
-		get_option( 'cron' );
-
-		$cached = wp_cache_get( \Automattic\WP\Cron_Control\Events_Store::CACHE_KEY );
-
-		$this->assertArrayHasKey( 'incrementer', $cached );
-		$this->assertArrayHasKey( 'buckets', $cached );
-		$this->assertArrayHasKey( 'event_count', $cached );
-
-		$this->assertEquals( 4, $cached['buckets'] );
-		$this->assertEquals( 100, $cached['event_count'] );
-	}
-
-	/**
 	 * Test retrieving an event without requesting a status
 	 */
 	function test_get_job_by_attributes() {
@@ -344,6 +317,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 			'action'   => 'test_query_raw_events',
 			'args'     => [ 'some' => 'data' ],
 			'schedule' => 'hourly',
+			'limit'    => 1,
 		] );
 
 		$this->assertEquals( 1, count( $result ), 'returns one event w/ oldest timestamp' );
