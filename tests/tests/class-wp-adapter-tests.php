@@ -47,7 +47,7 @@ class WP_Adapter_Tests extends \WP_UnitTestCase {
 		$this->assertTrue( $result, 'scheduling was successful' );
 
 		// Ensure the event made it's way to the DB.
-		$event = Event::get( [ 'action' => $event_args->hook ] );
+		$event = Event::find( [ 'action' => $event_args->hook ] );
 		$this->assertEquals( $event_args->timestamp, $event->get_timestamp() );
 
 		// Try to register again, and we get a duplicate event error.
@@ -72,7 +72,7 @@ class WP_Adapter_Tests extends \WP_UnitTestCase {
 		$this->assertTrue( $result, 'rescheduling was successful' );
 
 		// Ensure the event update made it's way to the DB.
-		$event = Event::get( [ 'action' => $event_args->hook ] );
+		$event = Event::find( [ 'action' => $event_args->hook ] );
 		$this->assertEquals( $event_args->timestamp + HOUR_IN_SECONDS, $event->get_timestamp() );
 
 		// Should fail if it can't find the event.
@@ -97,7 +97,7 @@ class WP_Adapter_Tests extends \WP_UnitTestCase {
 		$this->assertTrue( $result, 'unscheduling was successful' );
 
 		// Ensure the event update made it's way to the DB.
-		$object = Event::get( [ 'action' => $event->hook, 'status' => Events_Store::STATUS_COMPLETED ] );
+		$object = Event::find( [ 'action' => $event->hook, 'status' => Events_Store::STATUS_COMPLETED ] );
 		$this->assertEquals( Events_Store::STATUS_COMPLETED, $object->get_status() );
 
 		// Now that the event is "gone", it should fail to unschedule again.
@@ -128,7 +128,7 @@ class WP_Adapter_Tests extends \WP_UnitTestCase {
 		$this->assertEquals( 2, $result, 'clearing was successful' );
 
 		// Ensure the event update made it's way to the DB.
-		$object = Event::get( [
+		$object = Event::find( [
 			'action' => 'test_pre_clear_scheduled_hook',
 			'timestamp' => $event_two['timestamp'],
 			'status' => Events_Store::STATUS_COMPLETED,
@@ -161,9 +161,8 @@ class WP_Adapter_Tests extends \WP_UnitTestCase {
 		$this->assertEquals( 3, $result, 'clearing was successful' );
 
 		// Ensure the event update made it's way to the DB.
-		$object = Event::get( [
+		$object = Event::find( [
 			'action' => 'test_pre_unschedule_hook',
-			'args' => $event_three['args'],
 			'status' => Events_Store::STATUS_COMPLETED,
 		] );
 		$this->assertEquals( Events_Store::STATUS_COMPLETED, $object->get_status() );
@@ -257,7 +256,7 @@ class WP_Adapter_Tests extends \WP_UnitTestCase {
 		$update_result   = Cron_Control\pre_update_cron_option( $new_option, $existing_option );
 
 		$this->assertEquals( $existing_option, $update_result, 'return value is always the prev value' );
-		$added_event = Event::get( [ 'action' => 'test_pre_update_cron_option_new' ] );
+		$added_event = Event::find( [ 'action' => 'test_pre_update_cron_option_new' ] );
 		$this->assertEquals( $event_to_add->get_action(), $added_event->get_action(), 'event was registered' );
 
 		// Mock the scenario of deleting an event from the mix.
@@ -266,7 +265,7 @@ class WP_Adapter_Tests extends \WP_UnitTestCase {
 		$update_result   = Cron_Control\pre_update_cron_option( $new_option, $existing_option );
 
 		$this->assertEquals( $existing_option, $update_result, 'return value is always the prev value' );
-		$removed_event = Event::get( [ 'action' => 'test_pre_update_cron_option_existing' ] );
+		$removed_event = Event::find( [ 'action' => 'test_pre_update_cron_option_existing' ] );
 		$this->assertEquals( null, $removed_event, 'event was removed' );
 	}
 

@@ -54,11 +54,13 @@ class Main extends Singleton {
 		require __DIR__ . '/class-lock.php';
 
 		// Load remaining functionality.
+		require __DIR__ . '/class-event.php';
 		require __DIR__ . '/class-events.php';
 		require __DIR__ . '/class-internal-events.php';
 		require __DIR__ . '/class-rest-api.php';
 		require __DIR__ . '/functions.php';
 		require __DIR__ . '/wp-cli.php';
+		require __DIR__ . '/wp-adapter.php';
 	}
 
 	/**
