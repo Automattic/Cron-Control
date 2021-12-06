@@ -22,25 +22,6 @@ class Event {
 	// When the event will run next.
 	private int $timestamp;
 
-	// Keeps track of what properties are changed.
-	private array $changed = [];
-
-	/**
-	 * Get an existing event if an ID or row data is passed, otherwise the event is new and empty.
-	 * Note: Use Event::get() when possible instead of initializing an existing event here.
-	 *
-	 * @param int|object $event Event to initialize.
-	 */
-	public function __construct( $event = null ) {
-		if ( is_int( $event ) && $event > 0 ) {
-			$event_stub = new \stdClass();
-			$event_stub->ID = $event;
-			self::populate_data( $event_stub );
-		} elseif ( ! empty( $event->ID ) ) {
-			self::populate_data( $event );
-		}
-	}
-
 	/*
 	|--------------------------------------------------------------------------
 	| Getters
@@ -87,52 +68,26 @@ class Event {
 	*/
 
 	public function set_status( string $status ): void {
-		$status = strtolower( $status );
-
-		if ( in_array( $status, Events_Store::ALLOWED_STATUSES, true ) ) {
-			$this->status = $status;
-		} else {
-			$this->status = Events_Store::STATUS_PENDING;
-		}
-
-		// Always mark status as changed, as we want to ensure it always sends this data in the SQL if needed.
-		$this->mark_changed( 'status' );
+		$this->status = strtolower( $status );
 	}
 
 	public function set_action( string $action ): void {
-		if ( ! empty( $action ) ) {
-			$this->action = $action;
-			$this->mark_changed( 'action' );
-
-			$this->action_hashed = md5( $action );
-			$this->mark_changed( 'action_hashed' );
-		}
+		$this->action = $action;
+		$this->action_hashed = md5( $action );
 	}
 
 	public function set_args( array $args ): void {
 		$this->args = $args;
-		$this->mark_changed( 'args' );
-
 		$this->instance = self::create_instance_hash( $this->args );
-		$this->mark_changed( 'instance' );
 	}
 
 	public function set_schedule( string $schedule, int $interval ): void {
-		if ( ! empty( $schedule ) && $interval > 0 ) {
-			// Ensure either both or none are set.
-			$this->schedule = $schedule;
-			$this->mark_changed( 'schedule' );
-
-			$this->interval = $interval;
-			$this->mark_changed( 'interval' );
-		}
+		$this->schedule = $schedule;
+		$this->interval = $interval;
 	}
 
 	public function set_timestamp( int $timestamp ): void {
-		if ( $timestamp >= 1 ) {
-			$this->timestamp = $timestamp;
-			$this->mark_changed( 'timestamp' );
-		}
+		$this->timestamp = $timestamp;
 	}
 
 	/*
@@ -142,69 +97,42 @@ class Event {
 	*/
 
 	/**
-	 * Save the event based on locally-changed props.
+	 * Save the event (create if needed, else update).
 	 *
 	 * @return true|WP_Error true on success, WP_Error on failure.
 	 */
 	public function save() {
-		$changed_data = $this->get_changed_data();
-
-		if ( empty( $changed_data ) ) {
-			// Nothing to save.
-			return new WP_Error( 'cron-control:event:no-save-needed' );
+		// Set default status for new events.
+		if ( ! $this->exists() && null === $this->get_status() ) {
+			$this->set_status( Events_Store::STATUS_PENDING );
 		}
 
-		if ( ! isset( $this->action, $this->timestamp ) ) {
-			// These are required properties, must be set in order to save.
-			return new WP_Error( 'cron-control:event:missing-props' );
+		$validation_result = $this->validate_props();
+		if ( is_wp_error( $validation_result ) ) {
+			return $validation_result;
 		}
 
-		$all_row_data = [
-			'status'        => isset( $this->status ) ? $this->status : null,
-			'action'        => $this->action,
-			'action_hashed' => md5( $this->action ),
-			'args'          => serialize( $this->args ),
-			'instance'      => self::create_instance_hash( $this->args ),
-			'timestamp'     => $this->timestamp,
+		$row_data = [
+			'status'        => $this->get_status(),
+			'action'        => $this->get_action(),
+			'action_hashed' => $this->action_hashed,
+			'args'          => serialize( $this->get_args() ),
+			'instance'      => $this->get_instance(),
+			'timestamp'     => $this->get_timestamp(),
 		];
 
-		if ( isset( $this->schedule ) && isset( $this->interval ) ) {
-			$all_row_data['schedule'] = $this->schedule;
-			$all_row_data['interval'] = $this->interval;
-		}
-
-		// Pick out just the data that has changed.
-		$row_data = [];
-		foreach ( $changed_data as $changed_prop ) {
-			$row_data[ $changed_prop ] = $all_row_data[ $changed_prop ];
+		if ( $this->is_recurring() ) {
+			$row_data['schedule'] = $this->get_schedule();
+			$row_data['interval'] = $this->get_interval();
+		} else {
+			// Data store expects these as the defaults for "empty".
+			$row_data['schedule'] = null;
+			$row_data['interval'] = 0;
 		}
 
 		if ( $this->exists() ) {
 			$success = Events_Store::_update_event( $this->id, $row_data );
-			if ( ! $success ) {
-				return new WP_Error( 'cron-control:event:failed-update' );
-			}
-
-			$this->clear_changed_data();
-			return true;
-		}
-
-		// Gotta create the event for the first time. Let's make sure we send all the necessary data and defaults.
-		$status_set = false;
-		if ( ! isset( $row_data['status'] ) ) {
-			$row_data['status'] = Events_Store::STATUS_PENDING;
-			$status_set = true;
-		}
-
-		if ( ! isset( $row_data['args'], $row_data['instance'] ) ) {
-			$row_data['args']     = $all_row_data['args'];
-			$row_data['instance'] = $all_row_data['instance'];
-		}
-
-		if ( ! isset( $row_data['schedule'], $row_data['interval'] ) ) {
-			// Data store expects these, however we'll leave both as null internally here.
-			$row_data['schedule'] = null;
-			$row_data['interval'] = 0;
+			return true === $success ? true : new WP_Error( 'cron-control:event:failed-update' );
 		}
 
 		$event_id = Events_Store::_create_event( $row_data );
@@ -212,11 +140,7 @@ class Event {
 			return new WP_Error( 'cron-control:event:failed-create' );
 		}
 
-		// Hydrate the object with the defaults that were set.
-		$this->id       = $event_id;
-		$this->status   = $status_set ? Events_Store::STATUS_PENDING : $this->status;
-
-		$this->clear_changed_data();
+		$this->id = $event_id;
 		return true;
 	}
 
@@ -236,8 +160,9 @@ class Event {
 		}
 
 		// Prevent conflicts with the unique constraints in the table.
+		// Is a bit unfortunate since it won't be as easy to query for the event anymore.
+		// Perhaps in the future could remove the unique constraint in favor of stricter duplicate checking.
 		$this->instance = (string) mt_rand( 1000000, 9999999999999 );
-		$this->mark_changed( 'instance' );
 
 		$this->set_status( Events_Store::STATUS_COMPLETED );
 		return $this->save();
@@ -253,7 +178,7 @@ class Event {
 			return new WP_Error( 'cron-control:event:cannot-reschedule' );
 		}
 
-		if ( ! isset( $this->schedule, $this->interval ) ) {
+		if ( ! $this->is_recurring() ) {
 			// The event doesn't recur (or data was corrupted somehow), mark it as cancelled instead.
 			$this->complete();
 			return new WP_Error( 'cron-control:event:cannot-reschedule' );
@@ -283,28 +208,56 @@ class Event {
 	 * @return Event|null Returns an Event if successful, else null if the event could not be found.
 	 */
 	public static function get( $event ): ?Event {
+		// Given an event ID.
 		if ( is_int( $event ) ) {
-			$id = $event;
-			$event = new Event( $id );
-			return $event->exists() ? $event : null;
+			$db_row = Events_Store::_get_event_raw( $event );
+			return is_null( $db_row ) ? null : self::get_from_db_row( $db_row );
 		}
 
+		// Given event args.
 		if ( is_array( $event ) ) {
-			$args = $event;
-			$query = Events_Store::_query_events_raw( array_merge( $args, [ 'limit' => 1 ] ) );
-			if ( empty( $query ) ) {
-				return null;
-			}
-
-			$event = new Event( $query[0] );
-			return $event->exists() ? $event : null;
+			$query = Events_Store::_query_events_raw( array_merge( $event, [ 'limit' => 1 ] ) );
+			return empty( $query ) ? null : self::get_from_db_row( $query[0] );
 		}
 
 		return null;
 	}
 
+	/**
+	 * Hydrate the event object given a row from the DB.
+	 *
+	 * @param object $data Event database row.
+	 * @return Event|null Returns an Event if successful, else null if given invalid data.
+	 */
+	public static function get_from_db_row( object $data ): ?Event {
+		if ( ! isset( $data->ID, $data->status, $data->action, $data->timestamp ) ) {
+			// Missing expected/required data, cannot setup the object.
+			return null;
+		}
+
+		$event = new Event();
+		$event->id = (int) $data->ID;
+		$event->set_status( (string) $data->status );
+		$event->set_action( (string) $data->action );
+		$event->set_timestamp( (int) $data->timestamp );
+		$event->set_args( (array) maybe_unserialize( $data->args ) );
+
+		if ( ! empty( $data->schedule ) && ! empty( $data->interval ) ) {
+			// Note: the db is sending back "null" and "0" for the above two on single events,
+			// so we do the above empty() checks to filter that out.
+			$event->set_schedule( (string) $data->schedule, (int) $data->interval );
+		}
+
+		return $event;
+	}
+
 	public function exists(): bool {
 		return isset( $this->id );
+	}
+
+	public function is_recurring() : bool {
+		// To allow validation to do it's job, here we just see if the props have ever been set.
+		return isset( $this->schedule, $this->interval );
 	}
 
 	public function is_internal(): bool {
@@ -320,8 +273,8 @@ class Event {
 			'args'      => $this->get_args(),
 		];
 
-		if ( isset( $this->interval ) ) {
-			$wp_event['interval'] = $this->interval;
+		if ( $this->is_recurring() ) {
+			$wp_event['interval'] = $this->get_interval();
 		}
 
 		return (object) $wp_event;
@@ -331,16 +284,29 @@ class Event {
 		return md5( serialize( $args ) );
 	}
 
-	private function get_changed_data(): array {
-		return array_keys( $this->changed );
-	}
+	private function validate_props() {
+		$status = $this->get_status();
+		if ( ! in_array( $status, Events_Store::ALLOWED_STATUSES, true ) ) {
+			return new WP_Error( 'cron-control:event:prop-validation:invalid-status' );
+		}
 
-	private function clear_changed_data(): void {
-		$this->changed = [];
-	}
+		$action = $this->get_action();
+		if ( empty( $action ) ) {
+			return new WP_Error( 'cron-control:event:prop-validation:invalid-action' );
+		}
 
-	private function mark_changed( string $property ): void {
-		$this->changed[ $property ] = true;
+		$timestamp = $this->get_timestamp();
+		if ( empty( $timestamp ) || $timestamp < 1 ) {
+			return new WP_Error( 'cron-control:event:prop-validation:invalid-timestamp' );
+		}
+
+		if ( $this->is_recurring() ) {
+			if ( empty( $this->get_schedule() ) || $this->get_interval() <= 0 ) {
+				return new WP_Error( 'cron-control:event:prop-validation:invalid-schedule' );
+			}
+		}
+
+		return true;
 	}
 
 	// Similar functionality to wp_reschedule_event().
@@ -368,32 +334,5 @@ class Event {
 
 		// If we couldn't get from schedule (was removed), use whatever was saved already.
 		return $this->interval;
-	}
-
-	private function populate_data( object $data ): void {
-		if ( ! isset( $data->status, $data->action, $data->args, $data->timestamp ) ) {
-			if ( isset( $data->ID ) ) {
-				// Given just an ID, grab the rest of the data.
-				$data = Events_Store::_get_event_raw( $data->ID );
-			}
-
-			if ( ! isset( $data->ID, $data->status, $data->action, $data->args, $data->timestamp ) ) {
-				// Still no valid data, avoid setting up the object. Will be treated as a new event now.
-				return;
-			}
-		}
-
-		$this->id = $data->ID;
-		$this->set_status( (string) $data->status );
-		$this->set_action( (string) $data->action );
-		$this->set_timestamp( (int) $data->timestamp );
-		$this->set_args( (array) maybe_unserialize( $data->args ) );
-
-		if ( ! empty( $data->schedule ) && ! empty( $data->interval ) ) {
-			$this->set_schedule( (string) $data->schedule, (int) $data->interval );
-		}
-
-		// Didn't actually change anything yet.
-		$this->clear_changed_data();
 	}
 }
