@@ -961,7 +961,7 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Get raw events data based on various available query args.
-	 * For internal use only, please use Event::get( $args ) or Events::query( $args ).
+	 * For internal use only, please use Event::find( $args ) or Events::query( $args ).
 	 *
 	 * @param array $args Argument list for the query.
 	 * @return array Array of raw event objects.
@@ -1012,18 +1012,7 @@ class Events_Store extends Singleton {
 			],
 		];
 
-		$parsed_args = wp_parse_args( $args, [
-			'action'        => $valid_args['action']['default'],
-			'action_hashed' => $valid_args['action_hashed']['default'],
-			'args'          => $valid_args['args']['default'],
-			'instance'      => $valid_args['instance']['default'],
-			'timestamp'     => $valid_args['timestamp']['default'],
-			'schedule'      => $valid_args['schedule']['default'],
-			'status'        => $valid_args['status']['default'],
-			'limit'         => $valid_args['limit']['default'],
-			'page'          => $valid_args['page']['default'],
-			'order'          => $valid_args['order']['default'],
-		] );
+		$parsed_args = wp_parse_args( $args, array_map( fn( $arg ) => $arg['default'], $valid_args ) );
 
 		foreach ( $valid_args as $arg_name => $arg_checks ) {
 			if ( $parsed_args[ $arg_name ] !== $arg_checks['default'] ) {
@@ -1067,7 +1056,7 @@ class Events_Store extends Singleton {
 		}
 
 		if ( ! is_null( $parsed_args['action_hashed'] ) ) {
-			// TODO: Deprecate this query arg later once all is converted to the new API.
+			// TODO: Deprecate this query arg later once all is converted.
 			$sql .= ' AND action_hashed = %s';
 			$placeholders[] = $parsed_args['action_hashed'];
 		}
@@ -1078,7 +1067,7 @@ class Events_Store extends Singleton {
 			$sql .= ' AND instance = %s';
 			$placeholders[] = $instance;
 		} elseif ( ! is_null( $parsed_args['instance'] ) ) {
-			// TODO: Deprecate this query arg later once all is converted to the new API.
+			// TODO: Deprecate this query arg later once all is converted.
 			$sql .= ' AND instance = %s';
 			$placeholders[] = $parsed_args['instance'];
 		}
