@@ -201,34 +201,16 @@ class Event {
 	|--------------------------------------------------------------------------
 	*/
 
-	/**
-	 * Helper method for getting an event.
-	 *
-	 * @param int|array $event Event ID, or args to search for an event.
-	 * @return Event|null Returns an Event if successful, else null if the event could not be found.
-	 */
-	public static function get( $event ): ?Event {
-		// Given an event ID.
-		if ( is_int( $event ) ) {
-			$db_row = Events_Store::_get_event_raw( $event );
-			return is_null( $db_row ) ? null : self::get_from_db_row( $db_row );
-		}
-
-		// Given event args.
-		if ( is_array( $event ) ) {
-			$query = Events_Store::_query_events_raw( array_merge( $event, [ 'limit' => 1 ] ) );
-			return empty( $query ) ? null : self::get_from_db_row( $query[0] );
-		}
-
-		return null;
+	public static function get( int $event_id ): ?Event {
+		$db_row = Events_Store::_get_event_raw( $event_id );
+		return is_null( $db_row ) ? null : self::get_from_db_row( $db_row );
 	}
 
-	/**
-	 * Hydrate the event object given a row from the DB.
-	 *
-	 * @param object $data Event database row.
-	 * @return Event|null Returns an Event if successful, else null if given invalid data.
-	 */
+	public static function find( array $query_args ): ?Event {
+		$results = Events_Store::_query_events_raw( array_merge( $query_args, [ 'limit' => 1 ] ) );
+		return empty( $results ) ? null : self::get_from_db_row( $results[0] );
+	}
+
 	public static function get_from_db_row( object $data ): ?Event {
 		if ( ! isset( $data->ID, $data->status, $data->action, $data->timestamp ) ) {
 			// Missing expected/required data, cannot setup the object.

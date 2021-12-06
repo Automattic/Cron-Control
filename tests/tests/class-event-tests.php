@@ -135,13 +135,20 @@ class Event_Tests extends \WP_UnitTestCase {
 		// Failed get by ID.
 		$event = Event::get( PHP_INT_MAX );
 		$this->assertNull( $event, 'could not find event by ID' );
+	}
 
-		// Successful get by args.
-		$event = Event::get( [ 'action' => 'test_get_action', 'timestamp' => 1637447875 ] );
-		$this->assertEquals( 'test_get_action', $event->get_action(), 'found event by args' );
+	function test_find() {
+		$test_event = new Event();
+		$test_event->set_action( 'test_find_action' );
+		$test_event->set_timestamp( 1637447876 );
+		$test_event->save();
 
-		// Failed get by args.
-		$event = Event::get( [ 'action' => 'non_existant_action', 'timestamp' => 1637447875 ] );
+		// Successful find by args.
+		$event = Event::find( [ 'action' => 'test_find_action', 'timestamp' => 1637447876 ] );
+		$this->assertEquals( 'test_find_action', $event->get_action(), 'found event by args' );
+
+		// Failed find by args.
+		$event = Event::find( [ 'action' => 'non_existant_action', 'timestamp' => 1637447876 ] );
 		$this->assertNull( $event, 'could not find event by args' );
 	}
 
