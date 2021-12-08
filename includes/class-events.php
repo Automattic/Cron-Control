@@ -567,9 +567,9 @@ class Events extends Singleton {
 	 * @return array An array of Event objects.
 	 */
 	public static function query( array $query_args = [] ): array {
-		$events  = Events_Store::_query_events_raw( $query_args );
-		$objects = array_map( fn( $event ) => Event::get_from_db_row( $event ), $events );
-		return array_filter( $objects, fn( $event ) => ! is_null( $event ) );
+		$event_db_rows = Events_Store::_query_events_raw( $query_args );
+		$events = array_map( fn( $event ) => Event::get_from_db_row( $event ), $event_db_rows );
+		return array_filter( $events, fn( $event ) => ! is_null( $event ) );
 	}
 
 	/**
