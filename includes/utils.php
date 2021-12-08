@@ -177,27 +177,28 @@ function set_doing_cron() {
 	add_filter( 'wp_doing_cron', '__return_true', 99999 );
 }
 
-function _deprecated_function( string $function, string $replacement = '', $error_level = 1 ) {
-	$errors_levels = [
+// Helper method for deprecating publicly accessibly functions/methods.
+function _deprecated_function( string $function, string $replacement = '', $error_level = 2 ) {
+	$error_levels = [
 		'debug'  => 1,
 		'notice' => 2,
 		'warn'   => 3,
 	];
 
-	$message = sprintf( 'Cron-Control: %1$s is deprecated and will soon be removed.', $function );
+	$message = sprintf( 'Cron-Control: %s is deprecated and will soon be removed.', $function );
 	if ( ! empty( $replacement ) ) {
-		$message .= sprintf( ' Use %1$s instead.', $replacement );
+		$message .= sprintf( ' Use %s instead.', $replacement );
 	}
 
 	// Use E_WARNING error level.
 	$warning_constant = defined( 'CRON_CONTROL_WARN_FOR_DEPRECATIONS' ) && CRON_CONTROL_WARN_FOR_DEPRECATIONS;
-	if ( $warning_constant || $error_level >= $errors_levels['warn'] ) {
+	if ( $warning_constant || $error_level >= $error_levels['warn'] ) {
 		trigger_error( $message, E_USER_WARNING );
 		return;
 	}
 
 	// Use E_USER_NOTICE regardless of Debug mode.
-	if ( $error_level >= $errors_levels['notice'] ) {
+	if ( $error_level >= $error_levels['notice'] ) {
 		trigger_error( $message, E_USER_NOTICE );
 		return;
 	}
