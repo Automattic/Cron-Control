@@ -55,7 +55,7 @@ function pre_schedule_event( $pre, $event ) {
 		];
 	}
 
-	$existing = Event::get( $query_args );
+	$existing = Event::find( $query_args );
 	if ( ! is_null( $existing ) ) {
 		return new WP_Error( 'cron-control:wp:duplicate-event' );
 	}
@@ -91,7 +91,7 @@ function pre_reschedule_event( $pre, $event ) {
 		return $pre;
 	}
 
-	$event = Event::get( [
+	$event = Event::find( [
 		'timestamp' => $event->timestamp,
 		'action'    => $event->hook,
 		'args'      => $event->args,
@@ -118,7 +118,7 @@ function pre_unschedule_event( $pre, $timestamp, $hook, $args ) {
 		return $pre;
 	}
 
-	$event = Event::get( [
+	$event = Event::find( [
 		'timestamp' => $timestamp,
 		'action'    => $hook,
 		'args'      => $args,
@@ -201,7 +201,7 @@ function pre_get_scheduled_event( $pre, $hook, $args, $timestamp ) {
 		return $pre;
 	}
 
-	$event = Event::get( [
+	$event = Event::find( [
 		'timestamp' => $timestamp,
 		'action'    => $hook,
 		'args'      => $args,
@@ -279,7 +279,7 @@ function pre_update_cron_option( $new_value, $old_value ) {
 	// Remove first, to prevent scheduling conflicts for the "added events" next.
 	$removed_events = array_diff_key( $current_events, $new_events );
 	foreach ( $removed_events as $event_to_remove ) {
-		$existing_event = Event::get( [
+		$existing_event = Event::find( [
 			'timestamp' => $event_to_remove['timestamp'],
 			'action'    => $event_to_remove['action'],
 			'args'      => $event_to_remove['args'],
