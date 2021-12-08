@@ -559,6 +559,99 @@ class Events extends Singleton {
 
 		return update_option( self::DISABLE_RUN_OPTION, $new_status );
 	}
+
+	/**
+	 * Query for multiple events.
+	 *
+	 * @param array $query_args Event query args.
+	 * @return array An array of Event objects.
+	 */
+	public static function query( array $query_args = [] ): array {
+		$event_db_rows = Events_Store::_query_events_raw( $query_args );
+		$events = array_map( fn( $event ) => Event::get_from_db_row( $event ), $event_db_rows );
+		return array_filter( $events, fn( $event ) => ! is_null( $event ) );
+	}
+
+	/**
+	 * Format multiple events the way WP expects them.
+	 *
+	 * @param array $events Array of Event objects that need formatting.
+	 * @return array Array of event data in the deeply nested format WP expects.
+	 */
+	public static function format_events_for_wp( array $events ): array {
+		$crons = [];
+
+		foreach ( $events as $event ) {
+			// Level 1: Ensure the root timestamp node exists.
+			$timestamp = $event->get_timestamp();
+			if ( ! isset( $crons[ $timestamp ] ) ) {
+				$crons[ $timestamp ] = [];
+			}
+
+			// Level 2: Ensure the action node exists.
+			$action = $event->get_action();
+			if ( ! isset( $crons[ $timestamp ][ $action ] ) ) {
+				$crons[ $timestamp ][ $action ] = [];
+			}
+
+			// Finally, add the rest of the event details.
+			$formatted_event = [
+				'schedule' => empty( $event->get_schedule() ) ? false : $event->get_schedule(),
+				'args'     => $event->get_args(),
+			];
+
+			$interval = $event->get_interval();
+			if ( ! empty( $interval ) ) {
+				$formatted_event['interval'] = $interval;
+			}
+
+			$instance = $event->get_instance();
+			$crons[ $timestamp ][ $action ][ $instance ] = $formatted_event;
+		}
+
+		// Re-sort the array just as core does when events are scheduled.
+		uksort( $crons, 'strnatcasecmp' );
+		return $crons;
+	}
+
+	/**
+	 * Flatten the WP events array.
+	 * Each event will have a unique key for quick comparisons.
+	 *
+	 * @param array $events Deeply nested array of event data in the format WP core uses.
+	 * @return array Flat array that is easier to compare and work with :)
+	 */
+	public static function flatten_wp_events_array( array $events ): array {
+		// Core legacy thing, we don't need this.
+		unset( $events['version'] );
+
+		$flattened = [];
+		foreach ( $events as $timestamp => $ts_events ) {
+			foreach ( $ts_events as $action => $action_instances ) {
+				foreach ( $action_instances as $instance => $event_details ) {
+					$unique_key = "$timestamp:$action:$instance";
+
+					$flat_event = [
+						'timestamp' => $timestamp,
+						'action'    => $action,
+						'instance'  => $instance,
+						'args'      => $event_details['args'],
+					];
+
+					if ( ! empty( $event_details['schedule'] ) ) {
+						$unique_key = "$unique_key:{$event_details['schedule']}:{$event_details['interval']}";
+
+						$flat_event['schedule'] = $event_details['schedule'];
+						$flat_event['interval'] = $event_details['interval'];
+					}
+
+					$flattened[ sha1( $unique_key ) ] = $flat_event;
+				}
+			}
+		}
+
+		return $flattened;
+	}
 }
 
 Events::instance();
