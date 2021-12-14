@@ -56,7 +56,7 @@ class Main extends Singleton {
 		add_action( 'admin_notices', function () use ( $admin_message ) {
 			?>
 			<div class="notice notice-error">
-				<p><?php echo wp_kses( $admin_message, [ 'strong' => [], 'code' => [] ] ) ?></p>
+				<p><?php echo wp_kses( $admin_message, [ 'strong' => [], 'code' => [] ] ); ?></p>
 			</div>
 			<?php
 		} );
