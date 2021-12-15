@@ -62,10 +62,11 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Build appropriate table name for this install
+	 * Build appropriate table name for this site.
 	 */
 	public function get_table_name() {
-		return self::table_name();
+		global $wpdb;
+		return $wpdb->prefix . self::TABLE_SUFFIX;
 	}
 
 	/**
@@ -254,7 +255,7 @@ class Events_Store extends Singleton {
 			'status' => $args['status'],
 		];
 
-		$jobs = self::_query_events_raw( $adjusted_args );
+		$jobs = $this->_query_events_raw( $adjusted_args );
 		return array_map( array( $this, 'format_job' ), $jobs );
 	}
 
@@ -272,7 +273,7 @@ class Events_Store extends Singleton {
 			return false;
 		}
 
-		$job = self::_get_event_raw( $jid );
+		$job = $this->_get_event_raw( $jid );
 		if ( ! is_object( $job ) ) {
 			return false;
 		}
@@ -323,7 +324,7 @@ class Events_Store extends Singleton {
 			$adjusted_args['action_hashed'] = $attrs['action_hashed'];
 		}
 
-		$jobs = self::_query_events_raw( $adjusted_args );
+		$jobs = $this->_query_events_raw( $adjusted_args );
 		return is_object( $jobs[0] ) ? $this->format_job( $jobs[0] ) : false;
 	}
 
@@ -513,7 +514,7 @@ class Events_Store extends Singleton {
 	 * @param array $row_data The row data used to create the event.
 	 * @return int The newly created event ID, 0 if creation failed.
 	 */
-	public static function _create_event( array $row_data ): int {
+	public function _create_event( array $row_data ): int {
 		global $wpdb;
 
 		if ( empty( $row_data ) ) {
@@ -523,7 +524,7 @@ class Events_Store extends Singleton {
 		$row_data['created']       = current_time( 'mysql', true );
 		$row_data['last_modified'] = current_time( 'mysql', true );
 
-		$result = $wpdb->insert( self::table_name(), $row_data, self::row_formatting( $row_data ) );
+		$result = $wpdb->insert( $this->get_table_name(), $row_data, self::row_formatting( $row_data ) );
 
 		self::flush_event_cache();
 		return false === $result ? 0 : $wpdb->insert_id;
@@ -537,7 +538,7 @@ class Events_Store extends Singleton {
 	 * @param array $row_data The row data used to update the event.
 	 * @return bool True if update was successful, false otherwise.
 	 */
-	public static function _update_event( int $event_id, array $row_data ): bool {
+	public function _update_event( int $event_id, array $row_data ): bool {
 		global $wpdb;
 
 		if ( empty( $event_id ) || empty( $row_data ) ) {
@@ -547,7 +548,7 @@ class Events_Store extends Singleton {
 		$row_data['last_modified'] = current_time( 'mysql', true );
 
 		$where  = [ 'ID' => $event_id ];
-		$result = $wpdb->update( self::table_name(), $row_data, $where, self::row_formatting( $row_data ), self::row_formatting( $where ) );
+		$result = $wpdb->update( $this->get_table_name(), $row_data, $where, self::row_formatting( $row_data ), self::row_formatting( $where ) );
 
 		self::flush_event_cache();
 		return false !== $result;
@@ -564,16 +565,15 @@ class Events_Store extends Singleton {
 	 * @param int $id The ID of the event being retrieved.
 	 * @return object|null Raw event object if successful, false otherwise.
 	 */
-	public static function _get_event_raw( int $id ): ?object {
+	public function _get_event_raw( int $id ): ?object {
+		global $wpdb;
+
 		if ( $id <= 0 ) {
 			return null;
 		}
 
-		global $wpdb;
-		$table_name = self::table_name();
-
 		// Cannot prepare table name. @codingStandardsIgnoreLine
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_name} WHERE id = %d", $id ) );
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->get_table_name()} WHERE id = %d", $id ) );
 
 		return is_object( $row ) ? $row : null;
 	}
@@ -585,7 +585,7 @@ class Events_Store extends Singleton {
 	 * @param array $args Argument list for the query.
 	 * @return array Array of raw event objects.
 	 */
-	public static function _query_events_raw( array $args = [] ): array {
+	public function _query_events_raw( array $args = [] ): array {
 		global $wpdb;
 
 		$valid_args = [
@@ -643,7 +643,7 @@ class Events_Store extends Singleton {
 			}
 		}
 
-		$table = self::table_name();
+		$table = $this->get_table_name();
 		$sql = "SELECT * FROM `{$table}` WHERE 1=1";
 		$placeholders = [];
 
@@ -790,11 +790,6 @@ class Events_Store extends Singleton {
 
 	private static function flush_event_cache() {
 		wp_cache_set( 'last_changed', microtime(), 'cron-control-events' );
-	}
-
-	private static function table_name(): string {
-		global $wpdb;
-		return $wpdb->prefix . self::TABLE_SUFFIX;
 	}
 }
 
