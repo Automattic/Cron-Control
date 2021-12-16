@@ -145,7 +145,7 @@ class Events extends \WP_CLI_Command {
 		}
 
 		/* translators: 1: Event ID, 2: Event action, 3. Event instance */
-		\WP_CLI::log( sprintf( __( 'Found event %1$d with action `%2$s` and instance identifier `%3$s`', 'automattic-cron-control' ), $args[0], $event->action, $event->instance ) );
+		\WP_CLI::log( sprintf( __( 'Found event %1$d with action `%2$s` and instance identifier `%3$s`', 'automattic-cron-control' ), $args[0], $event->get_action(), $event->get_instance() ) );
 
 		$now = time();
 		$event_timestamp = $event->get_timestamp();
