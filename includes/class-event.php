@@ -131,11 +131,11 @@ class Event {
 		}
 
 		if ( $this->exists() ) {
-			$success = Events_Store::_update_event( $this->id, $row_data );
+			$success = Events_Store::instance()->_update_event( $this->id, $row_data );
 			return true === $success ? true : new WP_Error( 'cron-control:event:failed-update' );
 		}
 
-		$event_id = Events_Store::_create_event( $row_data );
+		$event_id = Events_Store::instance()->_create_event( $row_data );
 		if ( $event_id < 1 ) {
 			return new WP_Error( 'cron-control:event:failed-create' );
 		}
@@ -202,12 +202,12 @@ class Event {
 	*/
 
 	public static function get( int $event_id ): ?Event {
-		$db_row = Events_Store::_get_event_raw( $event_id );
+		$db_row = Events_Store::instance()->_get_event_raw( $event_id );
 		return is_null( $db_row ) ? null : self::get_from_db_row( $db_row );
 	}
 
 	public static function find( array $query_args ): ?Event {
-		$results = Events_Store::_query_events_raw( array_merge( $query_args, [ 'limit' => 1 ] ) );
+		$results = Events_Store::instance()->_query_events_raw( array_merge( $query_args, [ 'limit' => 1 ] ) );
 		return empty( $results ) ? null : self::get_from_db_row( $results[0] );
 	}
 

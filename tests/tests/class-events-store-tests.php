@@ -207,8 +207,10 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 	*/
 
 	function test_event_creation() {
+		$store = Events_Store::instance();
+
 		// We don't validate fields here, so not much to test other than return values.
-		$result = Events_Store::_create_event( [
+		$result = $store->_create_event( [
 			'status'        => Events_Store::STATUS_PENDING,
 			'action'        => 'test_raw_event',
 			'action_hashed' => md5( 'test_raw_event' ),
@@ -218,33 +220,37 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		] );
 		$this->assertTrue( is_int( $result ) && $result > 0, 'event was inserted' );
 
-		$empty_result = Events_Store::_create_event( [] );
+		$empty_result = $store->_create_event( [] );
 		$this->assertTrue( 0 === $empty_result, 'empty event was not inserted' );
 	}
 
 	function test_event_updates() {
+		$store = Events_Store::instance();
+
 		// Make a valid event.
 		$event = new Event();
 		$event->set_action( 'test_get_action' );
 		$event->set_timestamp( 1637447875 );
 		$event->save();
 
-		$result = Events_Store::_update_event( $event->get_id(), [ 'timestamp' => 1637447875 + 100 ] );
+		$result = $store->_update_event( $event->get_id(), [ 'timestamp' => 1637447875 + 100 ] );
 		$this->assertTrue( $result, 'event was updated' );
 
 		// Spot check the updated property.
-		$raw_event = Events_Store::_get_event_raw( $event->get_id() );
+		$raw_event = $store->_get_event_raw( $event->get_id() );
 		$this->assertEquals( 1637447875 + 100, $raw_event->timestamp );
 
-		$failed_result = Events_Store::_update_event( $event->get_id(), [] );
+		$failed_result = $store->_update_event( $event->get_id(), [] );
 		$this->assertFalse( $failed_result, 'event was not updated due to invalid args' );
 	}
 
 	function test_get_raw_event() {
-		$result = Events_Store::_get_event_raw( -1 );
+		$store = Events_Store::instance();
+
+		$result = $store->_get_event_raw( -1 );
 		$this->assertNull( $result, 'returns null when given invalid ID' );
 
-		$result = Events_Store::_get_event_raw( PHP_INT_MAX );
+		$result = $store->_get_event_raw( PHP_INT_MAX );
 		$this->assertNull( $result, 'returns null when given an non-existant ID' );
 
 		// Event w/ all defaults.
@@ -291,13 +297,15 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$save_result = $test_event->save();
 
 		// Check if we got expected values from the DB.
-		$raw_event = Events_Store::_get_event_raw( $test_event->get_id() );
+		$raw_event = Events_Store::instance()->_get_event_raw( $test_event->get_id() );
 		$expected_data = $event_data['expected_data'];
 		$expected_data['id'] = $test_event->get_id();
 		Utils::assert_event_raw_data_equals( $raw_event, $expected_data, $this );
 	}
 
 	public function test_query_raw_events() {
+		$store = Events_Store::instance();
+
 		$args = [
 			'status'    => Events_Store::STATUS_PENDING,
 			'action'    => 'test_query_raw_events',
@@ -312,7 +320,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$event_four  = $this->create_test_event( array_merge( $args, [ 'timestamp' => 4 ] ) );
 
 		// Should give us just the first event that has the oldest timestamp.
-		$result = Events_Store::_query_events_raw( [
+		$result = $store->_query_events_raw( [
 			'status'   => [ Events_Store::STATUS_PENDING ],
 			'action'   => 'test_query_raw_events',
 			'args'     => [ 'some' => 'data' ],
@@ -324,7 +332,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$this->assertEquals( $event_one->get_timestamp(), $result[0]->timestamp, 'found the right event' );
 
 		// Should give two events now, in desc order
-		$result = Events_Store::_query_events_raw( [
+		$result = $store->_query_events_raw( [
 			'status'   => [ Events_Store::STATUS_PENDING ],
 			'action'   => 'test_query_raw_events',
 			'args'     => [ 'some' => 'data' ],
@@ -338,7 +346,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$this->assertEquals( $event_three->get_timestamp(), $result[1]->timestamp, 'found the right event' );
 
 		// Should find just the middle two events that match the timeframe.
-		$result = Events_Store::_query_events_raw( [
+		$result = $store->_query_events_raw( [
 			'status'    => [ Events_Store::STATUS_PENDING ],
 			'action'    => 'test_query_raw_events',
 			'args'      => [ 'some' => 'data' ],
@@ -354,7 +362,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$event_five = $this->create_test_event( array_merge( $args, [ 'timestamp' => time() + 5 ] ) );
 
 		// Should find all but the last event that is not due yet.
-		$result = Events_Store::_query_events_raw( [
+		$result = $store->_query_events_raw( [
 			'status'    => [ Events_Store::STATUS_PENDING ],
 			'action'    => 'test_query_raw_events',
 			'args'      => [ 'some' => 'data' ],
@@ -368,7 +376,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$this->assertEquals( $event_four->get_timestamp(), $result[3]->timestamp, 'found the right event' );
 
 		// Grab the second page.
-		$result = Events_Store::_query_events_raw( [
+		$result = $store->_query_events_raw( [
 			'status'   => [ Events_Store::STATUS_PENDING ],
 			'action'   => 'test_query_raw_events',
 			'args'     => [ 'some' => 'data' ],

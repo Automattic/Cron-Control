@@ -317,7 +317,7 @@ class Event_Tests extends \WP_UnitTestCase {
 		$expected_result['id'] = $test_event->get_id();
 
 		// Grab straight from the DB so we can make sure the enclosed properties worked correctly.
-		$raw_event = Events_Store::_get_event_raw( $test_event->get_id() );
+		$raw_event = Events_Store::instance()->_get_event_raw( $test_event->get_id() );
 		Utils::assert_event_raw_data_equals( $raw_event, $expected_result, $this );
 
 		// Initiate the event again, testing the getters and ensuring data is hydrated correctly.
@@ -342,7 +342,7 @@ class Event_Tests extends \WP_UnitTestCase {
 			'timestamp' => 1637447875,
 		];
 
-		$raw_event = Events_Store::_get_event_raw( $test_event->get_id() );
+		$raw_event = Events_Store::instance()->_get_event_raw( $test_event->get_id() );
 
 		// Will populate the event w/ full data from database.
 		$event = Event::get_from_db_row( $raw_event );
