@@ -220,6 +220,7 @@ class Events extends Singleton {
 
 		// Ensure we don't run jobs ahead of time.
 		if ( ! $force && $timestamp > time() ) {
+			/* translators: 1: Job identifier */
 			$error_message = sprintf( __( 'Job with identifier `%1$s` is not scheduled to run yet.', 'automattic-cron-control' ), "$timestamp-$action-$instance" );
 			return new WP_Error( 'premature', $error_message, [ 'status' => 404 ] );
 		}
@@ -233,6 +234,7 @@ class Events extends Singleton {
 
 		// Nothing to do...
 		if ( is_null( $event ) ) {
+			/* translators: 1: Job identifier */
 			$error_message = sprintf( __( 'Job with identifier `%1$s` could not be found.', 'automattic-cron-control' ), "$timestamp-$action-$instance" );
 			return new WP_Error( 'no-event', $error_message, [ 'status' => 404 ] );
 		}
