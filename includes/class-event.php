@@ -134,12 +134,8 @@ class Event {
 		}
 
 		if ( $this->exists() ) {
-<<<<<<< HEAD
 			$success = Events_Store::instance()->_update_event( $this->id, $row_data );
-=======
-			$success = Events_Store::_update_event( $this->id, $row_data );
 			// TODO: update last modified
->>>>>>> 91f7cb0 (Cleanup Events())
 			return true === $success ? true : new WP_Error( 'cron-control:event:failed-update' );
 		}
 
