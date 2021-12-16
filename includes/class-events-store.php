@@ -527,9 +527,6 @@ class Events_Store extends Singleton {
 			return 0;
 		}
 
-		$row_data['created']       = current_time( 'mysql', true );
-		$row_data['last_modified'] = current_time( 'mysql', true );
-
 		$result = $wpdb->insert( $this->get_table_name(), $row_data, self::row_formatting( $row_data ) );
 
 		self::flush_event_cache();
@@ -550,8 +547,6 @@ class Events_Store extends Singleton {
 		if ( empty( $event_id ) || empty( $row_data ) ) {
 			return 0;
 		}
-
-		$row_data['last_modified'] = current_time( 'mysql', true );
 
 		$where  = [ 'ID' => $event_id ];
 		$result = $wpdb->update( $this->get_table_name(), $row_data, $where, self::row_formatting( $row_data ), self::row_formatting( $where ) );

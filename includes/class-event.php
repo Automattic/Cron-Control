@@ -133,19 +133,29 @@ class Event {
 			$row_data['interval'] = 0;
 		}
 
+		// About to be updated, so increment the "last modified" timestamp.
+		$current_time = current_time( 'mysql', true );
+		$row_data['last_modified'] = $current_time;
+
 		if ( $this->exists() ) {
 			$success = Events_Store::instance()->_update_event( $this->id, $row_data );
-			// TODO: update last modified
-			return true === $success ? true : new WP_Error( 'cron-control:event:failed-update' );
+			if ( ! $success ) {
+				return new WP_Error( 'cron-control:event:failed-update' );
+			}
+
+			$this->last_modified = $current_time;
+			return true;
 		}
+
+		$row_data['created'] = $current_time;
 
 		$event_id = Events_Store::instance()->_create_event( $row_data );
 		if ( $event_id < 1 ) {
 			return new WP_Error( 'cron-control:event:failed-create' );
 		}
 
-		// TODO: update created/last modified
 		$this->id = $event_id;
+		$this->created = $current_time;
 		return true;
 	}
 
