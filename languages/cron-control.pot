@@ -2,9 +2,9 @@
 # This file is distributed under the same license as the Cron Control package.
 msgid ""
 msgstr ""
-"Project-Id-Version: Cron Control 2.0\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/Cron-Control\n"
-"POT-Creation-Date: 2021-11-17 19:45:06+00:00\n"
+"Project-Id-Version: Cron Control 3.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/cron-control\n"
+"POT-Creation-Date: 2021-12-14 20:09:24+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -66,18 +66,28 @@ msgstr ""
 msgid "Cron Control internal job - every 10 minutes"
 msgstr ""
 
-#: includes/class-main.php:79
-#. translators: 1: Plugin name, 2: Constant name
-msgid "%1$s: %2$s set to unexpected value; must be corrected for proper behaviour."
+#: includes/class-main.php:32
+#. translators: 1: Constant name
+msgid "Must define the constant %1$s."
 msgstr ""
 
-#: includes/class-main.php:94
+#: includes/class-main.php:38
+#. translators: 1: PHP version
+msgid "The PHP version must be %1$s or above."
+msgstr ""
+
+#: includes/class-main.php:44
+#. translators: 1: WP version
+msgid "The WP version must be %1$s or above."
+msgstr ""
+
+#: includes/class-main.php:107
 msgid "Normal cron execution is blocked when the Cron Control plugin is active."
 msgstr ""
 
-#: includes/class-main.php:124
-#. translators: 1: Plugin name, 2: Constant name
-msgid "<strong>%1$s</strong>: To use this plugin, define the constant %2$s."
+#: includes/class-main.php:143
+#. translators: 1: Constant name
+msgid "%1$s set to unexpected value; must be corrected for proper behaviour."
 msgstr ""
 
 #: includes/class-rest-api.php:98
