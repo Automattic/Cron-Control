@@ -109,10 +109,12 @@ function delete_event_by_id( $id, $flush_cache = false ) {
 /**
  * Retrieve jobs given a set of parameters
  *
+ * @deprecated
  * @param array $args Event arguments to filter by.
  * @return array
  */
 function get_events( $args ) {
+	_deprecated_function( 'Automattic\WP\Cron_Control\get_events' );
 	return Events_Store::instance()->get_jobs( $args );
 }
 

@@ -216,7 +216,7 @@ class Events_Store extends Singleton {
 	 * @deprecated
 	 */
 	public function get_option() {
-		_deprecated_function( 'get_option', 'pre_get_cron_option' );
+		_deprecated_function( 'Events_Store\get_option', 'pre_get_cron_option' );
 		return pre_get_cron_option( false );
 	}
 
@@ -226,7 +226,7 @@ class Events_Store extends Singleton {
 	 * @deprecated
 	 */
 	public function update_option( $new_value, $old_value ) {
-		_deprecated_function( 'update_option', 'pre_update_cron_option' );
+		_deprecated_function( 'Events_Store\update_option', 'pre_update_cron_option' );
 		return pre_update_cron_option( $new_value, $old_value );
 	}
 
@@ -236,7 +236,7 @@ class Events_Store extends Singleton {
 	 * @deprecated
 	 */
 	public function block_creation_if_job_exists( $job ) {
-		_deprecated_function( 'block_creation_if_job_exists' );
+		_deprecated_function( 'Events_Store\block_creation_if_job_exists' );
 		return $job;
 	}
 
@@ -244,10 +244,13 @@ class Events_Store extends Singleton {
 	 * Retrieve jobs given a set of parameters
 	 * Deprecation coming soon.
 	 *
+	 * @deprecated
 	 * @param array $args Job arguments to search by.
 	 * @return array
 	 */
 	public function get_jobs( $args ) {
+		_deprecated_function( 'Events_Store\get_jobs' );
+
 		// Adjust this method's previous defaults for what our new method expects.
 		$adjusted_args = [
 			'limit'  => isset( $args['quantity'] ) && is_numeric( $args['quantity'] ) ? $args['quantity'] : 100,

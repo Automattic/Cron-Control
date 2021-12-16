@@ -7,6 +7,9 @@
 
 namespace Automattic\WP\Cron_Control\CLI;
 
+use \Automattic\WP\Cron_Control\Events_Store;
+use Automattic\WP\Cron_Control;
+
 /**
  * Manage Cron Control's data
  */
@@ -22,7 +25,7 @@ class Events extends \WP_CLI_Command {
 	 * @param array $assoc_args Array of flags.
 	 */
 	public function list_events( $args, $assoc_args ) {
-		$events = $this->get_events( $args, $assoc_args );
+		$events = $this->retrieve_events( $args, $assoc_args );
 
 		// Show the event count and abort. Works with --status flag.
 		if ( isset( $assoc_args['format'] ) && 'count' === $assoc_args['format'] ) {
@@ -175,7 +178,7 @@ class Events extends \WP_CLI_Command {
 	 * @param array $assoc_args Array of flags.
 	 * @return array
 	 */
-	private function get_events( $args, $assoc_args ) {
+	private function retrieve_events( $args, $assoc_args ) {
 		// Accept a status argument, with a default.
 		$status = 'pending';
 		if ( isset( $assoc_args['status'] ) ) {
@@ -186,15 +189,15 @@ class Events extends \WP_CLI_Command {
 		$event_status = null;
 		switch ( $status ) {
 			case 'pending':
-				$event_status = \Automattic\WP\Cron_Control\Events_Store::STATUS_PENDING;
+				$event_status = Events_Store::STATUS_PENDING;
 				break;
 
 			case 'running':
-				$event_status = \Automattic\WP\Cron_Control\Events_Store::STATUS_RUNNING;
+				$event_status = Events_Store::STATUS_RUNNING;
 				break;
 
 			case 'completed':
-				$event_status = \Automattic\WP\Cron_Control\Events_Store::STATUS_COMPLETED;
+				$event_status = Events_Store::STATUS_COMPLETED;
 				break;
 		}
 
@@ -218,19 +221,13 @@ class Events extends \WP_CLI_Command {
 
 		$offset = absint( ( $page - 1 ) * $limit );
 
-		$items = \Automattic\WP\Cron_Control\get_events(
-			array(
-				'status'     => $event_status,
-				'quantity'   => $limit,
-				'page'       => $page,
-				'force_sort' => true,
-			)
-		);
+		$events = Cron_Control\Events::query( [
+			'status' => $event_status,
+			'limit'  => $limit,
+			'page'   => $page,
+		] );
 
-		// Bail if we don't get results!
-		if ( ! is_array( $items ) ) {
-			\WP_CLI::error( __( 'Problem retrieving events', 'automattic-cron-control' ) );
-		}
+		$items = array_map( fn( $event ) => $event->get_legacy_event_format(), $events );
 
 		// Include totals for pagination etc.
 		$total_items = \Automattic\WP\Cron_Control\count_events_by_status( $event_status );
@@ -263,7 +260,7 @@ class Events extends \WP_CLI_Command {
 				'event_args'        => '',
 			);
 
-			if ( \Automattic\WP\Cron_Control\Events_Store::STATUS_PENDING === $event->status ) {
+			if ( Events_Store::STATUS_PENDING === $event->status ) {
 				$row['next_run_relative'] = $this->calculate_interval( $event->timestamp - time() );
 			}
 
@@ -271,7 +268,7 @@ class Events extends \WP_CLI_Command {
 
 			$row['event_args'] = maybe_serialize( $event->args );
 
-			if ( \Automattic\WP\Cron_Control\Events_Store::STATUS_COMPLETED === $event->status ) {
+			if ( Events_Store::STATUS_COMPLETED === $event->status ) {
 				$instance        = md5( $row['event_args'] );
 				$row['instance'] = "{$instance} - {$row['instance']}";
 			}
@@ -467,7 +464,7 @@ class Events extends \WP_CLI_Command {
 
 		$events_to_delete = array();
 
-		$events = $this->get_events( $args, $assoc_args );
+		$events = $this->retrieve_events( $args, $assoc_args );
 
 		/* translators: 1: Total event count */
 		\WP_CLI::log( sprintf( _n( 'Found %s event to check', 'Found %s events to check', $events['total_items'], 'automattic-cron-control' ), number_format_i18n( $events['total_items'] ) ) );
@@ -497,7 +494,7 @@ class Events extends \WP_CLI_Command {
 				break;
 			}
 
-			$events = $this->get_events( $args, $assoc_args );
+			$events = $this->retrieve_events( $args, $assoc_args );
 		} while ( $events['page'] <= $events['total_pages'] );
 
 		$search_progress->finish();
@@ -636,12 +633,12 @@ class Events extends \WP_CLI_Command {
 	 * @param array $assoc_args Array of flags.
 	 */
 	private function delete_completed_events( $args, $assoc_args ) {
-		$count = \Automattic\WP\Cron_Control\count_events_by_status( \Automattic\WP\Cron_Control\Events_Store::STATUS_COMPLETED );
+		$count = \Automattic\WP\Cron_Control\count_events_by_status( Events_Store::STATUS_COMPLETED );
 
 		/* translators: 1: Event count */
 		\WP_CLI::confirm( sprintf( _n( 'Found %s completed event to remove. Continue?', 'Found %s completed events to remove. Continue?', $count, 'automattic-cron-control' ), number_format_i18n( $count ) ) );
 
-		\Automattic\WP\Cron_Control\Events_Store::instance()->purge_completed_events( false );
+		Events_Store::instance()->purge_completed_events( false );
 
 		\WP_CLI::success( __( 'Entries removed', 'automattic-cron-control' ) );
 	}
