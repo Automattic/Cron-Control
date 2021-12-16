@@ -242,7 +242,6 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Retrieve jobs given a set of parameters
-	 * Deprecation coming soon.
 	 *
 	 * @deprecated
 	 * @param array $args Job arguments to search by.
@@ -264,12 +263,14 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Retrieve a single event by its ID
-	 * Deprecation coming soon.
 	 *
+	 * @deprecated
 	 * @param int $jid Job ID.
 	 * @return object|false
 	 */
 	public function get_job_by_id( $jid ) {
+		_deprecated_function( 'Events_Store\get_job_by_id' );
+
 		// Validate ID.
 		$jid = absint( $jid );
 		if ( ! $jid ) {

@@ -131,10 +131,12 @@ function get_event_by_attributes( $attributes ) {
 /**
  * Retrieve a single event by its ID
  *
+ * @deprecated
  * @param  int $jid Job ID.
  * @return object|false
  */
 function get_event_by_id( $jid ) {
+	_deprecated_function( 'Automattic\WP\Cron_Control\get_event_by_id' );
 	return Events_Store::instance()->get_job_by_id( $jid );
 }
 

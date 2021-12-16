@@ -137,9 +137,9 @@ class Events extends \WP_CLI_Command {
 		}
 
 		// Retrieve information needed to execute event.
-		$event = \Automattic\WP\Cron_Control\get_event_by_id( $args[0] );
+		$event = Cron_Control\Event::get( $args[0] );
 
-		if ( ! is_object( $event ) ) {
+		if ( is_null( $event ) ) {
 			/* translators: 1: Event ID */
 			\WP_CLI::error( sprintf( __( 'Failed to locate event %d. Please confirm that the entry exists and that the ID is that of an event.', 'automattic-cron-control' ), $args[0] ) );
 		}
@@ -148,9 +148,10 @@ class Events extends \WP_CLI_Command {
 		\WP_CLI::log( sprintf( __( 'Found event %1$d with action `%2$s` and instance identifier `%3$s`', 'automattic-cron-control' ), $args[0], $event->action, $event->instance ) );
 
 		$now = time();
-		if ( $event->timestamp > $now ) {
+		$event_timestamp = $event->get_timestamp();
+		if ( $event_timestamp > $now ) {
 			/* translators: 1: Time in UTC, 2: Human time diff */
-			\WP_CLI::warning( sprintf( __( 'This event is not scheduled to run until %1$s UTC (%2$s)', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $event->timestamp ), $this->calculate_interval( $event->timestamp - $now ) ) );
+			\WP_CLI::warning( sprintf( __( 'This event is not scheduled to run until %1$s UTC (%2$s)', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $event_timestamp ), $this->calculate_interval( $event_timestamp - $now ) ) );
 		}
 
 		\WP_CLI::confirm( sprintf( __( 'Run this event?', 'automattic-cron-control' ) ) );
@@ -159,7 +160,7 @@ class Events extends \WP_CLI_Command {
 		\Automattic\WP\Cron_Control\set_doing_cron();
 
 		// Run the event!
-		$run = \Automattic\WP\Cron_Control\run_event( $event->timestamp, $event->action_hashed, $event->instance, true );
+		$run = \Automattic\WP\Cron_Control\run_event( $event->get_timestamp(), md5( $event->get_action() ), $event->get_instance(), true );
 
 		// Output based on run attempt.
 		if ( is_array( $run ) ) {
@@ -399,41 +400,37 @@ class Events extends \WP_CLI_Command {
 		\WP_CLI::log( __( 'Locating event...', 'automattic-cron-control' ) . "\n" );
 
 		// Look up full event object.
-		$event = \Automattic\WP\Cron_Control\get_event_by_id( $jid );
+		$event = Cron_Control\Event::get( $jid );
 
-		if ( is_object( $event ) ) {
-			// Warning about Internal Events.
-			if ( \Automattic\WP\Cron_Control\is_internal_event( $event->action ) ) {
-				\WP_CLI::warning( __( 'This is an event created by the Cron Control plugin. It will recreated automatically.', 'automattic-cron-control' ) );
-			}
+		if ( is_null( $event ) ) {
+			/* translators: 1: Event ID */
+			\WP_CLI::error( sprintf( __( 'Failed to delete event %d. Please confirm that the entry exists and that the ID is that of an event.', 'automattic-cron-control' ), $jid ) );
+		}
 
-			/* translators: 1: Event execution time in UTC */
-			\WP_CLI::log( sprintf( __( 'Execution time: %s UTC', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $event->timestamp ) ) );
-			/* translators: 1: Event action */
-			\WP_CLI::log( sprintf( __( 'Action: %s', 'automattic-cron-control' ), $event->action ) );
-			/* translators: 1: Event instance */
-			\WP_CLI::log( sprintf( __( 'Instance identifier: %s', 'automattic-cron-control' ), $event->instance ) );
-			\WP_CLI::log( '' );
-			\WP_CLI::confirm( sprintf( __( 'Are you sure you want to delete this event?', 'automattic-cron-control' ) ) );
+		// Warning about Internal Events.
+		if ( $event->is_internal() ) {
+			\WP_CLI::warning( __( 'This is an event created by the Cron Control plugin. It will recreated automatically.', 'automattic-cron-control' ) );
+		}
 
-			// Try to delete the item and provide some relevant output.
-			\Automattic\WP\Cron_Control\_suspend_event_creation();
-			$deleted = \Automattic\WP\Cron_Control\delete_event_by_id( $event->ID, true );
-			\Automattic\WP\Cron_Control\_resume_event_creation();
+		/* translators: 1: Event execution time in UTC */
+		\WP_CLI::log( sprintf( __( 'Execution time: %s UTC', 'automattic-cron-control' ), date_i18n( TIME_FORMAT, $event->get_timestamp() ) ) );
+		/* translators: 1: Event action */
+		\WP_CLI::log( sprintf( __( 'Action: %s', 'automattic-cron-control' ), $event->get_action() ) );
+		/* translators: 1: Event instance */
+		\WP_CLI::log( sprintf( __( 'Instance identifier: %s', 'automattic-cron-control' ), $event->get_instance() ) );
+		\WP_CLI::log( '' );
+		\WP_CLI::confirm( sprintf( __( 'Are you sure you want to delete this event?', 'automattic-cron-control' ) ) );
 
-			if ( false === $deleted ) {
-				/* translators: 1: Event ID */
-				\WP_CLI::error( sprintf( __( 'Failed to delete event %d', 'automattic-cron-control' ), $jid ) );
-			} else {
-				\Automattic\WP\Cron_Control\_flush_internal_caches();
-				/* translators: 1: Event ID */
-				\WP_CLI::success( sprintf( __( 'Removed event %d', 'automattic-cron-control' ), $jid ) );
-				return;
-			}
+		// Try to delete the item and provide some relevant output.
+		$deleted = $event->complete();
+
+		if ( true !== $deleted ) {
+			/* translators: 1: Event ID */
+			\WP_CLI::error( sprintf( __( 'Failed to delete event %d', 'automattic-cron-control' ), $jid ) );
 		}
 
 		/* translators: 1: Event ID */
-		\WP_CLI::error( sprintf( __( 'Failed to delete event %d. Please confirm that the entry exists and that the ID is that of an event.', 'automattic-cron-control' ), $jid ) );
+		\WP_CLI::success( sprintf( __( 'Removed event %d', 'automattic-cron-control' ), $jid ) );
 	}
 
 	/**
