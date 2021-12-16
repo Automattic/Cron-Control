@@ -292,13 +292,15 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Retrieve a single event by a combination of a timestamp, instance identifier, and either action or the action's hashed representation
-	 * Deprecation coming soon.
 	 *
+	 * @deprecated
 	 * @param array $attrs Array of event attributes to query by.
 	 * @return object|false
 	 */
 	public function get_job_by_attributes( $attrs ) {
 		global $wpdb;
+
+		_deprecated_function( 'Events_Store\get_job_by_attributes' );
 
 		// Validate basic inputs.
 		if ( ! is_array( $attrs ) || empty( $attrs ) ) {

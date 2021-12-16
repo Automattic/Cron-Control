@@ -121,10 +121,12 @@ function get_events( $args ) {
 /**
  * Retrieve a single event by ID, or by a combination of its timestamp, instance identifier, and either action or the action's hashed representation
  *
+ * @deprecated
  * @param  array $attributes Array of event attributes to query by.
  * @return object|false
  */
 function get_event_by_attributes( $attributes ) {
+	_deprecated_function( 'Automattic\WP\Cron_Control\get_event_by_attributes' );
 	return Events_Store::instance()->get_job_by_attributes( $attributes );
 }
 

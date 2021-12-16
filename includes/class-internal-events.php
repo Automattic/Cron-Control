@@ -268,26 +268,16 @@ class Internal_Events extends Singleton {
 				continue;
 			}
 
-			$event_details = get_event_by_attributes(
-				array(
-					'timestamp' => $timestamp,
-					'action'    => $internal_event['action'],
-					'instance'  => md5( maybe_serialize( array() ) ),
-				)
-			);
+			$event = Event::find( [
+				'timestamp' => $timestamp,
+				'action'    => $internal_event['action'],
+				'instance'  => md5( maybe_serialize( [] ) ),
+			] );
 
-			if ( $event_details->schedule !== $internal_event['schedule'] ) {
-				if ( $timestamp <= time() ) {
-					$timestamp = time() + ( 1 * \MINUTE_IN_SECONDS );
-				}
-
-				$args = array(
-					'schedule' => $internal_event['schedule'],
-					'args'     => $event_details->args,
-					'interval' => $schedules[ $internal_event['schedule'] ]['interval'],
-				);
-
-				schedule_event( $timestamp, $event_details->action, $args, $event_details->ID );
+			if ( ! is_null( $event ) && $event->get_schedule() !== $internal_event['schedule'] ) {
+				// Update to the new schedule.
+				$event->set_schedule( $internal_event['schedule'], $schedules[ $internal_event['schedule'] ]['interval'] );
+				$event->save();
 			}
 		}
 	}
