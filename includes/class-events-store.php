@@ -358,9 +358,9 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Create or update entry for a given job
-	 * Deprecation coming soon.
+	 * Create or update entry for a given job.
 	 *
+	 * @deprecated
 	 * @param int    $timestamp    Unix timestamp event executes at.
 	 * @param string $action       Hook event fires.
 	 * @param array  $args         Array of event's schedule, arguments, and interval.
@@ -368,6 +368,8 @@ class Events_Store extends Singleton {
 	 * @param bool   $flush_cache  Whether or not to flush internal caches after creating/updating the event.
 	 */
 	public function create_or_update_job( $timestamp, $action, $args, $update_id = null, $flush_cache = true ) {
+		_deprecated_function( 'Events_Store\create_or_update_job' );
+
 		if ( is_int( $update_id ) && $update_id > 0 ) {
 			// Update an existing entry.
 			$event = Event::get( $update_id );
@@ -394,10 +396,10 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Mark an event's entry as completed
-	 * Deprecation coming soon.
 	 *
 	 * Completed entries will be cleaned up by an internal job
 	 *
+	 * @deprecated
 	 * @param int    $timestamp    Unix timestamp event executes at.
 	 * @param string $action       Name of action used when the event is registered (unhashed).
 	 * @param string $instance     md5 hash of the event's arguments array, which Core uses to index the `cron` option.
@@ -405,6 +407,8 @@ class Events_Store extends Singleton {
 	 * @return bool
 	 */
 	public function mark_job_completed( $timestamp, $action, $instance, $flush_cache = true ) {
+		_deprecated_function( 'Events_Store\mark_job_completed' );
+
 		$event = Event::find( [
 			'timestamp' => $timestamp,
 			'action'    => $action,
@@ -421,13 +425,15 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Set a job post to the "completed" status
-	 * Deprecation coming soon.
 	 *
+	 * @deprecated
 	 * @param int  $job_id       ID of job's record.
 	 * @param bool $flush_cache  Whether or not to flush internal caches after creating/updating the event.
 	 * @return bool
 	 */
 	public function mark_job_record_completed( $job_id, $flush_cache = true ) {
+		_deprecated_function( 'Events_Store\mark_job_record_completed' );
+
 		$event = Event::get( $job_id );
 
 		$result = false;
@@ -439,25 +445,27 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Deprecated soon, will be unused by the plugin.
-	 * Giving time to catch warnings before removing the public method.
+	 * @deprecated
 	 */
 	public function flush_internal_caches() {
+		_deprecated_function( 'Events_Store\flush_internal_caches' );
 		self::flush_event_cache();
 	}
 
 	/**
-	 * Soon to be deprecated.
+	 * @deprecated
 	 */
 	public function suspend_event_creation() {
 		// No longer needed.
+		_deprecated_function( 'Events_Store\suspend_event_creation' );
 	}
 
 	/**
-	 * Soon to be deprecated.
+	 * @deprecated
 	 */
 	public function resume_event_creation() {
 		// No longer needed.
+		_deprecated_function( 'Events_Store\resume_event_creation' );
 	}
 
 	/**

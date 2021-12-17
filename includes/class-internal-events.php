@@ -147,21 +147,9 @@ class Internal_Events extends Singleton {
 	 * Schedule internal events
 	 */
 	public function schedule_internal_events() {
-		$when = strtotime( sprintf( '+%d seconds', JOB_QUEUE_WINDOW_IN_SECONDS ) );
-
-		$schedules = wp_get_schedules();
-
 		foreach ( $this->internal_events as $event_args ) {
 			if ( ! wp_next_scheduled( $event_args['action'] ) ) {
-				$interval = array_key_exists( $event_args['schedule'], $schedules ) ? $schedules[ $event_args['schedule'] ]['interval'] : 0;
-
-				$args = array(
-					'schedule' => $event_args['schedule'],
-					'args'     => array(),
-					'interval' => $interval,
-				);
-
-				schedule_event( $when, $event_args['action'], $args );
+				wp_schedule_event( time(), $event_args['schedule'], $event_args['action'] );
 			}
 		}
 	}
