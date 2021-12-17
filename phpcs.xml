@@ -30,6 +30,7 @@
 		<exclude name="Squiz.Commenting.VariableComment.WrongStyle"/>
 		<exclude name="Squiz.Commenting.InlineComment.InvalidEndChar"/>
 		<exclude name="Generic.Commenting.DocComment.SpacingBeforeTags"/>
+		<exclude name="Generic.Commenting.DocComment.MissingShort"/>
 	</rule>
 	<rule ref="WordPress-Docs" />
 

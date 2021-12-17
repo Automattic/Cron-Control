@@ -453,6 +453,7 @@ class Events extends \WP_CLI_Command {
 			\WP_CLI::error( sprintf( __( 'No events with action `%s` found', 'automattic-cron-control' ), $action ) );
 		}
 
+		/* translators: 1: Total event count */
 		\WP_CLI::log( sprintf( __( 'Found %s event(s) to delete', 'automattic-cron-control' ), number_format_i18n( $events_count ) ) );
 		\WP_CLI::confirm( __( 'Are you sure you want to delete the event(s)?', 'automattic-cron-control' ) );
 
@@ -477,6 +478,7 @@ class Events extends \WP_CLI_Command {
 			return;
 		}
 
+		/* translators: 1: Total event count */
 		\WP_CLI::success( sprintf( __( 'Deleted %s event(s)', 'automattic-cron-control' ), number_format_i18n( $success_count ) ) );
 	}
 
