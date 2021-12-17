@@ -396,10 +396,10 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Mark an event's entry as completed
-	 * Deprecation coming soon.
 	 *
 	 * Completed entries will be cleaned up by an internal job
 	 *
+	 * @deprecated
 	 * @param int    $timestamp    Unix timestamp event executes at.
 	 * @param string $action       Name of action used when the event is registered (unhashed).
 	 * @param string $instance     md5 hash of the event's arguments array, which Core uses to index the `cron` option.
@@ -407,6 +407,8 @@ class Events_Store extends Singleton {
 	 * @return bool
 	 */
 	public function mark_job_completed( $timestamp, $action, $instance, $flush_cache = true ) {
+		_deprecated_function( 'Events_Store\mark_job_completed' );
+
 		$event = Event::find( [
 			'timestamp' => $timestamp,
 			'action'    => $action,

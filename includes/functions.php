@@ -89,11 +89,13 @@ function run_event( $timestamp, $action_hashed, $instance, $force = false ) {
 /**
  * Delete an event entry directly, bypassing the plugin's filtering to capture same
  *
+ * @deprecated
  * @param int    $timestamp Time event should run.
  * @param string $action    Hook to fire.
  * @param string $instance  Hashed version of event's arguments.
  */
 function delete_event( $timestamp, $action, $instance ) {
+	_deprecated_function( 'Automattic\WP\Cron_Control\delete_event' );
 	Events_Store::instance()->mark_job_completed( $timestamp, $action, $instance );
 }
 
