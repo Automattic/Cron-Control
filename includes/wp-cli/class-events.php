@@ -109,7 +109,7 @@ class Events extends \WP_CLI_Command {
 
 		// Remove all events with a given action.
 		if ( isset( $assoc_args['action'] ) ) {
-			$this->delete_event_by_action( $args, $assoc_args );
+			$this->delete_event_by_action( $assoc_args['action'] );
 			return;
 		}
 
@@ -397,8 +397,6 @@ class Events extends \WP_CLI_Command {
 			\WP_CLI::error( __( 'Invalid event ID', 'automattic-cron-control' ) );
 		}
 
-		\WP_CLI::log( __( 'Locating event...', 'automattic-cron-control' ) . "\n" );
-
 		// Look up full event object.
 		$event = Cron_Control\Event::get( $jid );
 
@@ -434,14 +432,9 @@ class Events extends \WP_CLI_Command {
 	}
 
 	/**
-	 * Delete all events of the same action
-	 *
-	 * @param array $args Array of positional arguments.
-	 * @param array $assoc_args Array of flags.
+	 * Delete all events of the same action.
 	 */
-	private function delete_event_by_action( $args, $assoc_args ) {
-		$action = $assoc_args['action'];
-
+	private function delete_event_by_action( $action ) {
 		// Validate entry.
 		if ( empty( $action ) ) {
 			\WP_CLI::error( __( 'Invalid action', 'automattic-cron-control' ) );
@@ -452,175 +445,39 @@ class Events extends \WP_CLI_Command {
 			\WP_CLI::warning( __( 'This is an event created by the Cron Control plugin. It will recreated automatically.', 'automattic-cron-control' ) );
 		}
 
-		// Set defaults needed to gather all events.
-		$assoc_args['page']  = 1;
-		$assoc_args['limit'] = 50;
+		$events = Cron_Control\Events::query( [ 'action' => $action, 'limit' => -1 ] );
+		$events_count = count( $events );
 
-		// Gather events.
-		\WP_CLI::log( __( 'Gathering events...', 'automattic-cron-control' ) );
-
-		$events_to_delete = array();
-
-		$events = $this->retrieve_events( $args, $assoc_args );
-
-		/* translators: 1: Total event count */
-		\WP_CLI::log( sprintf( _n( 'Found %s event to check', 'Found %s events to check', $events['total_items'], 'automattic-cron-control' ), number_format_i18n( $events['total_items'] ) ) );
-
-		/* translators: 1: Event action */
-		$search_progress = \WP_CLI\Utils\make_progress_bar( sprintf( __( 'Searching events for those with the action `%s`', 'automattic-cron-control' ), $action ), $events['total_items'] );
-
-		// Loop and pull out events to be deleted.
-		do {
-			if ( ! is_array( $events ) || empty( $events['items'] ) ) {
-				break;
-			}
-
-			// Check events for those that should be deleted.
-			foreach ( $events['items'] as $single_event ) {
-				if ( $single_event->action === $action ) {
-					$events_to_delete[] = (array) $single_event;
-				}
-
-				$search_progress->tick();
-			}
-
-			// Proceed to next batch.
-			$assoc_args['page']++;
-
-			if ( $assoc_args['page'] > $events['total_pages'] ) {
-				break;
-			}
-
-			$events = $this->retrieve_events( $args, $assoc_args );
-		} while ( $events['page'] <= $events['total_pages'] );
-
-		$search_progress->finish();
-
-		\WP_CLI::log( '' );
-
-		// Nothing more to do.
-		if ( empty( $events_to_delete ) ) {
+		if ( empty( $events ) ) {
 			/* translators: 1: Event action */
 			\WP_CLI::error( sprintf( __( 'No events with action `%s` found', 'automattic-cron-control' ), $action ) );
 		}
 
-		// List the items to remove.
-		$total_to_delete = count( $events_to_delete );
+		\WP_CLI::log( sprintf( __( 'Found %s event(s) to delete', 'automattic-cron-control' ), number_format_i18n( $events_count ) ) );
+		\WP_CLI::confirm( __( 'Are you sure you want to delete the event(s)?', 'automattic-cron-control' ) );
 
-		/* translators: 1: Event count, 2: Event action */
-		\WP_CLI::log( sprintf( _n( 'Found %1$s event with action `%2$s`:', 'Found %1$s events with action `%2$s`:', $total_to_delete, 'automattic-cron-control' ), number_format_i18n( $total_to_delete ), $action ) );
+		$progress = \WP_CLI\Utils\make_progress_bar( __( 'Deleting event(s)', 'automattic-cron-control' ), $events_count );
 
-		if ( $total_to_delete <= $assoc_args['limit'] ) {
-			// Sort results.
-			if ( ! empty( $events_to_delete ) ) {
-				usort( $events_to_delete, array( $this, 'sort_events' ) );
+		$success_count = 0;
+		foreach ( $events as $event ) {
+			$result = $event->complete();
+
+			if ( true === $result ) {
+				$success_count++;
 			}
 
-			\WP_CLI\Utils\format_items(
-				'table',
-				$events_to_delete,
-				array(
-					'ID',
-					'created',
-					'last_modified',
-					'timestamp',
-					'instance',
-				)
-			);
-		} else {
-			/* translators: 1: Event count */
-			\WP_CLI::warning( sprintf( __( 'Events are not displayed as there are more than %s to remove', 'automattic-cron-control' ), number_format_i18n( $assoc_args['limit'] ) ) );
+			$progress->tick();
 		}
 
-		\WP_CLI::log( '' );
-		\WP_CLI::confirm( _n( 'Are you sure you want to delete this event?', 'Are you sure you want to delete these events?', $total_to_delete, 'automattic-cron-control' ) );
+		$progress->finish();
 
-		// Remove the items.
-		$delete_progress = \WP_CLI\Utils\make_progress_bar( __( 'Deleting events', 'automattic-cron-control' ), $total_to_delete );
-
-		$events_deleted       = array();
-		$events_deleted_count = 0;
-		$events_failed_delete = 0;
-
-		// Don't create new events while deleting events.
-		\Automattic\WP\Cron_Control\_suspend_event_creation();
-
-		foreach ( $events_to_delete as $event_to_delete ) {
-			$deleted = \Automattic\WP\Cron_Control\delete_event_by_id( $event_to_delete['ID'], false );
-
-			$events_deleted[] = array(
-				'ID'      => $event_to_delete['ID'],
-				'deleted' => false === $deleted ? 'no' : 'yes',
-			);
-
-			if ( $deleted ) {
-				$events_deleted_count++;
-			} else {
-				$events_failed_delete++;
-			}
-
-			$delete_progress->tick();
+		if ( $success_count < $events_count ) {
+			/* translators: 1: Expected deleted-event count, 2: Actual deleted-event count */
+			\WP_CLI::warning( sprintf( __( 'Expected to delete %1$s events, but could only delete %2$s events.', 'automattic-cron-control' ), number_format_i18n( $events_count ), number_format_i18n( $success_count ) ) );
+			return;
 		}
 
-		$delete_progress->finish();
-
-		// When deletes succeed, sync internal caches.
-		if ( $events_deleted_count > 0 ) {
-			\Automattic\WP\Cron_Control\_flush_internal_caches();
-		}
-
-		// New events can be created now that removal is complete.
-		\Automattic\WP\Cron_Control\_resume_event_creation();
-
-		// List the removed items.
-		\WP_CLI::log( "\n" . __( 'RESULTS:', 'automattic-cron-control' ) );
-
-		if ( 1 === $total_to_delete && 1 === $events_deleted_count ) {
-			/* translators: 1: Event ID */
-			\WP_CLI::success( sprintf( __( 'Deleted one event: %d', 'automattic-cron-control' ), $events_deleted[0]['ID'] ) );
-		} else {
-			if ( $events_deleted_count === $total_to_delete ) {
-				/* translators: 1: Events deleted */
-				\WP_CLI::success( sprintf( __( 'Deleted %s events', 'automattic-cron-control' ), number_format_i18n( $events_deleted_count ) ) );
-			} else {
-				/* translators: 1: Expected deleted-event count, 2: Actual deleted-event count */
-				\WP_CLI::warning( sprintf( __( 'Expected to delete %1$s events, but could only delete %2$s events. It\'s likely that some events were executed while this command ran.', 'automattic-cron-control' ), number_format_i18n( $total_to_delete ), number_format_i18n( $events_deleted_count ) ) );
-			}
-
-			// Limit just to failed deletes when many events are removed.
-			if ( count( $events_deleted ) > $assoc_args['limit'] ) {
-				$events_deleted = array_filter(
-					$events_deleted,
-					function( $event ) {
-						if ( 'no' === $event['deleted'] ) {
-							return $event;
-						} else {
-							return false;
-						}
-					}
-				);
-
-				if ( count( $events_deleted ) > 0 ) {
-					\WP_CLI::log( "\n" . __( 'Events that couldn\'t be deleted:', 'automattic-cron-control' ) );
-				}
-			} else {
-				\WP_CLI::log( "\n" . __( 'Events deleted:', 'automattic-cron-control' ) );
-			}
-
-			// Don't display a table if there's nothing to display.
-			if ( count( $events_deleted ) > 0 ) {
-				\WP_CLI\Utils\format_items(
-					'table',
-					$events_deleted,
-					array(
-						'ID',
-						'deleted',
-					)
-				);
-			}
-		}
-
-		return;
+		\WP_CLI::success( sprintf( __( 'Deleted %s event(s)', 'automattic-cron-control' ), number_format_i18n( $success_count ) ) );
 	}
 
 	/**

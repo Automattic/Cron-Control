@@ -425,13 +425,15 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Set a job post to the "completed" status
-	 * Deprecation coming soon.
 	 *
+	 * @deprecated
 	 * @param int  $job_id       ID of job's record.
 	 * @param bool $flush_cache  Whether or not to flush internal caches after creating/updating the event.
 	 * @return bool
 	 */
 	public function mark_job_record_completed( $job_id, $flush_cache = true ) {
+		_deprecated_function( 'Events_Store\mark_job_record_completed' );
+
 		$event = Event::get( $job_id );
 
 		$result = false;

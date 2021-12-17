@@ -102,11 +102,13 @@ function delete_event( $timestamp, $action, $instance ) {
 /**
  * Delete an event by its ID
  *
+ * @deprecated
  * @param int  $id Event ID.
  * @param bool $flush_cache Flush internal caches.
  * @return bool
  */
 function delete_event_by_id( $id, $flush_cache = false ) {
+	_deprecated_function( 'Automattic\WP\Cron_Control\mark_job_record_completed' );
 	return Events_Store::instance()->mark_job_record_completed( $id, $flush_cache );
 }
 
