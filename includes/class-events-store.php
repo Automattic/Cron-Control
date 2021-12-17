@@ -563,14 +563,6 @@ class Events_Store extends Singleton {
 		return false !== $result;
 	}
 
-	// Delete ALL events from the table.
-	// Not using truncate to avoid resetting auto-increment.
-	public function _purge_entire_events_table() {
-		// Cannot prepare table name. @codingStandardsIgnoreLine
-		$wpdb->query( "DELETE FROM {$this->get_table_name()}" );
-		self::flush_event_cache();
-	}
-
 	/**
 	 * Get raw event data by an ID.
 	 * For internal use only, please use Event::get( $id ).
