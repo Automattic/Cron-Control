@@ -62,12 +62,14 @@ function is_rest_endpoint_request( $type ) {
 /**
  * Schedule an event directly, bypassing the plugin's filtering to capture Core's scheduling functions
  *
+ * @deprecated
  * @param int      $timestamp Time event should run.
  * @param string   $action    Hook to fire.
  * @param array    $args      Array of arguments, such as recurrence and parameters to pass to hook callback.
  * @param int|null $job_id    Optional. Job ID to update.
  */
 function schedule_event( $timestamp, $action, $args, $job_id = null ) {
+	_deprecated_function( 'Automattic\WP\Cron_Control\schedule_event' );
 	Events_Store::instance()->create_or_update_job( $timestamp, $action, $args, $job_id );
 }
 

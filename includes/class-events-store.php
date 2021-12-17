@@ -358,9 +358,9 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Create or update entry for a given job
-	 * Deprecation coming soon.
+	 * Create or update entry for a given job.
 	 *
+	 * @deprecated
 	 * @param int    $timestamp    Unix timestamp event executes at.
 	 * @param string $action       Hook event fires.
 	 * @param array  $args         Array of event's schedule, arguments, and interval.
@@ -368,6 +368,8 @@ class Events_Store extends Singleton {
 	 * @param bool   $flush_cache  Whether or not to flush internal caches after creating/updating the event.
 	 */
 	public function create_or_update_job( $timestamp, $action, $args, $update_id = null, $flush_cache = true ) {
+		_deprecated_function( 'Events_Store\create_or_update_job' );
+
 		if ( is_int( $update_id ) && $update_id > 0 ) {
 			// Update an existing entry.
 			$event = Event::get( $update_id );
