@@ -7,6 +7,8 @@
 
 namespace Automattic\WP\Cron_Control\CLI;
 
+use \Automattic\WP\Cron_Control\Events_Store;
+
 /**
  * Run one-time fixers for Cron Control
  */
@@ -24,15 +26,11 @@ class One_Time_Fixers extends \WP_CLI_Command {
 
 		// Are we actually destroying any data?
 		$dry_run = true;
-
 		if ( isset( $assoc_args['dry-run'] ) && 'false' === $assoc_args['dry-run'] ) {
 			$dry_run = false;
 		}
 
-		// Provide some idea of what's going on.
-		\WP_CLI::log( __( 'CRON CONTROL', 'automattic-cron-control' ) . "\n" );
-
-		$table_name = \Automattic\WP\Cron_Control\Events_Store::instance()->get_table_name();
+		$table_name = Events_Store::instance()->get_table_name();
 		$count = (int) $wpdb->get_var( "SELECT COUNT(ID) FROM {$table_name}" ); // Cannot prepare table name. @codingStandardsIgnoreLine
 
 		if ( $count > 1 ) {
@@ -51,27 +49,10 @@ class One_Time_Fixers extends \WP_CLI_Command {
 			\WP_CLI::log( __( 'This process will remove all data for the Cron Control plugin', 'automattic-cron-control' ) );
 			\WP_CLI::confirm( __( 'Proceed?', 'automattic-cron-control' ) );
 			\WP_CLI::log( "\n" . __( 'Starting...', 'automattic-cron-control' ) . "\n" );
+
+			Events_Store::instance()->_purge_entire_events_table();
 		}
 
-		// Don't create new events while deleting events.
-		\Automattic\WP\Cron_Control\_suspend_event_creation();
-
-		// Don't truncate as it requires DROP and resets auto-increment value.
-		if ( ! $dry_run ) {
-			$wpdb->query( "DELETE FROM {$table_name}" ); // Cannot prepare table name. @codingStandardsIgnoreLine
-		}
-
-		// Remove the now-stale cache when actively run.
-		if ( ! $dry_run ) {
-			\Automattic\WP\Cron_Control\_flush_internal_caches();
-			/* translators: 1: Plugin name */
-			\WP_CLI::log( "\n" . sprintf( __( 'Cleared the %s cache', 'automattic-cron-control' ), 'Cron Control' ) );
-		}
-
-		// Let event creation resume.
-		\Automattic\WP\Cron_Control\_resume_event_creation();
-
-		// Fin.
 		\WP_CLI::success( __( 'All done.', 'automattic-cron-control' ) );
 	}
 

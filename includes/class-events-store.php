@@ -445,25 +445,27 @@ class Events_Store extends Singleton {
 	}
 
 	/**
-	 * Deprecated soon, will be unused by the plugin.
-	 * Giving time to catch warnings before removing the public method.
+	 * @deprecated
 	 */
 	public function flush_internal_caches() {
+		_deprecated_function( 'Events_Store\flush_internal_caches' );
 		self::flush_event_cache();
 	}
 
 	/**
-	 * Soon to be deprecated.
+	 * @deprecated
 	 */
 	public function suspend_event_creation() {
 		// No longer needed.
+		_deprecated_function( 'Events_Store\suspend_event_creation' );
 	}
 
 	/**
-	 * Soon to be deprecated.
+	 * @deprecated
 	 */
 	public function resume_event_creation() {
 		// No longer needed.
+		_deprecated_function( 'Events_Store\resume_event_creation' );
 	}
 
 	/**
@@ -559,6 +561,14 @@ class Events_Store extends Singleton {
 
 		self::flush_event_cache();
 		return false !== $result;
+	}
+
+	// Delete ALL events from the table.
+	// Not using truncate to avoid resetting auto-increment.
+	public function _purge_entire_events_table() {
+		// Cannot prepare table name. @codingStandardsIgnoreLine
+		$wpdb->query( "DELETE FROM {$this->get_table_name()}" );
+		self::flush_event_cache();
 	}
 
 	/**

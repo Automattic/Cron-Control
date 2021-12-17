@@ -160,25 +160,32 @@ function count_events_by_status( $status ) {
 
 /**
  * Flush plugin's internal caches
+ * FOR INTERNAL USE ONLY; all other cache clearance should happen automatically.
  *
- * FOR INTERNAL USE ONLY - see WP-CLI; all other cache clearance should happen automatically through the `Events_Store` class
+ * @deprecated
  */
 function _flush_internal_caches() {
+	_deprecated_function( 'Automattic\WP\Cron_Control\_flush_internal_caches' );
 	return Events_Store::instance()->flush_internal_caches();
 }
 
 /**
  * Prevent event store from creating new entries
- *
  * Should be used sparingly, and followed by a call to resume_event_creation(), during bulk operations
+ *
+ * @deprecated
  */
 function _suspend_event_creation() {
+	_deprecated_function( 'Automattic\WP\Cron_Control\_suspend_event_creation' );
 	Events_Store::instance()->suspend_event_creation();
 }
 
 /**
  * Stop discarding events, once again storing them in the table
+ *
+ * @deprecated
  */
 function _resume_event_creation() {
+	_deprecated_function( 'Automattic\WP\Cron_Control\_resume_event_creation' );
 	Events_Store::instance()->resume_event_creation();
 }
