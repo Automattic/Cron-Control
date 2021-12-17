@@ -216,7 +216,7 @@ class Events_Store extends Singleton {
 	 * @deprecated
 	 */
 	public function get_option() {
-		_deprecated_function( 'get_option', 'pre_get_cron_option' );
+		_deprecated_function( 'Events_Store\get_option', 'pre_get_cron_option' );
 		return pre_get_cron_option( false );
 	}
 
@@ -226,7 +226,7 @@ class Events_Store extends Singleton {
 	 * @deprecated
 	 */
 	public function update_option( $new_value, $old_value ) {
-		_deprecated_function( 'update_option', 'pre_update_cron_option' );
+		_deprecated_function( 'Events_Store\update_option', 'pre_update_cron_option' );
 		return pre_update_cron_option( $new_value, $old_value );
 	}
 
@@ -236,18 +236,20 @@ class Events_Store extends Singleton {
 	 * @deprecated
 	 */
 	public function block_creation_if_job_exists( $job ) {
-		_deprecated_function( 'block_creation_if_job_exists' );
+		_deprecated_function( 'Events_Store\block_creation_if_job_exists' );
 		return $job;
 	}
 
 	/**
 	 * Retrieve jobs given a set of parameters
-	 * Deprecation coming soon.
 	 *
+	 * @deprecated
 	 * @param array $args Job arguments to search by.
 	 * @return array
 	 */
 	public function get_jobs( $args ) {
+		_deprecated_function( 'Events_Store\get_jobs' );
+
 		// Adjust this method's previous defaults for what our new method expects.
 		$adjusted_args = [
 			'limit'  => isset( $args['quantity'] ) && is_numeric( $args['quantity'] ) ? $args['quantity'] : 100,
@@ -261,12 +263,14 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Retrieve a single event by its ID
-	 * Deprecation coming soon.
 	 *
+	 * @deprecated
 	 * @param int $jid Job ID.
 	 * @return object|false
 	 */
 	public function get_job_by_id( $jid ) {
+		_deprecated_function( 'Events_Store\get_job_by_id' );
+
 		// Validate ID.
 		$jid = absint( $jid );
 		if ( ! $jid ) {
@@ -288,13 +292,15 @@ class Events_Store extends Singleton {
 
 	/**
 	 * Retrieve a single event by a combination of a timestamp, instance identifier, and either action or the action's hashed representation
-	 * Deprecation coming soon.
 	 *
+	 * @deprecated
 	 * @param array $attrs Array of event attributes to query by.
 	 * @return object|false
 	 */
 	public function get_job_by_attributes( $attrs ) {
 		global $wpdb;
+
+		_deprecated_function( 'Events_Store\get_job_by_attributes' );
 
 		// Validate basic inputs.
 		if ( ! is_array( $attrs ) || empty( $attrs ) ) {
@@ -521,9 +527,6 @@ class Events_Store extends Singleton {
 			return 0;
 		}
 
-		$row_data['created']       = current_time( 'mysql', true );
-		$row_data['last_modified'] = current_time( 'mysql', true );
-
 		$result = $wpdb->insert( $this->get_table_name(), $row_data, self::row_formatting( $row_data ) );
 
 		self::flush_event_cache();
@@ -544,8 +547,6 @@ class Events_Store extends Singleton {
 		if ( empty( $event_id ) || empty( $row_data ) ) {
 			return 0;
 		}
-
-		$row_data['last_modified'] = current_time( 'mysql', true );
 
 		$where  = [ 'ID' => $event_id ];
 		$result = $wpdb->update( $this->get_table_name(), $row_data, $where, self::row_formatting( $row_data ), self::row_formatting( $where ) );

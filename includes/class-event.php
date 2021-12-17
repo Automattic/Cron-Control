@@ -22,6 +22,9 @@ class Event {
 	// When the event will run next.
 	private int $timestamp;
 
+	private $created;
+	private $last_modified;
+
 	/*
 	|--------------------------------------------------------------------------
 	| Getters
@@ -130,10 +133,21 @@ class Event {
 			$row_data['interval'] = 0;
 		}
 
+		// About to be updated, so increment the "last modified" timestamp.
+		$current_time = current_time( 'mysql', true );
+		$row_data['last_modified'] = $current_time;
+
 		if ( $this->exists() ) {
 			$success = Events_Store::instance()->_update_event( $this->id, $row_data );
-			return true === $success ? true : new WP_Error( 'cron-control:event:failed-update' );
+			if ( ! $success ) {
+				return new WP_Error( 'cron-control:event:failed-update' );
+			}
+
+			$this->last_modified = $current_time;
+			return true;
 		}
+
+		$row_data['created'] = $current_time;
 
 		$event_id = Events_Store::instance()->_create_event( $row_data );
 		if ( $event_id < 1 ) {
@@ -141,6 +155,7 @@ class Event {
 		}
 
 		$this->id = $event_id;
+		$this->created = $current_time;
 		return true;
 	}
 
@@ -223,6 +238,8 @@ class Event {
 		$event->set_action( (string) $data->action );
 		$event->set_timestamp( (int) $data->timestamp );
 		$event->set_args( (array) maybe_unserialize( $data->args ) );
+		$event->created = $data->created;
+		$event->last_modified = $data->last_modified;
 
 		if ( ! empty( $data->schedule ) && ! empty( $data->interval ) ) {
 			// Note: the db is sending back "null" and "0" for the above two on single events,
@@ -260,6 +277,26 @@ class Event {
 		}
 
 		return (object) $wp_event;
+	}
+
+	// The old way this plugin used to pass around event objects.
+	// Needed for BC for some hooks, hopefully deprecated/removed fully later on.
+	public function get_legacy_event_format(): object {
+		$legacy_format = [
+			'ID'            => $this->get_id(),
+			'timestamp'     => $this->get_timestamp(),
+			'action'        => $this->get_action(),
+			'action_hashed' => $this->action_hashed,
+			'instance'      => $this->get_instance(),
+			'args'          => $this->get_args(),
+			'schedule'      => isset( $this->schedule ) ? $this->get_schedule() : false,
+			'interval'      => isset( $this->interval ) ? $this->get_interval() : 0,
+			'status'        => $this->get_status(),
+			'created'       => $this->created,
+			'last_modified' => $this->last_modified,
+		];
+
+		return (object) $legacy_format;
 	}
 
 	public static function create_instance_hash( array $args ): string {
