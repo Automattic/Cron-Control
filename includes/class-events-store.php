@@ -646,7 +646,7 @@ class Events_Store extends Singleton {
 			if ( $parsed_args[ $arg_name ] !== $arg_checks['default'] ) {
 				// The arg was changed from the default, let's validate it.
 				if ( ! call_user_func( $arg_checks['validation'], $parsed_args[ $arg_name ] ) ) {
-					trigger_error( 'Invalid arguments passed in for the events query', E_USER_NOTICE );
+					trigger_error( 'Invalid arguments passed in for the events query', E_USER_WARNING );
 					return [];
 				}
 			}
