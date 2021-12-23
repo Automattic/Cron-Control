@@ -90,7 +90,7 @@ class REST_API extends \WP_CLI_Command {
 
 		foreach ( $events as $event_data ) {
 			$event = Event::find( [
-				'timestamp'     => $event_data['timestamp'],
+				'timestamp'     => (int) $event_data['timestamp'],
 				'action_hashed' => $event_data['action'],
 				'instance'      => $event_data['instance'],
 			] );

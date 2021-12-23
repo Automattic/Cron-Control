@@ -410,7 +410,7 @@ class Events_Store extends Singleton {
 		_deprecated_function( 'Events_Store\mark_job_completed' );
 
 		$event = Event::find( [
-			'timestamp' => $timestamp,
+			'timestamp' => (int) $timestamp,
 			'action'    => $action,
 			'instance'  => $instance,
 		] );
