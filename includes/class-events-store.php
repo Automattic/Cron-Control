@@ -567,7 +567,7 @@ class Events_Store extends Singleton {
 
 		self::flush_query_cache();
 		if ( isset( $row_data['action'], $row_data['args'] ) ) {
-			// Regenerate the initial instance because "completed" events have it randomized to avoid db contraint conflicts.
+			// Regenerate the initial instance because "completed" events have it randomized to avoid db constraint conflicts.
 			$instance = Event::create_instance_hash( maybe_unserialize( $row_data['args'] ) );
 			self::flush_event_cache( $row_data['action'], $instance );
 		} else {
