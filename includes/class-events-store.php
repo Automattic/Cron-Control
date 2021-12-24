@@ -177,7 +177,7 @@ class Events_Store extends Singleton {
 		}
 
 		// Clear caches now that the table exists.
-		self::flush_all_caches();
+		self::flush_event_cache();
 	}
 
 	/**
@@ -449,7 +449,7 @@ class Events_Store extends Singleton {
 	 */
 	public function flush_internal_caches() {
 		_deprecated_function( 'Events_Store\flush_internal_caches' );
-		self::flush_all_caches();
+		self::flush_event_cache();
 	}
 
 	/**
@@ -493,7 +493,7 @@ class Events_Store extends Singleton {
 					'status' => self::STATUS_COMPLETED,
 				)
 			);
-			self::flush_all_caches();
+			self::flush_event_cache();
 		}
 	}
 
@@ -537,7 +537,6 @@ class Events_Store extends Singleton {
 
 		$result = $wpdb->insert( $this->get_table_name(), $row_data, self::row_formatting( $row_data ) );
 
-		self::flush_query_cache();
 		if ( isset( $row_data['action'], $row_data['instance'] ) ) {
 			self::flush_event_cache( $row_data['action'], $row_data['instance'] );
 		} else {
@@ -565,7 +564,6 @@ class Events_Store extends Singleton {
 		$where  = [ 'ID' => $event_id ];
 		$result = $wpdb->update( $this->get_table_name(), $row_data, $where, self::row_formatting( $row_data ), self::row_formatting( $where ) );
 
-		self::flush_query_cache();
 		if ( isset( $row_data['action'], $row_data['args'] ) ) {
 			// Regenerate the initial instance because "completed" events have it randomized to avoid db constraint conflicts.
 			$instance = Event::create_instance_hash( maybe_unserialize( $row_data['args'] ) );
@@ -825,18 +823,11 @@ class Events_Store extends Singleton {
 		return $formatting;
 	}
 
-	private static function flush_all_caches() {
-		self::flush_query_cache();
-		self::flush_event_cache();
-	}
-
-	private static function flush_query_cache() {
-		wp_cache_set( 'last_changed', microtime(), 'cron-control-queries' );
-	}
-
 	private static function flush_event_cache( string $event_action = null, string $event_instance = null ) {
-		$cache_group = 'cron-control-event';
+		// Always have to flush the query caches.
+		wp_cache_set( 'last_changed', microtime(), 'cron-control-queries' );
 
+		$cache_group = 'cron-control-event';
 		if ( is_null( $event_action ) || is_null( $event_instance ) ) {
 			// Flush the whole group when a specific event was not specified.
 			wp_cache_set( 'last_changed', microtime(), $cache_group );
