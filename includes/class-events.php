@@ -104,7 +104,7 @@ class Events extends Singleton {
 		// Grab relevant events that are due, or soon will be.
 		$current_time = time();
 		$events = self::query( [
-			'timestamp' => [ 'from' => 0, 'to' => $current_time + (int) $job_queue_window ],
+			'timestamp' => [ 'from' => 0, 'to' => $current_time + $job_queue_window ],
 			'status'    => Events_Store::STATUS_PENDING,
 			'limit'     => -1, // Need to get all, to ensure we grab internals even when queue is backed up.
 		] );
@@ -226,7 +226,7 @@ class Events extends Singleton {
 		}
 
 		$event = Event::find( [
-			'timestamp'     => (int) $timestamp,
+			'timestamp'     => $timestamp,
 			'action_hashed' => $action,
 			'instance'      => $instance,
 			'status'        => Events_Store::STATUS_PENDING,
