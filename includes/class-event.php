@@ -368,8 +368,7 @@ class Event {
 		$db_row_size_of_normal_event = 300;
 
 		// Note: Memcache can only cache up to 1mb values, after compression.
-		$default_storage_needed_for_events = $db_row_size_of_normal_event * $max_events_per_page;
-		$reasonable_size = ( MB_IN_BYTES - $default_storage_needed_for_events ) / $max_events_per_page;
+		$reasonable_size = ( MB_IN_BYTES / $max_events_per_page ) - $db_row_size_of_normal_event;
 
 		// First a quick uncompressed test.
 		$uncompressed_size = mb_strlen( serialize( $this->get_args() ), '8bit' );
