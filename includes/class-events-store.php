@@ -169,9 +169,33 @@ class Events_Store extends Singleton {
 
 	/*
 	|--------------------------------------------------------------------------
-	| Deprecated (or soon to be) methods for interactions w/ the data store.
+	| Deprecated (or soon to be) methods.
 	|--------------------------------------------------------------------------
 	*/
+
+	public function create_table_during_install() {
+		_deprecated_function( 'Events_Store\create_table_during_install' );
+	}
+
+	public function create_tables_during_multisite_install( $blog_id ) {
+		_deprecated_function( 'Events_Store\create_tables_during_multisite_install' );
+	}
+
+	public function maybe_create_table_on_shutdown() {
+		_deprecated_function( 'Events_Store\maybe_create_table_on_shutdown' );
+	}
+
+	public function prepare_table() {
+		_deprecated_function( 'Events_Store\prepare_table' );
+	}
+
+	public function cli_create_tables() {
+		_deprecated_function( 'Events_Store\cli_create_tables' );
+	}
+
+	public function remove_multisite_table( $tables_to_drop ) {
+		_deprecated_function( 'Events_Store\remove_multisite_table' );
+	}
 
 	/**
 	 * Deprecated, unused by the plugin.
