@@ -51,7 +51,7 @@ class Events_Store extends Singleton {
 			return true;
 		}
 
-		$table_name = $wpdb->prefix . self::TABLE_SUFFIX;;
+		$table_name = $wpdb->prefix . self::TABLE_SUFFIX;
 		$is_installed = 1 === count( $wpdb->get_col( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) ) );
 
 		if ( $is_installed ) {
