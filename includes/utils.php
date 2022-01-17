@@ -185,7 +185,7 @@ function _deprecated_function( string $function, string $replacement = '', $erro
 		'warn'   => 3,
 	];
 
-	$message = sprintf( 'Cron-Control: %s is deprecated and will soon be removed.', $function );
+	$message = sprintf( 'Cron-Control: Deprecation. %s is deprecated and will soon be removed.', $function );
 	if ( ! empty( $replacement ) ) {
 		$message .= sprintf( ' Use %s instead.', $replacement );
 	}
