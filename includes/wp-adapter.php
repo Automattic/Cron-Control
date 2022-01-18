@@ -303,7 +303,7 @@ function pre_update_cron_option( $new_value, $old_value ) {
 			'args'      => $event_to_add['args'],
 		];
 
-		if ( ! empty( $item['value']['schedule'] ) ) {
+		if ( ! empty( $event_to_add['schedule'] ) ) {
 			$wp_event['schedule'] = $event_to_add['schedule'];
 			$wp_event['interval'] = $event_to_add['interval'];
 		}
