@@ -68,6 +68,40 @@ return $wh;
 } );
 ```
 
+== Development & Testing ==
+
+= Quick and easy testing =
+
+If you have docker installed, can just run `./__tests__/bin/test.sh`.
+
+= Manual testing setup =
+
+First, you'll need svn and composer. Example of installing them on a docker container if needed:
+
+```
+apk add subversion
+wget -q https://getcomposer.org/installer -O - | php -- --install-dir=/usr/bin/ --filename=composer
+```
+
+Next change directories to the plugin and set up the test environment:
+
+```
+cd wp-content/mu-plugins/cron-control
+
+composer install
+
+# Note that the values below can be different, it is: <db-name> <db-user> <db-pass> [db-host] [wp-version]
+./__tests__/bin/install-wp-tests.sh test wordpress wordpress database latest
+```
+
+Lastly, kick things off with one command: `phpunit`
+
+= Readme & language file updates =
+
+Will need `npm`. Example of installing on a docker container: `apk add --update npm`
+
+Run `npm install` then `npm run build` to create/update language files and to convert `readme.txt` to `readme.md` if needed.
+
 == Changelog ==
 
 = 3.0 =
