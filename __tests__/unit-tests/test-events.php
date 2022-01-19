@@ -170,7 +170,7 @@ class Events_Tests extends \WP_UnitTestCase {
 
 		$scheduled = [];
 		foreach ( $test_events as $test_event_args ) {
-			$event = Utils::create_test_event( $test_event_args  );
+			$event = Utils::create_test_event( $test_event_args );
 			$scheduled[ $event->get_action() ] = [
 				'action' => $event->get_action(),
 				'hashed' => md5( $event->get_action() ),
