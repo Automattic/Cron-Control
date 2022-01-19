@@ -1,8 +1,6 @@
 <?php
 /**
- * PHPUnit bootstrap file
- *
- * @package a8c_Cron_Control
+ * PHPUnit bootstrap file.
  */
 
 use Automattic\WP\Cron_Control;
@@ -32,20 +30,18 @@ function _manually_load_plugin() {
 		)
 	);
 
-	// Nonsense values to test constraints and aid testing.
-	define( 'CRON_CONTROL_CACHE_BUCKET_SIZE', 0 );
-	define( 'CRON_CONTROL_MAX_CACHE_BUCKETS', PHP_INT_MAX / 2 );
-
 	require dirname( dirname( __FILE__ ) ) . '/cron-control.php';
 
 	// Plugin loads after `wp_install()` is called, so we compensate.
-	Cron_Control\Events_Store::instance()->install();
-	Cron_Control\register_adapter_hooks();
+	if ( ! Cron_Control\Events_Store::is_installed() ) {
+		Cron_Control\Events_Store::instance()->install();
+		Cron_Control\register_adapter_hooks();
+	}
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
 // Utilities.
-require_once __DIR__ . '/includes/class-utils.php';
+require_once __DIR__ . '/utils.php';
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
