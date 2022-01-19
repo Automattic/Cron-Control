@@ -12,15 +12,16 @@ Execute WordPress cron events in parallel, with custom event storage for high-vo
 
 ## Description ##
 
-Execute WordPress cron events in parallel, with custom event storage for high-volume cron.
+This plugin sets up a custom cron table for better events storage. Using WP hooks, it then intercepts cron registration/retrieval/deletions. There are two additional interaction layers exposed by the plugin - WP CLI and the REST API.
 
-Using REST API endpoints, or a Golang daemon, an event queue is produced and events are triggered.
+By default the plugin disables default WP cron processing. It is recommended to use the cron control runner to process cron: https://github.com/Automattic/cron-control-runner. This is how we are able to process cron events in parallel, allowing for high-volume and reliable cron.
 
 ## Installation ##
 
 1. Define `WP_CRON_CONTROL_SECRET` in `wp-config.php`, set to `false` to disable the REST API interface.
 1. Upload the `cron-control` directory to the `/wp-content/mu-plugins/` directory
 1. Create a file at `/wp-content/mu-plugins/cron-control.php` to load `/wp-content/mu-plugins/cron-control/cron-control.php`
+1. (optional) Set up the the cron control runner for event processing.
 
 ## Frequently Asked Questions ##
 
@@ -68,13 +69,13 @@ return $wh;
 } );
 ```
 
-## Testing ##
+## Development & Testing ##
 
-### Quick and easy ###
+### Quick and easy testing ###
 
 If you have docker installed, can just run `./__tests__/bin/test.sh`.
 
-### Manual setup ###
+### Manual testing setup ###
 
 First, you'll need svn and composer. Example of installing them on a docker container if needed:
 
@@ -95,6 +96,12 @@ composer install
 ```
 
 Lastly, kick things off with one command: `phpunit`
+
+### Readme & language file updates ###
+
+Will need `npm`. Example of installing on a docker container: `apk add --update npm`
+
+Run `npm install` then `npm run build` to create/update language files and to convert `readme.txt` to `readme.md` if needed.
 
 ## Changelog ##
 
