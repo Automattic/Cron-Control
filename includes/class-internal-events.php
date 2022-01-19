@@ -1,84 +1,64 @@
 <?php
 /**
- * Internal events to manage plugin and common WP cron complaints
+ * Internal events to manage the plugin and resolve common WP cron complaints.
  *
  * @package a8c_Cron_Control
  */
 
 namespace Automattic\WP\Cron_Control;
 
-/**
- * Internal Events class
- */
 class Internal_Events extends Singleton {
-	/**
-	 * PLUGIN SETUP
-	 */
 
-	/**
-	 * List of registered internal events
-	 *
-	 * @var array
-	 */
-	private $internal_events = array();
+	private array $internal_events = [];
+	private array $internal_events_schedules = [];
 
-	/**
-	 * Schedules for internal events
-	 *
-	 * Provides for intervals shorter than Core does by default
-	 *
-	 * @var array
-	 */
-	private $internal_events_schedules = array();
-
-	/**
-	 * Register hooks
-	 */
 	protected function class_init() {
-		// Prepare events and their schedules, allowing for additions.
 		$this->prepare_internal_events();
 		$this->prepare_internal_events_schedules();
 
-		// Register hooks.
-		if ( defined( 'WP_CLI' ) && \WP_CLI ) {
-			add_action( 'wp_loaded', array( $this, 'schedule_internal_events' ) );
-		} else {
-			add_action( 'admin_init', array( $this, 'schedule_internal_events' ) );
+		// Schedule the internal events once our custom store is in place.
+		if ( Events_Store::is_installed() ) {
+			$is_cron_or_cli = wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI );
+			$is_admin = is_admin() && ! wp_doing_ajax();
+
+			if ( $is_cron_or_cli || $is_admin ) {
+				add_action( 'wp_loaded', [ $this, 'schedule_internal_events' ] );
+			}
 		}
 
-		add_filter( 'cron_schedules', array( $this, 'register_internal_events_schedules' ) );
-
+		// Register schedules and callbacks.
+		add_filter( 'cron_schedules', [ $this, 'register_internal_events_schedules' ] );
 		foreach ( $this->internal_events as $internal_event ) {
 			add_action( $internal_event['action'], $internal_event['callback'] );
 		}
 	}
 
 	/**
-	 * Populate internal events, allowing for additions
+	 * Populate internal events, allowing for additions.
 	 */
 	private function prepare_internal_events() {
-		$internal_events = array(
-			array(
+		$internal_events = [
+			[
 				'schedule' => 'a8c_cron_control_minute',
 				'action'   => 'a8c_cron_control_force_publish_missed_schedules',
-				'callback' => array( $this, 'force_publish_missed_schedules' ),
-			),
-			array(
+				'callback' => [ $this, 'force_publish_missed_schedules' ],
+			],
+			[
 				'schedule' => 'a8c_cron_control_ten_minutes',
 				'action'   => 'a8c_cron_control_confirm_scheduled_posts',
-				'callback' => array( $this, 'confirm_scheduled_posts' ),
-			),
-			array(
-				'schedule' => 'daily',
-				'action'   => 'a8c_cron_control_clean_legacy_data',
-				'callback' => array( $this, 'clean_legacy_data' ),
-			),
-			array(
+				'callback' => [ $this, 'confirm_scheduled_posts' ],
+			],
+			[
 				'schedule' => 'hourly',
 				'action'   => 'a8c_cron_control_purge_completed_events',
-				'callback' => array( $this, 'purge_completed_events' ),
-			),
-		);
+				'callback' => [ $this, 'purge_completed_events' ],
+			],
+			[
+				'schedule' => 'daily',
+				'action'   => 'a8c_cron_control_clean_legacy_data',
+				'callback' => [ $this, 'clean_legacy_data' ],
+			],
+		];
 
 		// Allow additional internal events to be specified, ensuring the above cannot be overwritten.
 		if ( defined( 'CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS' ) && is_array( \CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS ) ) {
@@ -101,19 +81,19 @@ class Internal_Events extends Singleton {
 	}
 
 	/**
-	 * Allow custom internal events to provide their own schedules
+	 * Allow custom internal events to provide their own schedules.
 	 */
 	private function prepare_internal_events_schedules() {
-		$internal_events_schedules = array(
-			'a8c_cron_control_minute'      => array(
+		$internal_events_schedules = [
+			'a8c_cron_control_minute' => [
 				'interval' => 2 * MINUTE_IN_SECONDS,
 				'display'  => __( 'Cron Control internal job - every 2 minutes (used to be 1 minute)', 'automattic-cron-control' ),
-			),
-			'a8c_cron_control_ten_minutes' => array(
+			],
+			'a8c_cron_control_ten_minutes' => [
 				'interval' => 10 * MINUTE_IN_SECONDS,
 				'display'  => __( 'Cron Control internal job - every 10 minutes', 'automattic-cron-control' ),
-			),
-		);
+			],
+		];
 
 		// Allow additional schedules for custom events, ensuring the above cannot be overwritten.
 		if ( defined( 'CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS_SCHEDULES' ) && is_array( \CRON_CONTROL_ADDITIONAL_INTERNAL_EVENTS_SCHEDULES ) ) {
@@ -133,19 +113,10 @@ class Internal_Events extends Singleton {
 		$this->internal_events_schedules = $internal_events_schedules;
 	}
 
-	/**
-	 * Include custom schedules used for internal events
-	 *
-	 * @param array $schedules List of registered event intervals.
-	 * @return array
-	 */
-	public function register_internal_events_schedules( $schedules ) {
+	public function register_internal_events_schedules( array $schedules ): array {
 		return array_merge( $schedules, $this->internal_events_schedules );
 	}
 
-	/**
-	 * Schedule internal events
-	 */
 	public function schedule_internal_events() {
 		foreach ( $this->internal_events as $event_args ) {
 			if ( ! wp_next_scheduled( $event_args['action'] ) ) {
@@ -155,25 +126,22 @@ class Internal_Events extends Singleton {
 	}
 
 	/**
-	 * PLUGIN UTILITIES
-	 */
-
-	/**
-	 * Events that are always run, regardless of how many jobs are queued
+	 * Check if an action belongs to an internal event.
 	 *
 	 * @param string $action Event action.
-	 * @return bool
 	 */
-	public function is_internal_event( $action ) {
+	public function is_internal_event( $action ): bool {
 		return in_array( $action, wp_list_pluck( $this->internal_events, 'action' ), true );
 	}
 
-	/**
-	 * EVENT CALLBACKS
-	 */
+	/*
+	|--------------------------------------------------------------------------
+	| Internal Event Callbacks
+	|--------------------------------------------------------------------------
+	*/
 
 	/**
-	 * Publish scheduled posts that miss their schedule
+	 * Publish scheduled posts that miss their schedule.
 	 */
 	public function force_publish_missed_schedules() {
 		global $wpdb;
@@ -190,7 +158,7 @@ class Internal_Events extends Singleton {
 	}
 
 	/**
-	 * Ensure scheduled posts have a corresponding cron job to publish them
+	 * Ensure scheduled posts have a corresponding cron job to publish them.
 	 */
 	public function confirm_scheduled_posts() {
 		global $wpdb;
@@ -230,20 +198,23 @@ class Internal_Events extends Singleton {
 	}
 
 	/**
-	 * Remove unnecessary data and scheduled events
+	 * Delete event objects for events that have run.
+	 */
+	public function purge_completed_events() {
+		Events_Store::instance()->purge_completed_events();
+	}
+
+	/**
+	 * Remove unnecessary data and scheduled events.
 	 *
-	 * Some of this data relates to how Core manages Cron when this plugin isn't active
+	 * Some of this data relates to how Core manages Cron when this plugin isn't active.
 	 */
 	public function clean_legacy_data() {
 		// Cron option can be very large, so it shouldn't linger.
 		delete_option( 'cron' );
 
 		// While this plugin doesn't use this locking mechanism, other code may check the value.
-		if ( wp_using_ext_object_cache() ) {
-			wp_cache_delete( 'doing_cron', 'transient' );
-		} else {
-			delete_transient( 'doing_cron' );
-		}
+		delete_transient( 'doing_cron' );
 
 		// Confirm internal events are scheduled for when they're expected.
 		$schedules = wp_get_schedules();
@@ -268,12 +239,5 @@ class Internal_Events extends Singleton {
 				$event->save();
 			}
 		}
-	}
-
-	/**
-	 * Delete event objects for events that have run
-	 */
-	public function purge_completed_events() {
-		Events_Store::instance()->purge_completed_events();
 	}
 }
