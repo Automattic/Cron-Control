@@ -116,7 +116,6 @@ class Events_Tests extends \WP_UnitTestCase {
 
 		$events = [];
 		foreach ( $events_to_create as $event_key => $event_args ) {
-			$test_event = Utils::create_test_event( $event_args );
 			$events[ $event_key ] = Utils::create_test_event( $event_args );
 		}
 

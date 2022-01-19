@@ -33,8 +33,10 @@ function _manually_load_plugin() {
 	require dirname( dirname( __FILE__ ) ) . '/cron-control.php';
 
 	// Plugin loads after `wp_install()` is called, so we compensate.
-	Cron_Control\Events_Store::instance()->install();
-	Cron_Control\register_adapter_hooks();
+	if ( ! Cron_Control\Events_Store::is_installed() ) {
+		Cron_Control\Events_Store::instance()->install();
+		Cron_Control\register_adapter_hooks();
+	}
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
