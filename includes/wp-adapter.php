@@ -5,8 +5,7 @@ namespace Automattic\WP\Cron_Control;
 use Automattic\WP\Cron_Control\Events_Store;
 use WP_Error;
 
-// Integrate w/ WP's cron api once the custom table is installed.
-if ( Events_Store::is_installed() ) {
+function register_adapter_hooks() {
 	// Core filters added in WP 5.1, allowing us to fully use the custom event's store.
 	add_filter( 'pre_schedule_event', __NAMESPACE__ . '\\pre_schedule_event', 10, 2 );
 	add_filter( 'pre_reschedule_event', __NAMESPACE__ . '\\pre_reschedule_event', 10, 2 );

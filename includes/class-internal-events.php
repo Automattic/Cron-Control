@@ -277,5 +277,3 @@ class Internal_Events extends Singleton {
 		Events_Store::instance()->purge_completed_events();
 	}
 }
-
-Internal_Events::instance();
