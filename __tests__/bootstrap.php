@@ -1,8 +1,6 @@
 <?php
 /**
- * PHPUnit bootstrap file
- *
- * @package a8c_Cron_Control
+ * PHPUnit bootstrap file.
  */
 
 use Automattic\WP\Cron_Control;

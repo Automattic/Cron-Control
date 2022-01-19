@@ -13,12 +13,11 @@ use Automattic\WP\Cron_Control;
 class WP_Adapter_Tests extends \WP_UnitTestCase {
 	function setUp() {
 		parent::setUp();
-		// delete existing crons before each test
-		_set_cron_array( [] );
+		Utils::clear_cron_table();
 	}
 
 	function tearDown() {
-		_set_cron_array( [] );
+		Utils::clear_cron_table();
 		parent::tearDown();
 	}
 

@@ -1,104 +1,40 @@
 <?php
 /**
- * Utility functions for tests
- *
- * @package a8c_Cron_Control
+ * Utility functions for tests.
  */
 
 namespace Automattic\WP\Cron_Control\Tests;
 
-/**
- * Utilities
- */
+use Automattic\WP\Cron_Control\Events_Store;
+use Automattic\WP\Cron_Control\Event;
+
 class Utils {
-	/**
-	 * Provide easy access to the plugin's table
-	 */
-	static function get_table_name() {
-		return \Automattic\WP\Cron_Control\Events_Store::instance()->get_table_name();
+
+	public static function get_table_name(): string {
+		return Events_Store::instance()->get_table_name();
 	}
 
-	/**
-	 * Build a test event
-	 *
-	 * @param bool $allow_multiple Whether or not to create multiple of the same event.
-	 * @return array
-	 */
-	static function create_test_event( $allow_multiple = false ) {
-		$event = array(
-			'timestamp' => time(),
-			'action'    => 'a8c_cron_control_test_event',
-			'args'      => array(),
-		);
+	public static function clear_cron_table(): void {
+		_set_cron_array( [] );
+	}
 
-		// Plugin skips events with no callbacks.
-		add_action( 'a8c_cron_control_test_event', '__return_true' );
-
-		if ( $allow_multiple ) {
-			$event['action'] .= '_' . rand( 10, 100 );
+	public static function create_test_event( array $args = [] ): Event {
+		if ( empty( $args ) ) {
+			$args = array(
+				'timestamp' => time(),
+				'action'    => 'test_event_action',
+				'args'      => [],
+			);
 		}
 
-		$next = wp_next_scheduled( $event['action'], $event['args'] );
-
-		if ( $next ) {
-			$event['timestamp'] = $next;
-		} else {
-			wp_schedule_single_event( $event['timestamp'], $event['action'], $event['args'] );
-		}
+		$event = new Event();
+		self::apply_event_props( $event, $args );
+		$event->save();
 
 		return $event;
 	}
 
-	/**
-	 * Retrieve some events' post objects for use in testing
-	 *
-	 * @return array
-	 */
-	static function get_events_from_store() {
-		global $wpdb;
-
-		$table_name = self::get_table_name();
-		$events     = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table_name} WHERE status = %s ORDER BY `timestamp` ASC LIMIT 10;", \Automattic\WP\Cron_Control\Events_Store::STATUS_PENDING ), 'OBJECT' ); // Cannot prepare table name. @codingStandardsIgnoreLine
-
-		$parsed_events = array();
-
-		foreach ( $events as $event ) {
-			$parsed_events[] = array(
-				'timestamp' => (int) $event->timestamp,
-				'action'    => $event->action,
-				'instance'  => $event->instance,
-			);
-		}
-
-		return $parsed_events;
-	}
-
-	/**
-	 * Check that two arrays are equal
-	 *
-	 * @param array $expected Array of expected values.
-	 * @param array $test Array of values to test against $expected.
-	 * @param mixed $context Is this a test itself, or used within a test.
-	 * @return mixed
-	 */
-	static function compare_arrays( $expected, $test, $context ) {
-		$tested_data = array();
-		foreach ( $expected as $key => $value ) {
-			if ( isset( $test[ $key ] ) ) {
-				$tested_data[ $key ] = $test[ $key ];
-			} else {
-				$tested_data[ $key ] = null;
-			}
-		}
-
-		if ( is_object( $context ) ) {
-			$context->assertEquals( $expected, $tested_data );
-		} else {
-			return $tested_data;
-		}
-	}
-
-	static function apply_event_props( $event, $props ) {
+	public static function apply_event_props( Event $event, array $props ): void {
 		$props_to_set = array_keys( $props );
 
 		if ( in_array( 'status', $props_to_set, true ) ) {
@@ -122,7 +58,9 @@ class Utils {
 		}
 	}
 
-	static function assert_event_raw_data_equals( object $raw_event, array $expected_data, $context ) {
+	public static function assert_event_object_matches_database( Event $event, array $expected_data, $context ): void {
+		$raw_event = Events_Store::instance()->_get_event_raw( $event->get_id() );
+
 		$context->assertEquals( $raw_event->ID, $expected_data['id'], 'id matches' );
 		$context->assertEquals( $raw_event->status, $expected_data['status'], 'status matches' );
 		$context->assertEquals( $raw_event->action, $expected_data['action'], 'action matches' );
@@ -132,5 +70,23 @@ class Utils {
 		$context->assertEquals( $raw_event->schedule, $expected_data['schedule'], 'schedule matches' );
 		$context->assertEquals( $raw_event->interval, $expected_data['interval'], 'interval matches' );
 		$context->assertEquals( $raw_event->timestamp, $expected_data['timestamp'], 'timestamp matches' );
+
+		// Just make sure these were set.
+		$context->assertNotNull( $raw_event->created, 'created date was set' );
+		$context->assertNotNull( $raw_event->last_modified, 'last modified date was set' );
+	}
+
+	public static function assert_event_object_has_correct_props( Event $event, array $expected_data, $context ): void {
+		$context->assertEquals( $event->get_id(), $expected_data['id'], 'id matches' );
+		$context->assertEquals( $event->get_status(), $expected_data['status'], 'status matches' );
+		$context->assertEquals( $event->get_action(), $expected_data['action'], 'action matches' );
+		$context->assertEquals( $event->get_args(), $expected_data['args'], 'args match' );
+		$context->assertEquals( $event->get_instance(), Event::create_instance_hash( $expected_data['args'] ), 'instance matches' );
+		$context->assertEquals( $event->get_schedule(), $expected_data['schedule'], 'schedule matches' );
+		$context->assertEquals( $event->get_timestamp(), $expected_data['timestamp'], 'timestamp matches' );
+
+		// Special case: In the db it's "0", but in our class we keep as null.
+		$expected_interval = 0 === $expected_data['interval'] ? null : $expected_data['interval'];
+		$context->assertEquals( $event->get_interval(), $expected_interval, 'interval matches' );
 	}
 }
