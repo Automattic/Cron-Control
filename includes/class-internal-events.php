@@ -205,18 +205,57 @@ class Internal_Events extends Singleton {
 	}
 
 	/**
-	 * Remove unnecessary data and scheduled events.
-	 *
-	 * Some of this data relates to how Core manages Cron when this plugin isn't active.
+	 * Handles legacy data and general cleanup.
 	 */
 	public function clean_legacy_data() {
-		// Cron option can be very large, so it shouldn't linger.
+		$this->migrate_legacy_cron_events();
+
+		// Now that we've migrated events, can delete the cron option to save space in alloptions.
 		delete_option( 'cron' );
 
 		// While this plugin doesn't use this locking mechanism, other code may check the value.
 		delete_transient( 'doing_cron' );
 
-		// Confirm internal events are scheduled for when they're expected.
+		$this->ensure_internal_events_have_correct_schedule();
+	}
+
+	private function migrate_legacy_cron_events() {
+		global $wpdb;
+
+		// Grab directly from the database to avoid our special filtering.
+		$cron_row = $wpdb->get_row( "SELECT * FROM $wpdb->options WHERE option_name = 'cron'" );
+		if ( ! isset( $cron_row->option_value ) ) {
+			return;
+		}
+
+		$cron_array = maybe_unserialize( $cron_row->option_value );
+		if ( ! is_array( $cron_array ) ) {
+			return;
+		}
+
+		$legacy_events     = Events::flatten_wp_events_array( $cron_array );
+		$registered_events = Events::flatten_wp_events_array( pre_get_cron_option( false ) );
+
+		// Add any legacy events that are not registered in our custom table yet.
+		$events_to_add = array_diff_key( $legacy_events, $registered_events );
+		foreach ( $events_to_add as $event_to_add ) {
+			$wp_event = [
+				'timestamp' => $event_to_add['timestamp'],
+				'hook'      => $event_to_add['action'],
+				'args'      => $event_to_add['args'],
+			];
+
+			if ( ! empty( $event_to_add['schedule'] ) ) {
+				$wp_event['schedule'] = $event_to_add['schedule'];
+				$wp_event['interval'] = $event_to_add['interval'];
+			}
+
+			// Pass it up through this function so we can take advantage of duplicate prevention.
+			pre_schedule_event( null, (object) $wp_event );
+		}
+	}
+
+	private function ensure_internal_events_have_correct_schedule() {
 		$schedules = wp_get_schedules();
 
 		foreach ( $this->internal_events as $internal_event ) {
