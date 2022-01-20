@@ -25,6 +25,13 @@ By default the plugin disables default WP cron processing. It is recommended to 
 
 ## Frequently Asked Questions ##
 
+### Deviations from WordPress Core ###
+
+* Cron jobs are stored in a custom table and not in the `cron` option in wp_options. As long relevent code uses WP core functions for retrieving events and not direct SQL, all will stay compatible.
+* Duplicate recurring events with the same action/args/schedule are prevented. If multiple of the same action is needed on the same schedule, can add an arbitrary number to the args array.
+* When the cron control runner is running events, it does so via WP CLI. So the environment can be slightly different than that of a normal web request.
+* The cron control runner can process multiple events in parallel, whereas core cron only did 1 at a time. By default, events with the same action will not run in parallel unless specifically granted permission to do so.
+
 ### Adding Internal Events ###
 
 **This should be done sparingly as "Internal Events" bypass certain locks and limits built into the plugin.** Overuse will lead to unexpected resource usage, and likely resource exhaustion.
