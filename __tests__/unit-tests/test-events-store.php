@@ -203,4 +203,33 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$this->assertEquals( 1, count( $result ), 'returned event from second page' );
 		$this->assertEquals( $event_two->get_timestamp(), $result[0]->timestamp, 'found the right event' );
 	}
+
+	public function test_query_raw_events_orderby() {
+		$store = Events_Store::instance();
+
+		$event_one   = Utils::create_test_event( [ 'timestamp' => 5, 'action' => 'test_query_raw_events_orderby' ] );
+		$event_two   = Utils::create_test_event( [ 'timestamp' => 2, 'action' => 'test_query_raw_events_orderby' ] );
+		$event_three = Utils::create_test_event( [ 'timestamp' => 3, 'action' => 'test_query_raw_events_orderby' ] );
+		$event_four  = Utils::create_test_event( [ 'timestamp' => 1, 'action' => 'test_query_raw_events_orderby' ] );
+
+		// Default orderby should be timestamp ASC
+		$result = $store->_query_events_raw();
+		$this->assertEquals( 4, count( $result ), 'returned the correct amount of events' );
+		$this->assertEquals( $event_four->get_timestamp(), $result[0]->timestamp, 'the oldest "due now" event is returned first' );
+
+		// Fetch by timestamp in descending order.
+		$result = $store->_query_events_raw( [ 'orderby' => 'timestamp', 'order' => 'desc' ] );
+		$this->assertEquals( 4, count( $result ), 'returned the correct amount of events' );
+		$this->assertEquals( $event_one->get_timestamp(), $result[0]->timestamp, 'the farthest "due now" event is returned first' );
+
+		// Fetch by ID in ascending order.
+		$result = $store->_query_events_raw( [ 'orderby' => 'ID', 'order' => 'asc' ] );
+		$this->assertEquals( 4, count( $result ), 'returned the correct amount of events' );
+		$this->assertEquals( $event_one->get_id(), $result[0]->ID, 'the lowest ID is returned first' );
+
+		// Fetch by ID in descending order.
+		$result = $store->_query_events_raw( [ 'orderby' => 'ID', 'order' => 'desc' ] );
+		$this->assertEquals( 4, count( $result ), 'returned the correct amount of events' );
+		$this->assertEquals( $event_four->get_id(), $result[0]->ID, 'the highest ID is returned first' );
+	}
 }

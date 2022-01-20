@@ -61,4 +61,35 @@ class Internal_Events_Tests extends \WP_UnitTestCase {
 		$cron_row = $wpdb->get_row( "SELECT * FROM $wpdb->options WHERE option_name = 'cron'" );
 		$this->assertNull( $cron_row, 'cron option was deleted' );
 	}
+
+	function test_prune_duplicate_events() {
+		// We don't prune single events, even if duplicates.
+		$original_single_event  = Utils::create_test_event( [ 'timestamp' => time(), 'action' => 'single_event', 'args' => [ 'same' ] ] );
+		$duplicate_single_event = Utils::create_test_event( [ 'timestamp' => time() + 100, 'action' => 'single_event', 'args' => [ 'same' ] ] );
+		$unique_single_event    = Utils::create_test_event( [ 'timestamp' => time() + 200, 'action' => 'single_event', 'args' => [ 'unique' ] ] );
+
+		// We do prune duplicate recurring events.
+		$original_recurring_event   = Utils::create_test_event( [ 'timestamp' => time() + 500, 'action' => 'recurring_event', 'schedule' => 'hourly', 'interval' => \HOUR_IN_SECONDS ] );
+		$duplicate_recurring_event  = Utils::create_test_event( [ 'timestamp' => time() + 100, 'action' => 'recurring_event', 'schedule' => 'hourly', 'interval' => \HOUR_IN_SECONDS ] );
+		$duplicate_recurring_event2 = Utils::create_test_event( [ 'timestamp' => time() + 200, 'action' => 'recurring_event', 'schedule' => 'hourly', 'interval' => \HOUR_IN_SECONDS ] );
+		$unique_recurring_event     = Utils::create_test_event( [ 'timestamp' => time() + 100, 'action' => 'recurring_event', 'schedule' => 'hourly', 'interval' => \HOUR_IN_SECONDS, 'args' => [ 'unique' ] ] );
+
+		// Run the pruning.
+		Cron_Control\Internal_Events::instance()->clean_legacy_data();
+
+		// Should have 5 events left, and the oldest IDs should have been kept..
+		$remaining_events = Cron_Control\Events::query( [ 'limit' => 100, 'orderby' => 'ID', 'order' => 'ASC' ] );
+		$this->assertEquals( 5, count( $remaining_events ), 'correct number of registered events left after pruning' );
+		$this->assertEquals( $remaining_events[0]->get_id(), $original_single_event->get_id(), 'original single event was kept' );
+		$this->assertEquals( $remaining_events[1]->get_id(), $duplicate_single_event->get_id(), 'duplicate single event was also kept' );
+		$this->assertEquals( $remaining_events[2]->get_id(), $unique_single_event->get_id(), 'unique single event was kept' );
+		$this->assertEquals( $remaining_events[3]->get_id(), $original_recurring_event->get_id(), 'original recurring event was kept' );
+		$this->assertEquals( $remaining_events[4]->get_id(), $unique_recurring_event->get_id(), 'unique recurring event was kept' );
+
+		// The two duplicates should be marked as completed now.
+		$duplicate_recurring_1 = Cron_Control\Event::get( $duplicate_recurring_event->get_id() );
+		$duplicate_recurring_2 = Cron_Control\Event::get( $duplicate_recurring_event2->get_id() );
+		$this->assertEquals( $duplicate_recurring_1->get_status(), Cron_Control\Events_Store::STATUS_COMPLETED, 'duplicate recurring event 1 was marked as completed' );
+		$this->assertEquals( $duplicate_recurring_2->get_status(), Cron_Control\Events_Store::STATUS_COMPLETED, 'duplicate recurring event 2 was marked as completed' );
+	}
 }

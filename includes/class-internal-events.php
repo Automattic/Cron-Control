@@ -216,6 +216,7 @@ class Internal_Events extends Singleton {
 		// While this plugin doesn't use this locking mechanism, other code may check the value.
 		delete_transient( 'doing_cron' );
 
+		$this->prune_duplicate_events();
 		$this->ensure_internal_events_have_correct_schedule();
 	}
 
@@ -252,6 +253,34 @@ class Internal_Events extends Singleton {
 
 			// Pass it up through this function so we can take advantage of duplicate prevention.
 			pre_schedule_event( null, (object) $wp_event );
+		}
+	}
+
+	// Recurring events that have the same action/args/schedule are unnecessary. We can safely remove them.
+	private function prune_duplicate_events() {
+		$events = Events::query( [ 'limit' => -1, 'orderby' => 'ID', 'order' => 'ASC' ] );
+
+		$original_events  = [];
+		$duplicate_events = [];
+		foreach ( $events as $event ) {
+			if ( ! $event->is_recurring() ) {
+				// Only interested in recurring events.
+				continue;
+			}
+
+			$unique_key = sha1( "{$event->get_action()}:{$event->get_instance()}:{$event->get_schedule()}" );
+			if ( ! isset( $original_events[ $unique_key ] ) ) {
+				// The first occurrence, will also be the oldest (lowest ID).
+				$original_events[ $unique_key ] = true;
+			} else {
+				// Found a duplicate!
+				$duplicate_events[] = $event;
+			}
+		}
+
+		foreach ( $duplicate_events as $duplicate_event ) {
+			// For now we'll just complete them.
+			$duplicate_event->complete();
 		}
 	}
 
