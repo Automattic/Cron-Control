@@ -18,16 +18,66 @@ class Event_Tests extends \WP_UnitTestCase {
 	}
 
 	function test_run() {
-		$called = 0;
-		add_action( 'test_run_event_action', function () use ( &$called ) {
-			$called++;
-		} );
+		$successful_calls = 0;
+		$callback_result  = null;
+		add_action( 'test_run_event_action', function ( $arg_one, $arg_two ) use ( &$successful_calls, &$callback_result ) {
+			$successful_calls++;
+			$callback_result = [ $arg_one, $arg_two ];
+		}, 10, 2 );
+		add_action( 'test_run_event_action_failure', fn() => cause_a_fatal_with_not_a_real_function_call() );
 
-		$event = new Event();
-		$event->set_action( 'test_run_event_action' );
-		$event->run();
+		// Run a single event.
+		$single_event = Utils::create_test_event( [ 'action' => 'test_run_event_action', 'args' => [ 'one', 'two' ] ] );
+		$single_result = $single_event->run();
+		$this->assertTrue( $single_result, 'run was successful' );
+		$this->assertEquals( 1, $successful_calls, 'event callback was triggered once' );
+		$this->assertEquals( [ 'one', 'two' ], $callback_result, 'event callback was triggered with correct args' );
+		$this->assertEquals( Events_Store::STATUS_COMPLETED, $single_event->get_status(), 'event was marked as completed' );
+		$successful_calls = 0;
 
-		$this->assertEquals( 1, $called, 'event callback was triggered once' );
+		// Run a recurring event.
+		$recurring_event = Utils::create_test_event( [ 'action' => 'test_run_event_action', 'args' => [ 'three', 'four' ], 'schedule' => 'hourly', 'interval' => \HOUR_IN_SECONDS, 'timestamp' => time() + 500 ] );
+		$recurring_result = $recurring_event->run();
+		$this->assertTrue( $recurring_result, 'run was successful' );
+		$this->assertEquals( 1, $successful_calls, 'event callback was triggered once' );
+		$this->assertEquals( [ 'three', 'four' ], $callback_result, 'event callback was triggered with correct args' );
+		$this->assertEquals( Events_Store::STATUS_PENDING, $recurring_event->get_status(), 'event was rescheduled with pending status' );
+
+		// Run a failing event.
+		$failing_event = Utils::create_test_event( [ 'action' => 'test_run_event_action_failure' ] );
+		$failed_result = @$failing_event->run(); // @codingStandardsIgnoreLine Error suppression operator is used to prevent test from outputting the fatals.
+		$this->assertEquals( 'cron-control:event:error-thrown-during-run', $failed_result->get_error_code() );
+		$this->assertEquals( Events_Store::STATUS_COMPLETED, $single_event->get_status(), 'failed event was still marked as completed' );
+	}
+
+	function test_run_if_allowed() {
+		global $wpdb;
+		$event = Utils::create_test_event( [ 'action' => 'test_run_if_allowed', 'timestamp' => time() + 1 ] );
+
+		// Returns error if the timestamp isn't ready yet.
+		$this->assertEquals( 'cron-control:event:not-ready-yet', $event->run_if_allowed()->get_error_code() );
+
+		// The timestamp is due now, but still not ready to run since the status is not "pending".
+		$event->set_timestamp( time() - 100 );
+		$event->set_status( Events_Store::STATUS_RUNNING );
+		$this->assertEquals( 'cron-control:event:not-ready-yet', $event->run_if_allowed()->get_error_code() );
+
+		// Can't run if the action concurrency lock has already been claimed.
+		$event->set_status( Events_Store::STATUS_PENDING );
+		wp_cache_add( 'event_action_test_run_if_allowed', 1, 'cron-control-locks', 500 );
+		$this->assertEquals( 'cron-control:event:action-lock-unavailable', $event->run_if_allowed()->get_error_code() );
+
+		// Action concurrency lock is freed now, but "another request" concurrently already set the status to "running".
+		$table_name = Utils::get_table_name();
+		$wpdb->query( "UPDATE $table_name SET status = 'running' where ID = {$event->get_id()}" ); // @codingStandardsIgnoreLine direct SQL okay here.
+		wp_cache_delete( 'event_action_test_run_if_allowed', 'cron-control-locks' );
+		$this->assertEquals( 'cron-control:event:failed-to-set-running-status', $event->run_if_allowed()->get_error_code() );
+		$this->assertFalse( wp_cache_get( 'event_action_test_run_if_allowed', 'cron-control-locks' ), 'action lock was cleared' );
+
+		// Finally, all conditions are met and we can run the event!
+		$wpdb->query( "UPDATE $table_name SET status = 'pending' where ID = {$event->get_id()}" );
+		$this->assertTrue( $event->run_if_allowed() );
+		$this->assertFalse( wp_cache_get( 'event_action_test_run_if_allowed', 'cron-control-locks' ), 'action lock was cleared' );
 	}
 
 	function test_complete() {
@@ -48,6 +98,8 @@ class Event_Tests extends \WP_UnitTestCase {
 	}
 
 	function test_reschedule() {
+		global $wpdb;
+
 		// Try to reschedule a non-recurring event.
 		$event = new Event();
 		$event->set_action( 'test_reschedule' );
@@ -66,11 +118,18 @@ class Event_Tests extends \WP_UnitTestCase {
 		$this->assertEquals( 'cron-control:event:cannot-reschedule', $result->get_error_code() );
 
 		// Now save the event and make sure props were updated correctly.
+		$event->set_status( Events_Store::STATUS_RUNNING );
 		$event->save();
 		$result = $event->reschedule();
 		$this->assertTrue( $result, 'event was successfully rescheduled' );
 		$this->assertEquals( Events_Store::STATUS_PENDING, $event->get_status() );
 		$this->assertEquals( time() + HOUR_IN_SECONDS, $event->get_timestamp() );
+
+		// Simulate a concurrent request completing/deleting the event whilst it was running in this request.
+		$table_name = Utils::get_table_name();
+		$wpdb->query( "UPDATE $table_name SET status = 'complete' where ID = {$event->get_id()}" ); // @codingStandardsIgnoreLine direct SQL okay here.
+		$result = $event->reschedule();
+		$this->assertEquals( 'cron-control:event:cannot-reschedule-completed-event', $result->get_error_code() );
 	}
 
 	function test_exists() {

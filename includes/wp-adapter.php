@@ -229,6 +229,7 @@ function pre_get_ready_cron_jobs( $pre ) {
 	$events = Events::query( [
 		'timestamp' => 'due_now',
 		'limit'     => 100,
+		'status'    => Events_Store::STATUS_PENDING,
 	] );
 
 	return Events::format_events_for_wp( $events );

@@ -13,11 +13,12 @@ class Events_Store extends Singleton {
 	const DB_VERSION        = 1;
 	const DB_VERSION_OPTION = 'a8c_cron_control_db_version';
 
-	const STATUS_PENDING   = 'pending';
-	const STATUS_RUNNING   = 'running';
-	const STATUS_COMPLETED = 'complete';
-	const ACTIVE_STATUSES  = [ self::STATUS_PENDING, self::STATUS_RUNNING ];
-	const ALLOWED_STATUSES = [ self::STATUS_PENDING, self::STATUS_RUNNING, self::STATUS_COMPLETED ];
+	const STATUS_PENDING    = 'pending';
+	const STATUS_RUNNING    = 'running';
+	const STATUS_COMPLETED  = 'complete';
+	const INACTIVE_STATUSES = [ self::STATUS_COMPLETED ];
+	const ACTIVE_STATUSES   = [ self::STATUS_PENDING, self::STATUS_RUNNING ];
+	const ALLOWED_STATUSES  = [ self::STATUS_PENDING, self::STATUS_RUNNING, self::STATUS_COMPLETED ];
 
 	protected function class_init() {
 		if ( ! self::is_installed() ) {
@@ -541,14 +542,19 @@ class Events_Store extends Singleton {
 	 * @param array $row_data The row data used to update the event.
 	 * @return bool True if update was successful, false otherwise.
 	 */
-	public function _update_event( int $event_id, array $row_data ): bool {
+	public function _update_event( int $event_id, array $row_data, ?array $additional_where = null ): bool {
 		global $wpdb;
 
 		if ( empty( $event_id ) || empty( $row_data ) ) {
-			return 0;
+			return false;
 		}
 
-		$where  = [ 'ID' => $event_id ];
+		$where = [ 'ID' => $event_id ];
+		if ( is_array( $additional_where ) ) {
+			// The original $where clause is merged last to ensure the ID is not overwritten by $additional_where.
+			$where = array_merge( $additional_where, $where );
+		}
+
 		$result = $wpdb->update( $this->get_table_name(), $row_data, $where, self::row_formatting( $row_data ), self::row_formatting( $where ) );
 
 		if ( isset( $row_data['action'], $row_data['args'] ) ) {
@@ -559,7 +565,9 @@ class Events_Store extends Singleton {
 			self::flush_event_cache();
 		}
 
-		return false !== $result;
+		// Note: $wpdb->update() will return false on error, or the number of rows updated (including 0 if nothing needed to be, or could be, changed).
+		// In this case, we only count the update as successfull if precisely one row was updated.
+		return 1 === $result;
 	}
 
 	/**

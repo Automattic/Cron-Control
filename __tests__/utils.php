@@ -19,13 +19,9 @@ class Utils {
 	}
 
 	public static function create_test_event( array $args = [] ): Event {
-		if ( empty( $args ) ) {
-			$args = array(
-				'timestamp' => time(),
-				'action'    => 'test_event_action',
-				'args'      => [],
-			);
-		}
+		// Set defaults on the required fields.
+		$args['action']    = empty( $args['action'] ) ? 'test_event_action' : $args['action'];
+		$args['timestamp'] = empty( $args['timestamp'] ) ? time() : $args['timestamp'];
 
 		$event = new Event();
 		self::apply_event_props( $event, $args );

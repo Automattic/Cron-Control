@@ -90,6 +90,20 @@ class Events extends Singleton {
 		}
 	}
 
+	public function get_actions_with_allowed_concurrency(): array {
+		$allowed_concurrent_actions = [];
+
+		foreach ( $this->concurrent_action_whitelist as $event_action => $concurrency_limit ) {
+			if ( $concurrency_limit > 1 ) {
+				// We're just interested in events that have been configured w/ allowed concurrency.
+				// Note: A limit specified above 1 is now considered "unlimited" as far as the locking mechanisms are concerned.
+				$allowed_concurrent_actions[] = $event_action;
+			}
+		}
+
+		return $allowed_concurrent_actions;
+	}
+
 	/**
 	 * List events pending for the current period.
 	 *

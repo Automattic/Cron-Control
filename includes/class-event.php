@@ -159,10 +159,6 @@ class Event {
 		return true;
 	}
 
-	public function run(): void {
-		do_action_ref_array( $this->action, $this->args );
-	}
-
 	/**
 	 * Mark the event as completed.
 	 * TODO: Probably introduce cancel() method and status as well for more specific situations.
@@ -194,9 +190,16 @@ class Event {
 		}
 
 		if ( ! $this->is_recurring() ) {
-			// The event doesn't recur (or data was corrupted somehow), mark it as cancelled instead.
+			// The event doesn't recur (or data was corrupted somehow), mark it as completed instead.
 			$this->complete();
 			return new WP_Error( 'cron-control:event:cannot-reschedule' );
+		}
+
+		// Get a fresh status from the database.
+		$db_row = Events_Store::instance()->_get_event_raw( $this->id );
+		if ( is_null( $db_row ) || in_array( $db_row->status, Events_Store::INACTIVE_STATUSES, true ) ) {
+			// The event must have been completed/cancelled in a concurrent request, respect that and don't reschedule.
+			return new WP_Error( 'cron-control:event:cannot-reschedule-completed-event' );
 		}
 
 		$fresh_interval = $this->get_refreshed_schedule_interval();
@@ -206,8 +209,123 @@ class Event {
 			$this->set_schedule( $this->schedule, $this->interval );
 		}
 
+		$this->set_status( Events_Store::STATUS_PENDING );
 		$this->set_timestamp( $next_timestamp );
 		return $this->save();
+	}
+
+	/**
+	 * Update the event's status to $new_status as long as $current_status is a match with the current state.
+	 * Helps prevent concurrency-related issues by keeping the database as the source of truth for event state.
+	 *
+	 * @return true|WP_Error true on success, WP_Error on failure.
+	 */
+	private function update_status_from_to( string $current_status, string $new_status ) {
+		if ( ! $this->exists() ) {
+			return new WP_Error( 'cron-control:event:cannot-update-status' );
+		}
+
+		if ( ! in_array( $new_status, Events_Store::ALLOWED_STATUSES, true ) ) {
+			return new WP_Error( 'cron-control:event:prop-validation:invalid-status' );
+		}
+
+		// Need to send action/args to assist with cache invalidation.
+		$row_data = [
+			'action' => $this->get_action(),
+			'args'   => serialize( $this->get_args() ),
+			'status' => $new_status,
+		];
+
+		$current_time = current_time( 'mysql', true );
+		$row_data['last_modified'] = $current_time;
+
+		$success = Events_Store::instance()->_update_event( $this->id, $row_data, [ 'status' => $current_status ] );
+		if ( ! $success ) {
+			return new WP_Error( 'cron-control:event:status-update-failed' );
+		}
+
+		$this->last_modified = $current_time;
+		$this->set_status( $new_status );
+		return true;
+	}
+
+	/**
+	 * Run an event if all the safety/concurrency checks pass.
+	 *
+	 * @return true|WP_Error true on success, WP_Error on failure.
+	 */
+	public function run_if_allowed() {
+		// First round of safety, ensure the event is actually due to run.
+		if ( $this->get_timestamp() > time() || Events_Store::STATUS_PENDING !== $this->get_status() ) {
+			return new WP_Error( 'cron-control:event:not-ready-yet' );
+		}
+
+		// Second round of safety, ensure the same event actions are not run in parallel if concurrency is not allowed.
+		if ( ! $this->claim_action_run_lock() ) {
+			return new WP_Error( 'cron-control:event:action-lock-unavailable' );
+		}
+
+		// Third round of safety, adherring to the total allowed concurrency at the site-level. Internal events are exempt.
+		if ( ! $this->is_internal() ) {
+			// This check is not perfect as another parrallel request could be checking at the same time. But it's also not the most vital of checks.
+			// May be removing this check entirely in the future and just having "unlimited" site-level concurrency, letting the runner decide this instead.
+			$running_events = Events::query( [ 'status' => Events_Store::STATUS_RUNNING, 'limit' => -1 ] );
+			if ( count( $running_events ) >= JOB_CONCURRENCY_LIMIT ) {
+				$this->unclaim_action_run_lock();
+				return new WP_Error( 'cron-control:event:site-concurrency-limit-reached' );
+			}
+		}
+
+		// Finally, try to mark the event as "running" to claim ownership.
+		$update_result = $this->update_status_from_to( Events_Store::STATUS_PENDING, Events_Store::STATUS_RUNNING );
+		if ( is_wp_error( $update_result ) ) {
+			$this->unclaim_action_run_lock();
+			return new WP_Error( 'cron-control:event:failed-to-set-running-status' );
+		}
+
+		$run_result = $this->run();
+		$this->unclaim_action_run_lock();
+
+		return $run_result;
+	}
+
+	/**
+	 * Run an event and reschedule/complete afterwards. Catches most fatal errors.
+	 *
+	 * @return true|WP_Error true on success, WP_Error on failure.
+	 */
+	public function run() {
+		try {
+			do_action_ref_array( $this->action, $this->args );
+		} catch ( \Throwable $t ) {
+			// Catch any fatals during the event callback (excluding OOMs/timeouts, can't catch those here) and log as a warning instead. Allowing us to continue on with event cleanup.
+			$error_message = sprintf( 'PHP Fatal error: Cron-Control Caught Error: %1$s%2$sStack trace: %3$s', $t->getMessage(), PHP_EOL, $t->getTraceAsString() );
+			trigger_error( $error_message, E_USER_WARNING );
+
+			$result = $this->is_recurring() ? $this->reschedule() : $this->complete();
+			return is_wp_error( $result ) ? $result->get_error_code() : new WP_Error( 'cron-control:event:error-thrown-during-run' );
+		}
+
+		return $this->is_recurring() ? $this->reschedule() : $this->complete();
+	}
+
+	private function claim_action_run_lock(): bool {
+		$has_allowed_concurrency = in_array( $this->action, Events::instance()->get_actions_with_allowed_concurrency(), true );
+		if ( $has_allowed_concurrency ) {
+			// The "lock" is always available if the event allows for concurrency.
+			return true;
+		}
+
+		// Will return false if the lock is already taken by another process.
+		$timeout = LOCK_DEFAULT_TIMEOUT_IN_MINUTES * \MINUTE_IN_SECONDS;
+		return wp_cache_add( "event_action_{$this->action}", 1, 'cron-control-locks', $timeout );
+	}
+
+	private function unclaim_action_run_lock(): void {
+		$has_allowed_concurrency = in_array( $this->action, Events::instance()->get_actions_with_allowed_concurrency(), true );
+		if ( ! $has_allowed_concurrency ) {
+			wp_cache_delete( "event_action_{$this->action}", 'cron-control-locks' );
+		}
 	}
 
 	/*

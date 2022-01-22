@@ -52,15 +52,35 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$event->set_timestamp( 1637447875 );
 		$event->save();
 
-		$result = $store->_update_event( $event->get_id(), [ 'timestamp' => 1637447875 + 100 ] );
-		$this->assertTrue( $result, 'event was updated' );
+		// Successful update.
+		$update_result = $store->_update_event( $event->get_id(), [ 'timestamp' => 1637447875 + 100 ] );
+		$this->assertTrue( $update_result, 'event was updated' );
+		$this->assertEquals( 1637447875 + 100, $store->_get_event_raw( $event->get_id() )->timestamp, 'properties were updated correctly' );
 
-		// Spot check the updated property.
-		$raw_event = $store->_get_event_raw( $event->get_id() );
-		$this->assertEquals( 1637447875 + 100, $raw_event->timestamp );
+		// Successful update with additional "where".
+		$second_update = $store->_update_event( $event->get_id(), [ 'timestamp' => 1637447875 + 200 ], [ 'status' => Events_Store::STATUS_PENDING ] );
+		$this->assertTrue( $second_update, 'event was updated with additional where clause' );
+		$this->assertEquals( 1637447875 + 200, $store->_get_event_raw( $event->get_id() )->timestamp, 'properties were updated correctly' );
 
-		$failed_result = $store->_update_event( $event->get_id(), [] );
-		$this->assertFalse( $failed_result, 'event was not updated due to invalid args' );
+		// Invalid ID.
+		$failed_id_result = $store->_update_event( PHP_INT_MAX, [ 'timestamp' => 1 ] );
+		$this->assertFalse( $failed_id_result, 'invalid event id was not updated' );
+
+		// Invalid args results in failure.
+		$failed_args_result = $store->_update_event( $event->get_id(), [] );
+		$this->assertFalse( $failed_args_result, 'event was not updated due to invalid args' );
+
+		// No update to perform due to additional "where" clause (the event's status is not currently "running").
+		$failed_where_update = $store->_update_event( $event->get_id(), [ 'status' => Events_Store::STATUS_PENDING ], [ 'status' => Events_Store::STATUS_RUNNING ] );
+		$this->assertFalse( $failed_where_update, 'event was not updated due to additional where clause' );
+		$this->assertEquals( Events_Store::STATUS_PENDING, $store->_get_event_raw( $event->get_id() )->status, 'status was not updated' );
+
+		// Cannot override the ID in "where" clause.
+		$additional_event = Utils::create_test_event();
+		$override_prevention = $store->_update_event( $event->get_id(), [ 'timestamp' => 1637447875 + 300 ], [ 'ID' => $additional_event->get_id() ] );
+		$this->assertTrue( $override_prevention, 'event was still updated' );
+		$this->assertEquals( 1637447875 + 300, $store->_get_event_raw( $event->get_id() )->timestamp, 'properties were still updated correctly' );
+		$this->assertNotEquals( 1637447875 + 300, $store->_get_event_raw( $additional_event->get_id() )->timestamp, 'the other event was not updated' );
 	}
 
 	function test_get_raw_event() {
