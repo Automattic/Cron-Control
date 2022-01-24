@@ -633,6 +633,10 @@ class Events_Store extends Singleton {
 				'default'    => 1,
 				'validation' => fn( $page ) => is_int( $page ) && $page >= 1,
 			],
+			'orderby' => [
+				'default'    => 'timestamp',
+				'validation' => fn( $orderby ) => is_null( $orderby ) || ( is_string( $orderby ) && in_array( $orderby, [ 'timestamp', 'ID' ], true ) ),
+			],
 			'order' => [
 				'default'    => 'ASC',
 				'validation' => fn( $order ) => is_string( $order ) && in_array( strtoupper( $order ), [ 'ASC', 'DESC'], true ),
@@ -716,9 +720,10 @@ class Events_Store extends Singleton {
 			}
 		}
 
-		// TODO: adjust for situations where we don't need to sort.
-		$sql .= ' ORDER BY timestamp';
-		$sql .= strtoupper( $parsed_args['order'] ) === 'ASC' ? ' ASC' : ' DESC';
+		if ( ! is_null( $parsed_args['orderby'] ) ) {
+			$sql .= ' ORDER BY ' . $parsed_args['orderby'];
+			$sql .= strtoupper( $parsed_args['order'] ) === 'ASC' ? ' ASC' : ' DESC';
+		}
 
 		// Skip paging/limits if "-1" was passed to get all events.
 		if ( $parsed_args['limit'] >= 1 ) {
@@ -740,7 +745,7 @@ class Events_Store extends Singleton {
 
 		// Conditionally use a more specific cache for common FE queries, helping avoid most bulk invalidations.
 		$allowed_arg_count = array_key_exists( 'timestamp', $args ) ? 4 : 3;
-		if ( 1 === $args['limit'] && count( $args ) === $allowed_arg_count ) {
+		if ( isset( $args['limit'] ) && 1 === $args['limit'] && count( $args ) === $allowed_arg_count ) {
 			$has_timestamp = array_key_exists( 'timestamp', $args ) && ! is_null( $args['timestamp'] );
 
 			// Request was for the next event based on action/args, i.e. wp_next_scheduled()

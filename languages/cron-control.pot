@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cron Control 3.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/cron-control\n"
-"POT-Creation-Date: 2022-01-19 22:39:12+00:00\n"
+"POT-Creation-Date: 2022-01-20 03:55:29+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -58,11 +58,11 @@ msgstr ""
 msgid "Job with action `%1$s` and arguments `%2$s` executed."
 msgstr ""
 
-#: includes/class-internal-events.php:110
+#: includes/class-internal-events.php:90
 msgid "Cron Control internal job - every 2 minutes (used to be 1 minute)"
 msgstr ""
 
-#: includes/class-internal-events.php:114
+#: includes/class-internal-events.php:94
 msgid "Cron Control internal job - every 10 minutes"
 msgstr ""
 
