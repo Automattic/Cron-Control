@@ -245,11 +245,11 @@ class WP_Adapter_Tests extends \WP_UnitTestCase {
 
 		// Schedule one event, and leave two unsaved.
 		$default_args   = [ 'timestamp' => time() + 100, 'args' => [ 'some', 'args' ] ];
-		$existing_event = $this->create_unsaved_event( array_merge( $default_args, [ 'action' => 'test_pre_update_cron_option_existing' ] ) );
+		$existing_event = Utils::create_unsaved_event( array_merge( $default_args, [ 'action' => 'test_pre_update_cron_option_existing' ] ) );
 		$existing_event->save();
 
-		$event_to_add           = $this->create_unsaved_event( array_merge( $default_args, [ 'action' => 'test_pre_update_cron_option_new' ] ) );
-		$recurring_event_to_add = $this->create_unsaved_event( array_merge( $default_args, [
+		$event_to_add           = Utils::create_unsaved_event( array_merge( $default_args, [ 'action' => 'test_pre_update_cron_option_new' ] ) );
+		$recurring_event_to_add = Utils::create_unsaved_event( array_merge( $default_args, [
 			'action' => 'test_pre_update_cron_option_new_recurring',
 			'schedule' => 'hourly',
 			'interval' => HOUR_IN_SECONDS,
@@ -307,18 +307,5 @@ class WP_Adapter_Tests extends \WP_UnitTestCase {
 			'future'    => $future_event,
 			'recurring' => $recurring,
 		];
-	}
-
-	private function create_unsaved_event( array $args ) {
-		$event = new Event();
-		$event->set_action( $args['action'] );
-		$event->set_timestamp( $args['timestamp'] );
-		$event->set_args( $args['args'] );
-
-		if ( isset( $args['schedule'] ) ) {
-			$event->set_schedule( $args['schedule'], $args['interval'] );
-		}
-
-		return $event;
 	}
 }

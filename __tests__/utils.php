@@ -19,18 +19,22 @@ class Utils {
 	}
 
 	public static function create_test_event( array $args = [] ): Event {
+		$event = self::create_unsaved_event( $args );
+		$event->save();
+		return $event;
+	}
+
+	public static function create_unsaved_event( array $args = [] ) {
 		if ( empty( $args ) ) {
 			$args = array(
 				'timestamp' => time(),
-				'action'    => 'test_event_action',
+				'action'    => 'test_unsaved_event_action',
 				'args'      => [],
 			);
 		}
 
 		$event = new Event();
 		self::apply_event_props( $event, $args );
-		$event->save();
-
 		return $event;
 	}
 
