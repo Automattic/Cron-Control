@@ -45,3 +45,19 @@ require_once __DIR__ . '/utils.php';
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
+
+// Setup WP CLI depedencies.
+if ( ! defined( 'WP_CLI_ROOT' ) ) {
+	define( 'WP_CLI_ROOT', __DIR__ . '/../vendor/wp-cli/wp-cli' );
+}
+
+include WP_CLI_ROOT . '/php/utils.php';
+include WP_CLI_ROOT . '/php/dispatcher.php';
+include WP_CLI_ROOT . '/php/class-wp-cli.php';
+include WP_CLI_ROOT . '/php/class-wp-cli-command.php';
+
+\WP_CLI\Utils\load_dependencies();
+
+// WP_CLI wasn't defined during plugin bootup, so bootstrap our cli classes manually
+require dirname( dirname( __FILE__ ) ) . '/includes/wp-cli.php';
+Cron_Control\CLI\prepare_environment();
