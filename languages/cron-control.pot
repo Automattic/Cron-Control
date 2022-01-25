@@ -2,9 +2,9 @@
 # This file is distributed under the same license as the Cron Control package.
 msgid ""
 msgstr ""
-"Project-Id-Version: Cron Control 3.0\n"
+"Project-Id-Version: Cron Control 3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/cron-control\n"
-"POT-Creation-Date: 2022-01-20 03:55:29+00:00\n"
+"POT-Creation-Date: 2022-01-25 18:26:12+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
