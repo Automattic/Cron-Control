@@ -4,7 +4,7 @@ Tags: cron, cron control, concurrency, parallel, async
 Requires at least: 5.1
 Tested up to: 5.8
 Requires PHP: 7.4
-Stable tag: 3.0
+Stable tag: 3.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -111,6 +111,13 @@ Will need `npm`. Example of installing on a docker container: `apk add --update 
 Run `npm install` then `npm run build` to create/update language files and to convert `readme.txt` to `readme.md` if needed.
 
 == Changelog ==
+
+= 3.1 =
+* Update installation process, always ensuring the custom table is installed.
+* Swap out deprecated `wpmu_new_blog` hook.
+* Ignore archived/deleted/spam subsites during the runner's `list sites` cli command.
+* Migrate legacy events from the `cron` option to the new table before deleting the option.
+* Delete duplicate recurring events. Runs daily.
 
 = 3.0 =
 * Implement WP cron filters that were added in WP 5.1.
