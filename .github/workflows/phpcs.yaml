@@ -20,7 +20,7 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php }}
+          php-version: 7.4
 
       - name: Get composer cache directory
         id: composer-cache
@@ -30,10 +30,8 @@ jobs:
         uses: actions/cache@v3.2.3
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-php-${{ matrix.php }}-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-php-${{ matrix.php }}
-            ${{ runner.os }}-php-
+          key: ${{ runner.os }}-php-7.4-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-php-7.4
 
       - name: Validate composer.json and composer.lock
         run: composer validate
