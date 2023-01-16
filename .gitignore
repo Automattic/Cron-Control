@@ -7,3 +7,4 @@ node_modules/
 *.tar.gz
 *.zip
 /bin/cron-control-runner
+.phpunit.result.cache
