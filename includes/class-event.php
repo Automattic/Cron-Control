@@ -9,7 +9,7 @@ class Event {
 	private string $status;
 
 	// TODO: Maybe we don't need action_hashed going forward?
-	private string $action;
+	public string $action;
 	private string $action_hashed;
 
 	private array $args = [];
