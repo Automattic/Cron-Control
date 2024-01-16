@@ -285,7 +285,7 @@ class Events_Store extends Singleton {
 	 *
 	 * Currently no need for caching here really,
 	 * the action/instance/timestamp combination is the query that often happens on the FE.
-	 * So perhaps room for enhacement there later.
+	 * So perhaps room for enhancement there later.
 	 *
 	 * @param int $id The ID of the event being retrieved.
 	 * @return object|null Raw event object if successful, false otherwise.
