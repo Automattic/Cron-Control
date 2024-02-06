@@ -55,8 +55,7 @@ class Events_Store extends Singleton {
 		$table_name = $wpdb->prefix . self::TABLE_SUFFIX;
 		$is_installed = 1 === count( $wpdb->get_col( $wpdb->prepare( 'SELECT TABLE_NAME FROM information_schema.tables WHERE TABLE_NAME = %s', $table_name ) ) );
 
-		// Cache false for future is_installed checks. Will be overriden by
-		// _prepare_table when/if it's ultimately installed.
+		// Cache the results, will be overridden by _prepare_table() during installation.
 		wp_cache_add( 'is_installed', $is_installed, 'cron-control' );
 
 		return $is_installed;
