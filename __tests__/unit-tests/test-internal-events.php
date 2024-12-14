@@ -74,12 +74,27 @@ class Internal_Events_Tests extends \WP_UnitTestCase {
 		$duplicate_recurring_event2 = Utils::create_test_event( [ 'timestamp' => time() + 200, 'action' => 'recurring_event', 'schedule' => 'hourly', 'interval' => \HOUR_IN_SECONDS ] );
 		$unique_recurring_event     = Utils::create_test_event( [ 'timestamp' => time() + 100, 'action' => 'recurring_event', 'schedule' => 'hourly', 'interval' => \HOUR_IN_SECONDS, 'args' => [ 'unique' ] ] );
 
+		// This prevent events starting with `wp_` from being scheduled, like wp_version_check,
+		// wp_update_plugins or wp_update_themes to avoid affecting the count assertions.
+		$prevent_wp_cron_events = function ( $event ) {
+			if ( str_starts_with( $event->hook, 'wp_' ) ) {
+				return false;
+			}
+			return $event;
+		};
+
+		// Filter to block any WordPress core cron events so the test events are isolated.
+		add_filter( 'schedule_event', $prevent_wp_cron_events );
+
 		// Run the pruning.
 		Cron_Control\Internal_Events::instance()->clean_legacy_data();
 
+		// Remove the filter after the pruning calls.
+		remove_filter( 'schedule_event', $prevent_wp_cron_events );
+
 		// Should have 5 events left, and the oldest IDs should have been kept..
 		$remaining_events = Cron_Control\Events::query( [ 'limit' => 100, 'orderby' => 'ID', 'order' => 'ASC' ] );
-		$this->assertEquals( 5, count( $remaining_events ), 'correct number of registered events left after pruning' );
+		$this->assertCount( 5, $remaining_events, 'correct number of registered events left after pruning' );
 		$this->assertEquals( $remaining_events[0]->get_id(), $original_single_event->get_id(), 'original single event was kept' );
 		$this->assertEquals( $remaining_events[1]->get_id(), $duplicate_single_event->get_id(), 'duplicate single event was also kept' );
 		$this->assertEquals( $remaining_events[2]->get_id(), $unique_single_event->get_id(), 'unique single event was kept' );
