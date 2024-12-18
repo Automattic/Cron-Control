@@ -176,4 +176,61 @@ class Internal_Events_Tests extends \WP_UnitTestCase {
 		$this->assertCount( 1, $future_posts_after, 'One post should still be scheduled.' );
 		$this->assertCount( 1, $published_posts, 'One post should be published.' );
 	}
+
+	public function test_confirm_scheduled_posts() {
+		// Create posts with 'future' status.
+		$future_posts = array(
+			$this->factory()->post->create(
+				array(
+					'post_title'  => '1 hour in the future',
+					'post_status' => 'future',
+					'post_type'   => 'post',
+					'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '+1 hour' ) ),
+				)
+			),
+			$this->factory()->post->create(
+				array(
+					'post_title'  => '2 hours in the future',
+					'post_status' => 'future',
+					'post_type'   => 'post',
+					'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '+2 hours' ) ),
+				)
+			),
+			$this->factory()->post->create(
+				array(
+					'post_title'  => '3 hours in the future',
+					'post_status' => 'future',
+					'post_type'   => 'post',
+					'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '+3 hours' ) ),
+				)
+			),
+		);
+
+		// Clear existing cron events to isolate the test.
+		Utils::clear_cron_table();
+
+		// Query all cron events to confirm none exist.
+		$events = Cron_Control\Events::query();
+		$this->assertEmpty( $events, 'No scheduled events should exist initially.' );
+
+		// Call the method to confirm scheduled posts.
+		Cron_Control\Internal_Events::instance()->confirm_scheduled_posts();
+
+		// Verify that cron jobs are scheduled for each future post.
+		foreach ( $future_posts as $future_post_id ) {
+			$timestamp = wp_next_scheduled( 'publish_future_post', array( $future_post_id ) );
+			$this->assertNotFalse( $timestamp, "Cron job should be scheduled for post ID: $future_post_id." );
+		}
+
+		// Reschedule one post with a different timestamp and call the method again.
+		$future_post_gmt_time = strtotime( get_gmt_from_date( get_post( $future_posts[0] )->post_date ) . ' GMT' );
+		wp_clear_scheduled_hook( 'publish_future_post', array( $future_posts[0] ) );
+		wp_schedule_single_event( $future_post_gmt_time - 3600, 'publish_future_post', array( $future_posts[0] ) ); // Schedule 1 hour earlier.
+
+		Cron_Control\Internal_Events::instance()->confirm_scheduled_posts();
+
+		// Verify the post's cron job has been rescheduled to the correct timestamp.
+		$rescheduled_timestamp = wp_next_scheduled( 'publish_future_post', array( $future_posts[0] ) );
+		$this->assertEquals( $future_post_gmt_time, $rescheduled_timestamp, 'Cron job for post 1 should be rescheduled to the correct timestamp.' );
+	}
 }
