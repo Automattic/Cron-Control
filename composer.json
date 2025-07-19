@@ -6,13 +6,13 @@
     "php": ">=7.4.0"
   },
   "require-dev": {
-    "dealerdirect/phpcodesniffer-composer-installer": "^1.1",
+    "dealerdirect/phpcodesniffer-composer-installer": "*",
     "johnpbloch/wordpress-core": "^6.1.1",
     "phpcompatibility/phpcompatibility-wp": "^2.1.4",
     "wp-cli/wp-cli": "*",
     "wp-coding-standards/wpcs": "^2.3",
     "wp-phpunit/wp-phpunit": "^6.1.1",
-    "yoast/phpunit-polyfills": "1.1.0"
+    "yoast/phpunit-polyfills": "^4.0.0"
   },
   "config": {
     "sort-packages": true,
