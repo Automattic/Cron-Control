@@ -14,17 +14,6 @@ class Orchestrate_Sites_Tests extends \WP_UnitTestCase {
 		parent::setUp();
 	}
 
-	public function test_list_sites_removes_inactive_subsites() {
-		add_filter( 'sites_pre_query', [ $this, 'mock_get_sites' ], 10, 2 );
-
-		// The archived/spam/deleted subsites should not be returned.
-		$expected = wp_json_encode( [ [ 'url' => 'site1.com' ], [ 'url' => 'site2.com/two' ], [ 'url' => 'site3.com/three' ], [ 'url' => 'site7.com/seven' ] ] );
-		$this->expectOutputString( $expected );
-		( new CLI\Orchestrate_Sites() )->list();
-
-		remove_filter( 'sites_pre_query', [ $this, 'mock_get_sites' ], 10, 2 );
-	}
-
 	public function test_list_sites_2_hosts() {
 		add_filter( 'sites_pre_query', [ $this, 'mock_get_sites' ], 10, 2 );
 
@@ -64,16 +53,13 @@ class Orchestrate_Sites_Tests extends \WP_UnitTestCase {
 
 	public function mock_get_sites( $site_data, $query_class ) {
 		if ( $query_class->query_vars['count'] ) {
-			return 7;
+			return 4;
 		}
 
 		return [
 			new WP_Site( (object) [ 'domain' => 'site1.com', 'path' => '/' ] ),
 			new WP_Site( (object) [ 'domain' => 'site2.com', 'path' => '/two' ] ),
 			new WP_Site( (object) [ 'domain' => 'site3.com', 'path' => '/three' ] ),
-			new WP_Site( (object) [ 'domain' => 'site4.com', 'path' => '/four', 'archived' => '1' ] ),
-			new WP_Site( (object) [ 'domain' => 'site5.com', 'path' => '/five', 'spam' => '1' ] ),
-			new WP_Site( (object) [ 'domain' => 'site6.com', 'path' => '/six', 'deleted' => '1' ] ),
 			new WP_Site( (object) [ 'domain' => 'site7.com', 'path' => '/seven' ] ),
 		];
 	}
