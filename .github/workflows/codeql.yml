@@ -7,8 +7,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - ".github/**.yml"
   schedule:
     - cron: '1 1 * * 3'
 
