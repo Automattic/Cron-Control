@@ -1,0 +1,20 @@
+name: Dependency Review
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    name: Review Dependencies
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the source code
+        uses: actions/checkout@v4.2.2
+
+      - name: Review dependencies
+        uses: actions/dependency-review-action@v4.7.1
