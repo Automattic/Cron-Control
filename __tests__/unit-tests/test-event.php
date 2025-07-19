@@ -70,7 +70,7 @@ class Event_Tests extends \WP_UnitTestCase {
 		$result = $event->reschedule();
 		$this->assertTrue( $result, 'event was successfully rescheduled' );
 		$this->assertEquals( Events_Store::STATUS_PENDING, $event->get_status() );
-		$this->assertEquals( time() + HOUR_IN_SECONDS, $event->get_timestamp() );
+		$this->assertEqualsWithDelta( time() + HOUR_IN_SECONDS, $event->get_timestamp(), 1 );
 	}
 
 	public function test_exists() {
