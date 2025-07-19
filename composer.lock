@@ -4,33 +4,33 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "dda0fe1f0ad1b36fdef158b0a311094e",
+    "content-hash": "0310f6ea00a606332d6badc871a240bf",
     "packages": [],
     "packages-dev": [
         {
             "name": "dealerdirect/phpcodesniffer-composer-installer",
-            "version": "v1.0.0",
+            "version": "v1.1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHPCSStandards/composer-installer.git",
-                "reference": "4be43904336affa5c2f70744a348312336afd0da"
+                "reference": "e9cf5e4bbf7eeaf9ef5db34938942602838fc2b1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHPCSStandards/composer-installer/zipball/4be43904336affa5c2f70744a348312336afd0da",
-                "reference": "4be43904336affa5c2f70744a348312336afd0da",
+                "url": "https://api.github.com/repos/PHPCSStandards/composer-installer/zipball/e9cf5e4bbf7eeaf9ef5db34938942602838fc2b1",
+                "reference": "e9cf5e4bbf7eeaf9ef5db34938942602838fc2b1",
                 "shasum": ""
             },
             "require": {
-                "composer-plugin-api": "^1.0 || ^2.0",
+                "composer-plugin-api": "^2.2",
                 "php": ">=5.4",
                 "squizlabs/php_codesniffer": "^2.0 || ^3.1.0 || ^4.0"
             },
             "require-dev": {
-                "composer/composer": "*",
+                "composer/composer": "^2.2",
                 "ext-json": "*",
                 "ext-zip": "*",
-                "php-parallel-lint/php-parallel-lint": "^1.3.1",
+                "php-parallel-lint/php-parallel-lint": "^1.4.0",
                 "phpcompatibility/php-compatibility": "^9.0",
                 "yoast/phpunit-polyfills": "^1.0"
             },
@@ -50,9 +50,9 @@
             "authors": [
                 {
                     "name": "Franck Nijhof",
-                    "email": "franck.nijhof@dealerdirect.com",
-                    "homepage": "http://www.frenck.nl",
-                    "role": "Developer / IT Manager"
+                    "email": "opensource@frenck.dev",
+                    "homepage": "https://frenck.dev",
+                    "role": "Open source developer"
                 },
                 {
                     "name": "Contributors",
@@ -60,7 +60,6 @@
                 }
             ],
             "description": "PHP_CodeSniffer Standards Composer Installer Plugin",
-            "homepage": "http://www.dealerdirect.com",
             "keywords": [
                 "PHPCodeSniffer",
                 "PHP_CodeSniffer",
@@ -81,9 +80,28 @@
             ],
             "support": {
                 "issues": "https://github.com/PHPCSStandards/composer-installer/issues",
+                "security": "https://github.com/PHPCSStandards/composer-installer/security/policy",
                 "source": "https://github.com/PHPCSStandards/composer-installer"
             },
-            "time": "2023-01-05T11:28:13+00:00"
+            "funding": [
+                {
+                    "url": "https://github.com/PHPCSStandards",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/jrfnl",
+                    "type": "github"
+                },
+                {
+                    "url": "https://opencollective.com/php_codesniffer",
+                    "type": "open_collective"
+                },
+                {
+                    "url": "https://thanks.dev/u/gh/phpcsstandards",
+                    "type": "thanks_dev"
+                }
+            ],
+            "time": "2025-07-17T20:45:56+00:00"
         },
         {
             "name": "doctrine/instantiator",
@@ -157,24 +175,24 @@
         },
         {
             "name": "johnpbloch/wordpress-core",
-            "version": "6.1.1",
+            "version": "6.8.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/johnpbloch/wordpress-core.git",
-                "reference": "c9688597721b8579f3c29028e572a7b9753db893"
+                "reference": "316a8fe38b6dde4e4f399946809f040462038403"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/johnpbloch/wordpress-core/zipball/c9688597721b8579f3c29028e572a7b9753db893",
-                "reference": "c9688597721b8579f3c29028e572a7b9753db893",
+                "url": "https://api.github.com/repos/johnpbloch/wordpress-core/zipball/316a8fe38b6dde4e4f399946809f040462038403",
+                "reference": "316a8fe38b6dde4e4f399946809f040462038403",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
-                "php": ">=5.6.20"
+                "php": ">=7.2.24"
             },
             "provide": {
-                "wordpress/core-implementation": "6.1.1"
+                "wordpress/core-implementation": "6.8.2"
             },
             "type": "wordpress-core",
             "notification-url": "https://packagist.org/downloads/",
@@ -201,7 +219,7 @@
                 "source": "https://core.trac.wordpress.org/browser",
                 "wiki": "https://codex.wordpress.org/"
             },
-            "time": "2022-11-15T19:11:58+00:00"
+            "time": "2025-07-15T15:32:59+00:00"
         },
         {
             "name": "myclabs/deep-copy",
@@ -575,27 +593,28 @@
         },
         {
             "name": "phpcompatibility/phpcompatibility-wp",
-            "version": "2.1.4",
+            "version": "2.1.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHPCompatibility/PHPCompatibilityWP.git",
-                "reference": "b6c1e3ee1c35de6c41a511d5eb9bd03e447480a5"
+                "reference": "5bfbbfbabb3df2b9a83e601de9153e4a7111962c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHPCompatibility/PHPCompatibilityWP/zipball/b6c1e3ee1c35de6c41a511d5eb9bd03e447480a5",
-                "reference": "b6c1e3ee1c35de6c41a511d5eb9bd03e447480a5",
+                "url": "https://api.github.com/repos/PHPCompatibility/PHPCompatibilityWP/zipball/5bfbbfbabb3df2b9a83e601de9153e4a7111962c",
+                "reference": "5bfbbfbabb3df2b9a83e601de9153e4a7111962c",
                 "shasum": ""
             },
             "require": {
                 "phpcompatibility/php-compatibility": "^9.0",
-                "phpcompatibility/phpcompatibility-paragonie": "^1.0"
+                "phpcompatibility/phpcompatibility-paragonie": "^1.0",
+                "squizlabs/php_codesniffer": "^3.3"
             },
             "require-dev": {
-                "dealerdirect/phpcodesniffer-composer-installer": "^0.7"
+                "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
             },
             "suggest": {
-                "dealerdirect/phpcodesniffer-composer-installer": "^0.7 || This Composer plugin will sort out the PHP_CodeSniffer 'installed_paths' automatically.",
+                "dealerdirect/phpcodesniffer-composer-installer": "^1.0 || This Composer plugin will sort out the PHP_CodeSniffer 'installed_paths' automatically.",
                 "roave/security-advisories": "dev-master || Helps prevent installing dependencies with known security issues."
             },
             "type": "phpcodesniffer-standard",
@@ -624,9 +643,28 @@
             ],
             "support": {
                 "issues": "https://github.com/PHPCompatibility/PHPCompatibilityWP/issues",
+                "security": "https://github.com/PHPCompatibility/PHPCompatibilityWP/security/policy",
                 "source": "https://github.com/PHPCompatibility/PHPCompatibilityWP"
             },
-            "time": "2022-10-24T09:00:36+00:00"
+            "funding": [
+                {
+                    "url": "https://github.com/PHPCompatibility",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/jrfnl",
+                    "type": "github"
+                },
+                {
+                    "url": "https://opencollective.com/php_codesniffer",
+                    "type": "open_collective"
+                },
+                {
+                    "url": "https://thanks.dev/u/gh/phpcompatibility",
+                    "type": "thanks_dev"
+                }
+            ],
+            "time": "2025-05-12T16:38:37+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -2653,16 +2691,16 @@
         },
         {
             "name": "wp-phpunit/wp-phpunit",
-            "version": "6.1.1",
+            "version": "6.8.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/wp-phpunit/wp-phpunit.git",
-                "reference": "49521597fa525f762a50a4a6d22ed180839519fd"
+                "reference": "a33d328dab5a4a9ddf0c560bcadbabb58b5ee67f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/wp-phpunit/wp-phpunit/zipball/49521597fa525f762a50a4a6d22ed180839519fd",
-                "reference": "49521597fa525f762a50a4a6d22ed180839519fd",
+                "url": "https://api.github.com/repos/wp-phpunit/wp-phpunit/zipball/a33d328dab5a4a9ddf0c560bcadbabb58b5ee67f",
+                "reference": "a33d328dab5a4a9ddf0c560bcadbabb58b5ee67f",
                 "shasum": ""
             },
             "type": "library",
@@ -2697,7 +2735,7 @@
                 "issues": "https://github.com/wp-phpunit/issues",
                 "source": "https://github.com/wp-phpunit/wp-phpunit"
             },
-            "time": "2022-11-02T12:52:44+00:00"
+            "time": "2025-04-16T01:40:54+00:00"
         },
         {
             "name": "yoast/phpunit-polyfills",
