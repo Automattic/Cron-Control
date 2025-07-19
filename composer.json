@@ -10,7 +10,7 @@
     "johnpbloch/wordpress-core": "^6.1.1",
     "phpcompatibility/phpcompatibility-wp": "^2.1.4",
     "wp-cli/wp-cli": "*",
-    "wp-coding-standards/wpcs": "^2.3",
+    "wp-coding-standards/wpcs": "^3.1",
     "wp-phpunit/wp-phpunit": "^6.1.1",
     "yoast/phpunit-polyfills": "^4.0.0"
   },

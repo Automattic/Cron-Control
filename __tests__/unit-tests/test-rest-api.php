@@ -15,7 +15,7 @@ class REST_API_Tests extends \WP_UnitTestCase {
 		parent::setUp();
 
 		global $wp_rest_server;
-		$wp_rest_server = new WP_REST_Server;
+		$wp_rest_server = new WP_REST_Server();
 		$this->server   = $wp_rest_server;
 		do_action( 'rest_api_init' );
 
@@ -77,14 +77,14 @@ class REST_API_Tests extends \WP_UnitTestCase {
 
 		$this->assertResponseData(
 			array(
-				'events' => array(
+				'events'               => array(
 					array(
 						'timestamp' => $event->get_timestamp(),
 						'action'    => md5( $event->get_action() ),
 						'instance'  => $event->get_instance(),
 					),
 				),
-				'endpoint' => get_rest_url( null, REST_API::API_NAMESPACE . '/' . REST_API::ENDPOINT_RUN ),
+				'endpoint'             => get_rest_url( null, REST_API::API_NAMESPACE . '/' . REST_API::ENDPOINT_RUN ),
 				'total_events_pending' => 1,
 			),
 			$response

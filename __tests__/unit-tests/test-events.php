@@ -41,18 +41,18 @@ class Events_Tests extends \WP_UnitTestCase {
 				$events['A']->get_action() => [ // A & B share action
 					$events['A']->get_instance() => [
 						'schedule' => false,
-						'args' => [],
+						'args'     => [],
 					],
 					$events['B']->get_instance() => [
 						'schedule' => 'hourly',
 						'interval' => HOUR_IN_SECONDS,
-						'args' => [ 'B' ],
+						'args'     => [ 'B' ],
 					],
 				],
 				$events['C']->get_action() => [ // C has it's own action
 					$events['C']->get_instance() => [
 						'schedule' => false,
-						'args' => [ 'C' ],
+						'args'     => [ 'C' ],
 					],
 				],
 			],
@@ -60,7 +60,7 @@ class Events_Tests extends \WP_UnitTestCase {
 				$events['D']->get_action() => [
 					$events['D']->get_instance() => [
 						'schedule' => false,
-						'args' => [ 'D' ],
+						'args'     => [ 'D' ],
 					],
 				],
 			],
@@ -91,25 +91,25 @@ class Events_Tests extends \WP_UnitTestCase {
 
 		$events_to_create = [
 			'A' => [
-				'action' => 'test_format_events_for_wp',
-				'args' => [],
+				'action'    => 'test_format_events_for_wp',
+				'args'      => [],
 				'timestamp' => $time_one,
 			],
 			'B' => [
-				'action' => 'test_format_events_for_wp',
-				'args' => [ 'B' ],
+				'action'    => 'test_format_events_for_wp',
+				'args'      => [ 'B' ],
 				'timestamp' => $time_one,
-				'schedule' => 'hourly',
-				'interval' => HOUR_IN_SECONDS,
+				'schedule'  => 'hourly',
+				'interval'  => HOUR_IN_SECONDS,
 			],
 			'C' => [
-				'action' => 'test_format_events_for_wp_two',
-				'args' => [ 'C' ],
+				'action'    => 'test_format_events_for_wp_two',
+				'args'      => [ 'C' ],
 				'timestamp' => $time_one,
 			],
 			'D' => [
-				'action' => 'test_format_events_for_wp',
-				'args' => [ 'D' ],
+				'action'    => 'test_format_events_for_wp',
+				'args'      => [ 'D' ],
 				'timestamp' => $time_two,
 			],
 		];

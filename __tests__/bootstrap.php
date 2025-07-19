@@ -32,7 +32,7 @@ function _manually_load_plugin() {
 		)
 	);
 
-	require_once dirname( dirname( __FILE__ ) ) . '/cron-control.php';
+	require_once dirname( __DIR__ ) . '/cron-control.php';
 
 	// Plugin loads after `wp_install()` is called, so we compensate.
 	if ( ! Cron_Control\Events_Store::is_installed() ) {
@@ -53,13 +53,13 @@ if ( ! defined( 'WP_CLI_ROOT' ) ) {
 	define( 'WP_CLI_ROOT', __DIR__ . '/../vendor/wp-cli/wp-cli' );
 }
 
-include_once WP_CLI_ROOT . '/php/utils.php';
-include_once WP_CLI_ROOT . '/php/dispatcher.php';
-include_once WP_CLI_ROOT . '/php/class-wp-cli.php';
-include_once WP_CLI_ROOT . '/php/class-wp-cli-command.php';
+require_once WP_CLI_ROOT . '/php/utils.php';
+require_once WP_CLI_ROOT . '/php/dispatcher.php';
+require_once WP_CLI_ROOT . '/php/class-wp-cli.php';
+require_once WP_CLI_ROOT . '/php/class-wp-cli-command.php';
 
 \WP_CLI\Utils\load_dependencies();
 
 // WP_CLI wasn't defined during plugin bootup, so bootstrap our cli classes manually
-require_once dirname( dirname( __FILE__ ) ) . '/includes/wp-cli.php';
+require_once dirname( __DIR__ ) . '/includes/wp-cli.php';
 Cron_Control\CLI\prepare_environment();

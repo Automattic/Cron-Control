@@ -128,9 +128,9 @@ class WP_Adapter_Tests extends \WP_UnitTestCase {
 
 		// Ensure the event update made it's way to the DB.
 		$object = Event::find( [
-			'action' => 'test_pre_clear_scheduled_hook',
+			'action'    => 'test_pre_clear_scheduled_hook',
 			'timestamp' => $event_two['timestamp'],
-			'status' => Events_Store::STATUS_COMPLETED,
+			'status'    => Events_Store::STATUS_COMPLETED,
 		] );
 		$this->assertEquals( Events_Store::STATUS_COMPLETED, $object->get_status() );
 
@@ -250,7 +250,7 @@ class WP_Adapter_Tests extends \WP_UnitTestCase {
 
 		$event_to_add           = Utils::create_unsaved_event( array_merge( $default_args, [ 'action' => 'test_pre_update_cron_option_new' ] ) );
 		$recurring_event_to_add = Utils::create_unsaved_event( array_merge( $default_args, [
-			'action' => 'test_pre_update_cron_option_new_recurring',
+			'action'   => 'test_pre_update_cron_option_new_recurring',
 			'schedule' => 'hourly',
 			'interval' => HOUR_IN_SECONDS,
 		] ) );

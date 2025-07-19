@@ -151,7 +151,7 @@ class Event_Tests extends \WP_UnitTestCase {
 		// Invalid status.
 		$this->run_event_save_test( [
 			'creation' => [
-				'args' => [
+				'args'   => [
 					'timestamp' => 1637447873,
 					'action'    => 'test_event',
 					'status'    => 'invalid_status',
@@ -163,7 +163,7 @@ class Event_Tests extends \WP_UnitTestCase {
 		// Invalid/missing action.
 		$this->run_event_save_test( [
 			'creation' => [
-				'args' => [
+				'args'   => [
 					'timestamp' => 1637447873,
 					'action'    => '',
 				],
@@ -174,7 +174,7 @@ class Event_Tests extends \WP_UnitTestCase {
 		// Missing timestamp.
 		$this->run_event_save_test( [
 			'creation' => [
-				'args' => [ 'action' => 'test_event' ],
+				'args'   => [ 'action' => 'test_event' ],
 				'result' => new WP_Error( 'cron-control:event:prop-validation:invalid-timestamp' ),
 			],
 		] );
@@ -182,7 +182,7 @@ class Event_Tests extends \WP_UnitTestCase {
 		// Invalid timestamp.
 		$this->run_event_save_test( [
 			'creation' => [
-				'args' => [
+				'args'   => [
 					'timestamp' => -100,
 					'action'    => 'test_event',
 				],
@@ -193,7 +193,7 @@ class Event_Tests extends \WP_UnitTestCase {
 		// Invalid schedule.
 		$this->run_event_save_test( [
 			'creation' => [
-				'args' => [
+				'args'   => [
 					'timestamp' => 1637447873,
 					'action'    => 'test_event',
 					'schedule'  => '',
@@ -206,7 +206,7 @@ class Event_Tests extends \WP_UnitTestCase {
 		// Invalid interval.
 		$this->run_event_save_test( [
 			'creation' => [
-				'args' => [
+				'args'   => [
 					'timestamp' => 1637447873,
 					'action'    => 'test_event',
 					'schedule'  => 'hourly',
@@ -223,7 +223,7 @@ class Event_Tests extends \WP_UnitTestCase {
 		// Then update the timestamp.
 		$this->run_event_save_test( [
 			'creation' => [
-				'args' => [
+				'args'   => [
 					'action'    => 'test_event_creations_1',
 					'timestamp' => 1637447872,
 				],
@@ -236,8 +236,8 @@ class Event_Tests extends \WP_UnitTestCase {
 					'timestamp' => 1637447872,
 				],
 			],
-			'update' => [
-				'args' => [ 'timestamp' => 1637447872 + 500 ],
+			'update'   => [
+				'args'   => [ 'timestamp' => 1637447872 + 500 ],
 				'result' => [
 					'status'    => 'pending',
 					'action'    => 'test_event_creations_1',
@@ -253,7 +253,7 @@ class Event_Tests extends \WP_UnitTestCase {
 		// Then try to update with invalid timestamp
 		$this->run_event_save_test( [
 			'creation' => [
-				'args' => [
+				'args'   => [
 					'status'    => 'complete',
 					'action'    => 'test_event_creations_2',
 					'args'      => [ 'some' => 'data' ],
@@ -270,8 +270,8 @@ class Event_Tests extends \WP_UnitTestCase {
 					'timestamp' => 1637447873,
 				],
 			],
-			'update' => [
-				'args' => [ 'timestamp' => -1 ],
+			'update'   => [
+				'args'   => [ 'timestamp' => -1 ],
 				'result' => new WP_Error( 'cron-control:event:prop-validation:invalid-timestamp' ),
 			],
 		] );
