@@ -42,7 +42,7 @@ class Orchestrate_Sites extends \WP_CLI_Command {
 		$hosts = $this->get_hosts();
 
 		// Use 2 hosts per site.
-		$num_groups = count( $hosts ) / 2;
+		$num_groups = (int) ( count( $hosts ) / 2 );
 		if ( $num_groups < 2 ) {
 			// Every host runs every site.
 			$this->display_sites();
@@ -69,7 +69,7 @@ class Orchestrate_Sites extends \WP_CLI_Command {
 		$all_sites = get_sites( [ 'number' => 10000 ] );
 		$sites_to_display = [];
 		foreach ( $all_sites as $index => $site ) {
-			if ( ! ( $index % $num_groups === $group ) ) {
+			if ( $index % $num_groups !== $group ) {
 				// The site does not belong to this group.
 				continue;
 			}
