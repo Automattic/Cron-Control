@@ -43,7 +43,7 @@ class Internal_Events_Tests extends \WP_UnitTestCase {
 		$cron_array['version'] = 2;
 
 		// Put the legacy event directly into the cron option, avoiding our special filtering. @codingStandardsIgnoreLine
-		$result = $wpdb->query( $wpdb->prepare( "INSERT INTO `$wpdb->options` (`option_name`, `option_value`, `autoload`) VALUES (%s, %s, %s)", 'cron', serialize( $cron_array ), 'yes' ) );
+		$wpdb->query( $wpdb->prepare( "INSERT INTO `$wpdb->options` (`option_name`, `option_value`, `autoload`) VALUES (%s, %s, %s)", 'cron', serialize( $cron_array ), 'yes' ) );
 		wp_cache_delete( 'alloptions', 'options' );
 		wp_cache_delete( 'notoptions', 'options' );
 		wp_cache_delete( 'cron', 'options' );

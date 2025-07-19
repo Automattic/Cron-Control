@@ -174,7 +174,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$this->assertEquals( $event_two->get_timestamp(), $result[0]->timestamp, 'found the right event' );
 		$this->assertEquals( $event_three->get_timestamp(), $result[1]->timestamp, 'found the right event' );
 
-		$event_five = Utils::create_test_event( array_merge( $args, [ 'timestamp' => time() + 5 ] ) );
+		Utils::create_test_event( array_merge( $args, [ 'timestamp' => time() + 5 ] ) );
 
 		// Should find all but the last event that is not due yet.
 		$result = $store->_query_events_raw( [
@@ -207,10 +207,10 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 	public function test_query_raw_events_orderby() {
 		$store = Events_Store::instance();
 
-		$event_one   = Utils::create_test_event( [ 'timestamp' => 5, 'action' => 'test_query_raw_events_orderby' ] );
-		$event_two   = Utils::create_test_event( [ 'timestamp' => 2, 'action' => 'test_query_raw_events_orderby' ] );
-		$event_three = Utils::create_test_event( [ 'timestamp' => 3, 'action' => 'test_query_raw_events_orderby' ] );
-		$event_four  = Utils::create_test_event( [ 'timestamp' => 1, 'action' => 'test_query_raw_events_orderby' ] );
+		$event_one = Utils::create_test_event( [ 'timestamp' => 5, 'action' => 'test_query_raw_events_orderby' ] );
+		Utils::create_test_event( [ 'timestamp' => 2, 'action' => 'test_query_raw_events_orderby' ] );
+		Utils::create_test_event( [ 'timestamp' => 3, 'action' => 'test_query_raw_events_orderby' ] );
+		$event_four = Utils::create_test_event( [ 'timestamp' => 1, 'action' => 'test_query_raw_events_orderby' ] );
 
 		// Default orderby should be timestamp ASC
 		$result = $store->_query_events_raw();
