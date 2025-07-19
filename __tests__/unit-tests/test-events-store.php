@@ -6,17 +6,17 @@ use Automattic\WP\Cron_Control\Events_Store;
 use Automattic\WP\Cron_Control\Event;
 
 class Events_Store_Tests extends \WP_UnitTestCase {
-	function setUp(): void {
+	public function setUp(): void {
 		parent::setUp();
 		Utils::clear_cron_table();
 	}
 
-	function tearDown(): void {
+	public function tearDown(): void {
 		Utils::clear_cron_table();
 		parent::tearDown();
 	}
 
-	function test_table_exists() {
+	public function test_table_exists() {
 		global $wpdb;
 
 		$table_name = Utils::get_table_name();
@@ -25,7 +25,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$this->assertTrue( Events_Store::is_installed() );
 	}
 
-	function test_event_creation() {
+	public function test_event_creation() {
 		$store = Events_Store::instance();
 
 		// We don't validate fields here, so not much to test other than return values.
@@ -43,7 +43,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$this->assertTrue( 0 === $empty_result, 'empty event was not inserted' );
 	}
 
-	function test_event_updates() {
+	public function test_event_updates() {
 		$store = Events_Store::instance();
 
 		// Make a valid event.
@@ -63,7 +63,7 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$this->assertFalse( $failed_result, 'event was not updated due to invalid args' );
 	}
 
-	function test_get_raw_event() {
+	public function test_get_raw_event() {
 		$store = Events_Store::instance();
 
 		$result = $store->_get_event_raw( -1 );
