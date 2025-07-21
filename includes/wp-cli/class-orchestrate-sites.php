@@ -14,6 +14,7 @@ namespace Automattic\WP\Cron_Control\CLI;
  */
 class Orchestrate_Sites extends \WP_CLI_Command {
 	const RUNNER_HOST_HEARTBEAT_KEY = 'a8c_cron_control_host_heartbeats';
+	const MAX_SITES = 11000;
 
 	/**
 	 * Record a heartbeat
@@ -61,12 +62,12 @@ class Orchestrate_Sites extends \WP_CLI_Command {
 	 */
 	private function display_sites( $num_groups = 1, $group = 0 ) {
 		$site_count = get_sites( [ 'count' => 1 ] );
-		if ( $site_count > 10000 ) {
-			trigger_error( 'Cron-Control: This multisite has more than 10000 subsites, currently unsupported.', E_USER_WARNING );
+		if ( $site_count > self::MAX_SITES ) {
+			trigger_error( 'Cron-Control: This multisite has more than ' . self::MAX_SITES . ' subsites, currently unsupported.', E_USER_WARNING );
 		}
 
 		// Keep the query simple, then process the results.
-		$all_sites = get_sites( [ 'number' => 10000 ] );
+		$all_sites = get_sites( [ 'number' => self::MAX_SITES ] );
 		$sites_to_display = [];
 		foreach ( $all_sites as $index => $site ) {
 			if ( $index % $num_groups !== $group ) {
