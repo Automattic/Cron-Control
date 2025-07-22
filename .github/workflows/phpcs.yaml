@@ -22,7 +22,7 @@ jobs:
           php-version: 8.1
 
       - name: Install PHP Dependencies
-        uses: ramsey/composer-install@3.0.0
+        uses: ramsey/composer-install@3.1.1
 
       - name: Add error matcher
         run: echo "::add-matcher::$(pwd)/.github/checkstyle-problem-matcher.json"
