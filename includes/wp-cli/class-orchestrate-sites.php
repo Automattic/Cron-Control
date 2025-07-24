@@ -118,7 +118,7 @@ class Orchestrate_Sites extends \WP_CLI_Command {
 		// If a host has missed 2 heartbeats, remove it from jobs processing.
 		$heartbeats = array_filter(
 			$heartbeats,
-			function( $timestamp ) use ( $heartbeat_interval ) {
+			function ( $timestamp ) use ( $heartbeat_interval ) {
 				if ( time() - ( $heartbeat_interval * 2 ) > $timestamp ) {
 					return false;
 				}

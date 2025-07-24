@@ -122,11 +122,11 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$store = Events_Store::instance();
 
 		$args = [
-			'status'    => Events_Store::STATUS_PENDING,
-			'action'    => 'test_query_raw_events',
-			'args'      => [ 'some' => 'data' ],
-			'schedule'  => 'hourly',
-			'interval'  => HOUR_IN_SECONDS,
+			'status'   => Events_Store::STATUS_PENDING,
+			'action'   => 'test_query_raw_events',
+			'args'     => [ 'some' => 'data' ],
+			'schedule' => 'hourly',
+			'interval' => HOUR_IN_SECONDS,
 		];
 
 		$event_one   = Utils::create_test_event( array_merge( $args, [ 'timestamp' => 1 ] ) );
