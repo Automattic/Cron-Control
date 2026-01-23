@@ -19,7 +19,7 @@ jobs:
       contents: read
     steps:
       - name: Check out source code
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6.0.2
 
       - name: Set up Node.js environment
         uses: actions/setup-node@v4.4.0
