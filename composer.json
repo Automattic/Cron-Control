@@ -7,7 +7,7 @@
   },
   "require-dev": {
     "dealerdirect/phpcodesniffer-composer-installer": "*",
-    "johnpbloch/wordpress-core": "^6.1.1",
+    "johnpbloch/wordpress-core": "^7.0.0",
     "phpcompatibility/phpcompatibility-wp": "^2.1.4",
     "wp-cli/wp-cli": "*",
     "wp-coding-standards/wpcs": "^3.1",
