@@ -43,7 +43,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y subversion
 
       - name: Check out source code
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v6.0.3
 
       - name: Set up PHP
         uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # 2.37.1
