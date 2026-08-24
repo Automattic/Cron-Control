@@ -11,7 +11,7 @@
     "phpcompatibility/phpcompatibility-wp": "^2.1.4",
     "wp-cli/wp-cli": "*",
     "wp-coding-standards/wpcs": "^3.4.1",
-    "wp-phpunit/wp-phpunit": "^6.1.1",
+    "wp-phpunit/wp-phpunit": "^7.1.0",
     "yoast/phpunit-polyfills": "^4.0.0"
   },
   "config": {
