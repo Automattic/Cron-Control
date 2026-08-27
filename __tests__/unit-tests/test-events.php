@@ -128,6 +128,10 @@ class Events_Tests extends \WP_UnitTestCase {
 		$events->set_transition_error( $error );
 		Lock::prime_lock( Events::LOCK );
 
+		if ( $event->is_internal() ) {
+			Lock::check_lock( Events::LOCK, 1 );
+		}
+
 		$result = $events->run_event( $event->get_timestamp(), md5( $event->get_action() ), $event->get_instance() );
 
 		$this->assertSame( $error, $result );
