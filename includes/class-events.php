@@ -42,9 +42,6 @@ class Events extends Singleton {
 	 * Register hooks
 	 */
 	protected function class_init() {
-		// Prime lock cache if not present.
-		Lock::prime_lock( self::LOCK );
-
 		// Prepare environment as early as possible.
 		$earliest_action = did_action( 'muplugins_loaded' ) ? 'plugins_loaded' : 'muplugins_loaded';
 		add_action( $earliest_action, array( $this, 'prepare_environment' ) );
@@ -241,9 +238,6 @@ class Events extends Singleton {
 
 		// Limit how many events are processed concurrently, unless explicitly bypassed.
 		if ( ! $force ) {
-			// Prepare event-level lock.
-			$this->prime_event_action_lock( $event );
-
 			if ( ! $this->can_run_event( $event ) ) {
 				/* translators: 1: Event action, 2: Event arguments */
 				$error_message = sprintf( __( 'No resources available to run the job with action `%1$s` and arguments `%2$s`.', 'automattic-cron-control' ), $event->get_action(), maybe_serialize( $event->get_args() ) );
@@ -300,10 +294,6 @@ class Events extends Singleton {
 		return $return;
 	}
 
-	private function prime_event_action_lock( Event $event ): void {
-		Lock::prime_lock( $this->get_lock_key_for_event_action( $event ), JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS );
-	}
-
 	// Checks concurrency locks, deciding if the event can be run at this moment.
 	private function can_run_event( Event $event ): bool {
 		// Limit to one concurrent execution of a specific action by default.
@@ -348,11 +338,7 @@ class Events extends Singleton {
 		$lock_key = $this->get_lock_key_for_event_action( $event );
 		$expires  = JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS;
 
-		if ( isset( $this->concurrent_action_whitelist[ $event->get_action() ] ) ) {
-			return Lock::free_lock( $lock_key, $expires );
-		} else {
-			return Lock::reset_lock( $lock_key, $expires );
-		}
+		return Lock::free_lock( $lock_key, $expires );
 	}
 
 	/**
