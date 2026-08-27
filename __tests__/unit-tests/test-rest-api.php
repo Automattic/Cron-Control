@@ -116,6 +116,17 @@ class REST_API_Tests extends \WP_UnitTestCase {
 		$this->assertArrayHasKey( 'message', $data );
 	}
 
+	public function test_array_secret_is_rejected() {
+		$request = new WP_REST_Request( 'POST', '/' . REST_API::API_NAMESPACE . '/' . REST_API::ENDPOINT_LIST );
+		$request->set_body( wp_json_encode( [ 'secret' => [] ] ) );
+		$request->set_header( 'content-type', 'application/json' );
+
+		$response = $this->server->dispatch( $request );
+
+		$this->assertResponseStatus( 400, $response );
+		$this->assertEquals( 'no-secret', $response->get_data()['code'] );
+	}
+
 	/**
 	 * Check response code
 	 *
