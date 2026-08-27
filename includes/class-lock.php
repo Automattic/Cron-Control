@@ -261,6 +261,11 @@ class Lock {
 	 * @return int
 	 */
 	private static function get_next_generation() {
-		return \wp_rand( 1, \PHP_INT_MAX );
+		if ( \function_exists( 'wp_rand' ) ) {
+			return \wp_rand( 1, \PHP_INT_MAX );
+		}
+
+		// Lock may initialize before WordPress procedural functions are loaded.
+		return \mt_rand( 1, \mt_getrandmax() );
 	}
 }
