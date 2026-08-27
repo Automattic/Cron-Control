@@ -38,13 +38,13 @@ class Events extends Singleton {
 	 */
 	private $running_event = null;
 
+	/** @var int|null Site where the running event's locks were acquired. */
+	private $running_event_site_id = null;
+
 	/**
 	 * Register hooks
 	 */
 	protected function class_init() {
-		// Prime lock cache if not present.
-		Lock::prime_lock( self::LOCK );
-
 		// Prepare environment as early as possible.
 		$earliest_action = did_action( 'muplugins_loaded' ) ? 'plugins_loaded' : 'muplugins_loaded';
 		add_action( $earliest_action, array( $this, 'prepare_environment' ) );
@@ -317,6 +317,7 @@ class Events extends Singleton {
 		if ( ! Lock::check_lock( $this->get_lock_key_for_event_action( $event ), $limit, JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS ) ) {
 			return false;
 		}
+		$this->running_event_site_id = get_current_blog_id();
 
 		// Internal Events aren't subject to the global lock.
 		if ( $event->is_internal() ) {
@@ -327,6 +328,7 @@ class Events extends Singleton {
 		// If not, the individual-event lock must be freed, otherwise it's deadlocked until it times out.
 		if ( ! Lock::check_lock( self::LOCK, JOB_CONCURRENCY_LIMIT ) ) {
 			$this->reset_event_lock( $event );
+			$this->running_event_site_id = null;
 			return false;
 		}
 
@@ -335,24 +337,22 @@ class Events extends Singleton {
 	}
 
 	private function do_lock_cleanup( Event $event ): void {
+		$site_id = $this->running_event_site_id;
+		$this->running_event_site_id = null;
 		// Site-level lock isn't set when event is Internal, so we don't want to alter it.
 		if ( ! $event->is_internal() ) {
-			Lock::free_lock( self::LOCK );
+			Lock::free_lock( self::LOCK, 0, $site_id );
 		}
 
 		// Reset individual event lock.
-		$this->reset_event_lock( $event );
+		$this->reset_event_lock( $event, $site_id );
 	}
 
-	private function reset_event_lock( Event $event ): bool {
+	private function reset_event_lock( Event $event, $site_id = null ): bool {
 		$lock_key = $this->get_lock_key_for_event_action( $event );
 		$expires  = JOB_LOCK_EXPIRY_IN_MINUTES * \MINUTE_IN_SECONDS;
 
-		if ( isset( $this->concurrent_action_whitelist[ $event->get_action() ] ) ) {
-			return Lock::free_lock( $lock_key, $expires );
-		} else {
-			return Lock::reset_lock( $lock_key, $expires );
-		}
+		return Lock::free_lock( $lock_key, $expires, $site_id );
 	}
 
 	/**
