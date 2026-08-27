@@ -34,7 +34,7 @@ class Lock {
 
 		$now          = time();
 		$stale_before = $now - $timeout;
-		$generation   = random_int( 1, \PHP_INT_MAX );
+		$generation   = self::get_next_generation();
 
 		// LAST_INSERT_ID() retains the generation from this atomic upsert on this database connection.
 		$result = $wpdb->query(
@@ -148,7 +148,7 @@ class Lock {
 			$wpdb->prepare(
 				"INSERT IGNORE INTO `$wpdb->options` (`option_name`, `option_value`, `autoload`) VALUES (%s, %s, 'no')",
 				self::get_key( $lock ),
-				self::build_lock_state( 0, time(), random_int( 1, \PHP_INT_MAX ) )
+				self::build_lock_state( 0, time(), self::get_next_generation() )
 			)
 		);
 
@@ -188,7 +188,7 @@ class Lock {
 		global $wpdb;
 
 		$now        = time();
-		$generation = random_int( 1, \PHP_INT_MAX );
+		$generation = self::get_next_generation();
 		$result     = $wpdb->query(
 			$wpdb->prepare(
 				"INSERT INTO `$wpdb->options` (`option_name`, `option_value`, `autoload`)
@@ -253,5 +253,14 @@ class Lock {
 	 */
 	private static function build_lock_state( $count, $timestamp, $generation ) {
 		return "{$count}:{$timestamp}:{$generation}";
+	}
+
+	/**
+	 * Get a non-zero lock-row generation.
+	 *
+	 * @return int
+	 */
+	private static function get_next_generation() {
+		return wp_rand( 1, \PHP_INT_MAX );
 	}
 }
