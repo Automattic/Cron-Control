@@ -92,7 +92,7 @@ class Lock {
 			return false;
 		}
 
-		$generation = array_pop( self::$acquired_locks[ $lock ] );
+		$generation = end( self::$acquired_locks[ $lock ] );
 		$now        = time();
 
 		$result = $wpdb->query(
@@ -121,6 +121,10 @@ class Lock {
 			);
 		}
 
+		if ( false !== $result ) {
+			array_pop( self::$acquired_locks[ $lock ] );
+		}
+
 		return false !== $result;
 	}
 
@@ -135,23 +139,16 @@ class Lock {
 	}
 
 	/**
-	 * Ensure lock entries are initially set
+	 * Ensure lock entries are initially set.
+	 *
+	 * Lock acquisition creates a missing row atomically, so priming no longer
+	 * needs to perform a database write.
 	 *
 	 * @param string $lock Lock name.
 	 * @param int    $expires Lock expiration timestamp.
 	 * @return null
 	 */
 	public static function prime_lock( $lock, $expires = 0 ) {
-		global $wpdb;
-
-		$wpdb->query(
-			$wpdb->prepare(
-				"INSERT IGNORE INTO `$wpdb->options` (`option_name`, `option_value`, `autoload`) VALUES (%s, %s, 'no')",
-				self::get_key( $lock ),
-				self::build_lock_state( 0, time(), self::get_next_generation() )
-			)
-		);
-
 		return null;
 	}
 

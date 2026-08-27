@@ -46,6 +46,45 @@ class Lock_Tests extends \WP_UnitTestCase {
 		$this->assertSame( 1, Lock::get_lock_value( $lock ) );
 	}
 
+	public function test_failed_lock_release_can_be_retried() {
+		global $wpdb;
+
+		$lock       = 'failed-release';
+		$reflection = new \ReflectionProperty( Lock::class, 'acquired_locks' );
+		$reflection->setAccessible( true );
+		$original_locks = $reflection->getValue();
+		$original_wpdb  = $wpdb;
+		$reflection->setValue(
+			array(
+				$lock => array( 1 ),
+			)
+		);
+		$wpdb = new class() {
+			public $options = 'wp_options';
+			public $queries = 0;
+
+			public function prepare( $query, ...$args ) {
+				return $query;
+			}
+
+			public function query( $query ) {
+				++$this->queries;
+
+				return 1 === $this->queries ? false : 0;
+			}
+		};
+
+		try {
+			$this->assertFalse( Lock::free_lock( $lock ) );
+			$this->assertSame( array( 1 ), $reflection->getValue()[ $lock ] );
+			$this->assertTrue( Lock::free_lock( $lock ) );
+			$this->assertSame( array(), $reflection->getValue()[ $lock ] );
+		} finally {
+			$wpdb = $original_wpdb;
+			$reflection->setValue( $original_locks );
+		}
+	}
+
 	public function test_stale_lock_recovery_records_the_new_admission() {
 		global $wpdb;
 
