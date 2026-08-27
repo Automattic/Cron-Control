@@ -261,6 +261,6 @@ class Lock {
 	 * @return int
 	 */
 	private static function get_next_generation() {
-		return wp_rand( 1, \PHP_INT_MAX );
+		return \wp_rand( 1, \PHP_INT_MAX );
 	}
 }
