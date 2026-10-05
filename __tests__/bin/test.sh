@@ -98,6 +98,10 @@ cleanup() {
 
 trap cleanup EXIT
 
+# Mount at the runner image's project path, and set APP_HOME and the working directory
+# explicitly so vendor/ is found even on older images with a different default home.
+PROJECT_DIR=/home/debian/project
+
 # shellcheck disable=SC2086 # ARGS must not be quoted
 docker run \
     -it \
@@ -112,6 +116,8 @@ docker run \
     -e MYSQL_PASSWORD \
     -e MYSQL_DATABASE \
     -e MYSQL_HOST \
-    -v "$(pwd):/home/circleci/project" \
+    -e APP_HOME="${PROJECT_DIR}" \
+    -v "$(pwd):${PROJECT_DIR}" \
+    -w "${PROJECT_DIR}" \
     ghcr.io/automattic/vip-container-images/wp-test-runner:latest \
     ${ARGS}
