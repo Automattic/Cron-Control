@@ -10,7 +10,7 @@ namespace Automattic\WP\Cron_Control;
 class Events_Store extends Singleton {
 	const TABLE_SUFFIX = 'a8c_cron_control_jobs';
 
-	const DB_VERSION        = 1;
+	const DB_VERSION        = 2;
 	const DB_VERSION_OPTION = 'a8c_cron_control_db_version';
 
 	const STATUS_PENDING   = 'pending';
@@ -26,6 +26,9 @@ class Events_Store extends Singleton {
 
 			// Keep trying in case we weren't around during the site installation.
 			add_action( 'shutdown', array( $this, 'maybe_install_during_shutdown' ) );
+		} elseif ( self::needs_upgrade() ) {
+			// Table exists but the schema is behind, bring it up to date.
+			add_action( 'shutdown', array( $this, 'maybe_upgrade_during_shutdown' ) );
 		}
 
 		// Handle adding/removing tables when subsites are created/deleted.
@@ -110,6 +113,36 @@ class Events_Store extends Singleton {
 	}
 
 	/**
+	 * Check if the installed schema is behind the current version.
+	 */
+	public static function needs_upgrade(): bool {
+		return (int) get_option( self::DB_VERSION_OPTION, 0 ) < self::DB_VERSION;
+	}
+
+	/**
+	 * For certain requests, bring an out of date schema up to date on shutdown.
+	 */
+	public function maybe_upgrade_during_shutdown() {
+		$is_cron_or_cli = wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI );
+		$is_admin = is_admin() && ! wp_doing_ajax();
+
+		if ( ! $is_cron_or_cli && ! $is_admin ) {
+			// Not a request we should try to upgrade on.
+			return;
+		}
+
+		if ( ! self::needs_upgrade() ) {
+			// Must have been upgraded earlier on in this request already.
+			return;
+		}
+
+		if ( wp_cache_add( 'upgrade_lock', true, 'cron-control', \MINUTE_IN_SECONDS ) ) {
+			// We've claimed the lock, run the upgrade. dbDelta() adds any missing indexes.
+			$this->_prepare_table();
+		}
+	}
+
+	/**
 	 * Create the plugin's DB table when necessary
 	 */
 	protected function _prepare_table() {
@@ -141,7 +174,8 @@ class Events_Store extends Singleton {
 
 			PRIMARY KEY (`ID`),
 			UNIQUE KEY `ts_action_instance_status` (`timestamp`, `action` (191), `instance`, `status`),
-			KEY `status` (`status`)
+			KEY `status` (`status`),
+			KEY `action_instance_status_ts` (`action` (191), `instance`, `status`, `timestamp`)
 		) ENGINE=InnoDB;\n";
 
 		dbDelta( $schema, true );
