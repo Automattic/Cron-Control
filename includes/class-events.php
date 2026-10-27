@@ -255,7 +255,7 @@ class Events extends Singleton {
 			add_action( 'shutdown', array( $this, 'do_lock_cleanup_on_shutdown' ) );
 		}
 
-		// Core reschedules/conpletes an event before running it, so we respect that.
+		// Core reschedules/completes an event before running it, so we respect that.
 		$transition_result = $this->transition_event( $event );
 
 		if ( is_wp_error( $transition_result ) ) {
