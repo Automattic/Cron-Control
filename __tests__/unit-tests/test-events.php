@@ -3,7 +3,12 @@
 namespace Automattic\WP\Cron_Control\Tests;
 
 use Automattic\WP\Cron_Control\Events;
+use Automattic\WP\Cron_Control\Events_Store;
 use Automattic\WP\Cron_Control\Event;
+use Automattic\WP\Cron_Control\Lock;
+use WP_Error;
+
+require_once __DIR__ . '/fixtures/class-transition-failure-events.php';
 
 class Events_Tests extends \WP_UnitTestCase {
 	public function setUp(): void {
@@ -83,6 +88,113 @@ class Events_Tests extends \WP_UnitTestCase {
 		$flattened = Events::flatten_wp_events_array( $formatted );
 		$this->assertEquals( count( $flattened ), 4, 'Returns all expected events' );
 		// Could maybe test more here, but honestly feels like it would couple too closely to the implementation itself.
+	}
+
+	public function test_run_event_does_not_run_a_callback_after_a_failed_complete() {
+		$this->assert_update_failure_is_retryable( array() );
+	}
+
+	public function test_run_event_does_not_run_a_callback_after_a_failed_reschedule() {
+		$this->assert_update_failure_is_retryable(
+			array(
+				'schedule' => 'hourly',
+				'interval' => HOUR_IN_SECONDS,
+			)
+		);
+	}
+
+	private function assert_update_failure_is_retryable( array $event_data ) {
+		$called = 0;
+		$action = 'test_failed_update_' . wp_generate_uuid4();
+		$callback = function () use ( &$called ) {
+			++$called;
+		};
+		add_action( $action, $callback );
+
+		$event_data['action'] = $action;
+		$event_data['timestamp'] = time();
+		$event = Utils::create_test_event( $event_data );
+		$events = Events::instance();
+		$table = Events_Store::instance()->get_table_name();
+		$failed_updates = 0;
+		$fail_update = function ( $query ) use ( $table, &$failed_updates ) {
+			if ( 0 === strpos( $query, 'UPDATE `' . $table . '`' ) ) {
+				++$failed_updates;
+				return '';
+			}
+			return $query;
+		};
+		add_filter( 'query', $fail_update );
+
+		try {
+			$result = $events->run_event( $event->get_timestamp(), md5( $action ), $event->get_instance() );
+		} finally {
+			remove_filter( 'query', $fail_update );
+		}
+
+		try {
+			$this->assertSame( 1, $failed_updates );
+			$this->assertWPError( $result );
+			$this->assertSame( 'cron-control:event:failed-update', $result->get_error_code() );
+			$this->assertSame( 0, $called );
+			$this->assertSame( 0, Lock::get_lock_value( Events::LOCK ) );
+			$this->assertSame( 0, Lock::get_lock_value( $events->get_lock_key_for_event_action( $event ) ) );
+
+			$reloaded = Event::get( $event->get_id() );
+			$this->assertInstanceOf( Event::class, $reloaded );
+			$this->assertSame( Events_Store::STATUS_PENDING, $reloaded->get_status() );
+			$this->assertSame( $event->get_timestamp(), $reloaded->get_timestamp() );
+			$this->assertSame( $event->get_instance(), $reloaded->get_instance() );
+
+			$retry = $events->run_event( $event->get_timestamp(), md5( $action ), $event->get_instance() );
+			$this->assertTrue( $retry['success'] );
+			$this->assertSame( 1, $called );
+		} finally {
+			remove_action( $action, $callback );
+		}
+	}
+
+	public function test_run_event_releases_only_the_action_lock_for_an_internal_event_after_a_failed_transition() {
+		$this->assert_transition_failure_prevents_callback(
+			array(
+				'action' => 'a8c_cron_control_purge_completed_events',
+			)
+		);
+	}
+
+	private function assert_transition_failure_prevents_callback( array $event_data ) {
+		$called = 0;
+		$action = $event_data['action'] ?? 'test_failed_transition_' . wp_generate_uuid4();
+		$callback = function () use ( &$called ) {
+			++$called;
+		};
+		add_action( $action, $callback );
+
+		$event_data['action']     = $action;
+		$event_data['timestamp'] = time();
+		$event                    = Utils::create_test_event( $event_data );
+		$events                   = Transition_Failure_Events::instance();
+		$error                    = new WP_Error( 'cron-control:event:failed-update' );
+		$events->set_transition_error( $error );
+		Lock::prime_lock( Events::LOCK );
+
+		if ( $event->is_internal() ) {
+			Lock::check_lock( Events::LOCK, 1 );
+		}
+
+		try {
+			$result = $events->run_event( $event->get_timestamp(), md5( $event->get_action() ), $event->get_instance() );
+
+			$this->assertSame( $error, $result );
+			$this->assertSame( 0, $called );
+			$this->assertSame( $event->is_internal() ? 1 : 0, Lock::get_lock_value( Events::LOCK ) );
+			$this->assertSame( 0, Lock::get_lock_value( $events->get_lock_key_for_event_action( $event ) ) );
+		} finally {
+			remove_action( $action, $callback );
+			if ( $event->is_internal() ) {
+				Lock::free_lock( Events::LOCK );
+			}
+		}
 	}
 
 	private function create_test_events() {
