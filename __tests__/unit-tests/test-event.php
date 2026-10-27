@@ -73,6 +73,52 @@ class Event_Tests extends \WP_UnitTestCase {
 		$this->assertEqualsWithDelta( time() + HOUR_IN_SECONDS, $event->get_timestamp(), 1 );
 	}
 
+	public function test_reschedule_updates_interval_when_schedule_changes() {
+		$event = new Event();
+		$due = time() - MINUTE_IN_SECONDS;
+		$event->set_action( 'test_reschedule_interval' );
+		$event->set_timestamp( $due );
+		$event->set_schedule( 'test_cron_control_interval', HOUR_IN_SECONDS );
+		$event->save();
+
+		$filter = function ( $schedules ) {
+			$schedules['test_cron_control_interval'] = [
+				'interval' => 2 * HOUR_IN_SECONDS,
+				'display'  => 'Cron Control test interval',
+			];
+			return $schedules;
+		};
+		add_filter( 'cron_schedules', $filter );
+
+		try {
+			$result = $event->reschedule();
+		} finally {
+			remove_filter( 'cron_schedules', $filter );
+		}
+		$reloaded_event = Event::get( $event->get_id() );
+		$this->assertTrue( $result, 'event was successfully rescheduled' );
+		$this->assertInstanceOf( Event::class, $reloaded_event );
+		$this->assertEquals( 2 * HOUR_IN_SECONDS, $reloaded_event->get_interval(), 'the refreshed interval was saved' );
+		$this->assertSame( $due + ( 2 * HOUR_IN_SECONDS ), $reloaded_event->get_timestamp() );
+	}
+
+	public function test_reschedule_uses_stored_interval_when_schedule_is_removed() {
+		$event = new Event();
+		$due = time() - MINUTE_IN_SECONDS;
+		$event->set_action( 'test_reschedule_removed_interval' );
+		$event->set_timestamp( $due );
+		$event->set_schedule( 'test_removed_cron_control_interval', HOUR_IN_SECONDS );
+		$event->save();
+
+		$result = $event->reschedule();
+		$reloaded_event = Event::get( $event->get_id() );
+
+		$this->assertTrue( $result, 'event was successfully rescheduled' );
+		$this->assertInstanceOf( Event::class, $reloaded_event );
+		$this->assertSame( HOUR_IN_SECONDS, $reloaded_event->get_interval() );
+		$this->assertSame( $due + HOUR_IN_SECONDS, $reloaded_event->get_timestamp() );
+	}
+
 	public function test_exists() {
 		$event = new Event();
 		$event->set_action( 'test_exists' );
