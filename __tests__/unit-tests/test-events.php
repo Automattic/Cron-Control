@@ -90,6 +90,42 @@ class Events_Tests extends \WP_UnitTestCase {
 		// Could maybe test more here, but honestly feels like it would couple too closely to the implementation itself.
 	}
 
+	public function test_run_event_uses_stored_interval_when_schedule_becomes_zero() {
+		$called = 0;
+		$action = 'test_run_event_zero_interval';
+		$due = time() - MINUTE_IN_SECONDS;
+		$event = Utils::create_test_event( [
+			'action'    => $action,
+			'timestamp' => $due,
+			'schedule'  => 'test_zero_interval',
+			'interval'  => HOUR_IN_SECONDS,
+		] );
+		$callback = function () use ( &$called ) {
+			++$called;
+		};
+		$filter = function ( $schedules ) {
+			$schedules['test_zero_interval'] = [ 'interval' => 0, 'display' => 'Invalid interval' ];
+			return $schedules;
+		};
+		add_action( $action, $callback );
+		add_filter( 'cron_schedules', $filter );
+
+		try {
+			$events = Events::instance();
+			$result = $events->run_event( $due, md5( $action ), $event->get_instance() );
+			$this->assertTrue( $result['success'] );
+			$this->assertSame( 1, $called );
+			$this->assertSame( 0, Lock::get_lock_value( Events::LOCK ) );
+			$this->assertSame( 0, Lock::get_lock_value( $events->get_lock_key_for_event_action( $event ) ) );
+			$reloaded_event = Event::get( $event->get_id() );
+			$this->assertSame( HOUR_IN_SECONDS, $reloaded_event->get_interval() );
+			$this->assertSame( $due + HOUR_IN_SECONDS, $reloaded_event->get_timestamp() );
+		} finally {
+			remove_filter( 'cron_schedules', $filter );
+			remove_action( $action, $callback );
+		}
+	}
+
 	public function test_run_event_does_not_run_a_callback_after_a_failed_complete() {
 		$this->assert_update_failure_is_retryable( array() );
 	}

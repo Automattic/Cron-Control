@@ -200,6 +200,10 @@ class Event {
 		}
 
 		$fresh_interval = $this->get_refreshed_schedule_interval();
+		if ( $fresh_interval <= 0 ) {
+			return new WP_Error( 'cron-control:event:prop-validation:invalid-schedule' );
+		}
+
 		$next_timestamp = $this->calculate_next_timestamp( $fresh_interval );
 
 		if ( $this->interval !== $fresh_interval ) {
@@ -352,11 +356,12 @@ class Event {
 	private function get_refreshed_schedule_interval() {
 		// Try to get the interval from the schedule in case it's been updated.
 		$schedules = wp_get_schedules();
-		if ( isset( $schedules[ $this->schedule ] ) ) {
-			return (int) $schedules[ $this->schedule ]['interval'];
+		$interval = (int) ( $schedules[ $this->schedule ]['interval'] ?? 0 );
+		if ( $interval > 0 ) {
+			return $interval;
 		}
 
-		// If we couldn't get from schedule (was removed), use whatever was saved already.
+		// If the schedule was removed or its interval is invalid, use whatever was saved already.
 		return $this->interval;
 	}
 
