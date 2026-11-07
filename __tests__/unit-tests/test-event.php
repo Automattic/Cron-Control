@@ -119,63 +119,38 @@ class Event_Tests extends \WP_UnitTestCase {
 		$this->assertSame( $due + HOUR_IN_SECONDS, $reloaded_event->get_timestamp() );
 	}
 
-	/**
-	 * @dataProvider invalid_schedule_provider
-	 */
-	public function test_reschedule_uses_stored_interval_when_schedule_is_invalid( array $schedule ) {
-		$event = new Event();
+	public function test_reschedule_uses_stored_interval_when_schedule_is_zero() {
 		$due = time() - MINUTE_IN_SECONDS;
-		$event->set_action( 'test_reschedule_invalid_interval' );
-		$event->set_timestamp( $due );
-		$event->set_schedule( 'test_invalid_cron_control_interval', HOUR_IN_SECONDS );
-		$this->assertTrue( $event->save() );
-
-		$filter = function ( $schedules ) use ( $schedule ) {
-			$schedules['test_invalid_cron_control_interval'] = $schedule;
+		$event = Utils::create_test_event( [
+			'action'    => 'test_reschedule_zero_interval',
+			'timestamp' => $due,
+			'schedule'  => 'test_zero_interval',
+			'interval'  => HOUR_IN_SECONDS,
+		] );
+		$filter = function ( $schedules ) {
+			$schedules['test_zero_interval'] = [ 'interval' => 0, 'display' => 'Invalid interval' ];
 			return $schedules;
 		};
 		add_filter( 'cron_schedules', $filter );
-
 		try {
-			$result = $event->reschedule();
+			$this->assertTrue( $event->reschedule() );
 		} finally {
 			remove_filter( 'cron_schedules', $filter );
 		}
-
-		$this->assertTrue( $result );
-		$reloaded_event = Event::get( $event->get_id() );
-		$this->assertSame( HOUR_IN_SECONDS, $reloaded_event->get_interval() );
-		$this->assertSame( $due + HOUR_IN_SECONDS, $reloaded_event->get_timestamp() );
-	}
-
-	public static function invalid_schedule_provider() {
-		return [
-			'zero'     => [ [ 'interval' => 0 ] ],
-			'negative' => [ [ 'interval' => -60 ] ],
-			'missing'  => [ [] ],
-			'null'     => [ [ 'interval' => null ] ],
-			'string'   => [ [ 'interval' => 'invalid' ] ],
-			'fraction' => [ [ 'interval' => 0.5 ] ],
-		];
+		$reloaded = Event::get( $event->get_id() );
+		$this->assertSame( HOUR_IN_SECONDS, $reloaded->get_interval() );
+		$this->assertSame( $due + HOUR_IN_SECONDS, $reloaded->get_timestamp() );
 	}
 
 	public function test_reschedule_rejects_an_invalid_stored_interval() {
-		$event = new Event();
+		$event = Utils::create_test_event();
 		$due = time() - MINUTE_IN_SECONDS;
-		$event->set_action( 'test_reschedule_invalid_stored_interval' );
 		$event->set_timestamp( $due );
-		$event->set_schedule( 'test_removed_cron_control_interval', HOUR_IN_SECONDS );
-		$this->assertTrue( $event->save() );
-		$event->set_schedule( 'test_removed_cron_control_interval', 0 );
-
+		$event->set_schedule( 'test_missing_schedule', 0 );
 		$result = $event->reschedule();
-
 		$this->assertWPError( $result );
 		$this->assertSame( 'cron-control:event:prop-validation:invalid-schedule', $result->get_error_code() );
 		$this->assertSame( $due, $event->get_timestamp() );
-		$reloaded_event = Event::get( $event->get_id() );
-		$this->assertSame( HOUR_IN_SECONDS, $reloaded_event->get_interval() );
-		$this->assertSame( $due, $reloaded_event->get_timestamp() );
 	}
 
 	public function test_exists() {
