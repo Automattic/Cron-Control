@@ -25,6 +25,34 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$this->assertTrue( Events_Store::is_installed() );
 	}
 
+	public function test_is_installed_ignores_same_named_table_in_other_database() {
+		global $wpdb;
+
+		// Use real tables, since temporary tables don't show up in information_schema.
+		remove_filter( 'query', array( $this, '_create_temporary_tables' ) );
+		remove_filter( 'query', array( $this, '_drop_temporary_tables' ) );
+
+		$other_db   = 'cron_control_tests_other';
+		$table_name = Utils::get_table_name();
+
+		$suppress = $wpdb->suppress_errors();
+		$created  = $wpdb->query( $wpdb->prepare( 'CREATE DATABASE IF NOT EXISTS %i', $other_db ) );
+		$wpdb->suppress_errors( $suppress );
+		if ( false === $created ) {
+			$this->markTestSkipped( 'The test DB user cannot create databases.' );
+		}
+
+		$wpdb->query( $wpdb->prepare( 'CREATE TABLE %i.%i (`ID` bigint(20) unsigned NOT NULL)', $other_db, $table_name ) );
+
+		wp_cache_delete( 'is_installed', 'cron-control' );
+		$is_installed = Events_Store::is_installed();
+
+		$wpdb->query( $wpdb->prepare( 'DROP DATABASE %i', $other_db ) );
+		wp_cache_delete( 'is_installed', 'cron-control' );
+
+		$this->assertTrue( $is_installed );
+	}
+
 	public function test_event_creation() {
 		$store = Events_Store::instance();
 
