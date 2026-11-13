@@ -11,6 +11,47 @@ use WP_Error;
 require_once __DIR__ . '/fixtures/class-transition-failure-events.php';
 
 class Events_Tests extends \WP_UnitTestCase {
+	/** @dataProvider cleanup_modes */
+	public function test_event_locks_are_released_after_callback_switches_sites( $shutdown ) {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Requires multisite.' );
+		}
+		$site = self::factory()->blog->create();
+		$action = 'switch_site_' . wp_generate_uuid4();
+		$event = Utils::create_test_event( array( 'action' => $action, 'timestamp' => time() ) );
+		$events = Events::instance();
+		$original_site = get_current_blog_id();
+		$shutdown_counts = null;
+		$callback = static function () use ( $site, $original_site, $shutdown, $events, $event, &$shutdown_counts ) {
+			switch_to_blog( $site );
+			if ( $shutdown ) {
+				$events->do_lock_cleanup_on_shutdown();
+				switch_to_blog( $original_site );
+				$shutdown_counts = array( \Automattic\WP\Cron_Control\Lock::get_lock_value( Events::LOCK ), \Automattic\WP\Cron_Control\Lock::get_lock_value( $events->get_lock_key_for_event_action( $event ) ) );
+				restore_current_blog();
+			}
+		};
+		add_action( $action, $callback );
+		try {
+			$result = $events->run_event( $event->get_timestamp(), md5( $action ), $event->get_instance() );
+			$this->assertTrue( $result['success'] );
+		} finally {
+			remove_action( $action, $callback );
+			if ( get_current_blog_id() === $site ) {
+				restore_current_blog();
+			}
+		}
+		$this->assertSame( 0, \Automattic\WP\Cron_Control\Lock::get_lock_value( Events::LOCK ) );
+		$this->assertSame( 0, \Automattic\WP\Cron_Control\Lock::get_lock_value( $events->get_lock_key_for_event_action( $event ) ) );
+		if ( $shutdown ) {
+			$this->assertSame( array( 0, 0 ), $shutdown_counts );
+		}
+	}
+
+	public function cleanup_modes() {
+		return array( array( false ), array( true ) );
+	}
+
 	public function setUp(): void {
 		parent::setUp();
 		Utils::clear_cron_table();
