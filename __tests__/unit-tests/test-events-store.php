@@ -25,6 +25,37 @@ class Events_Store_Tests extends \WP_UnitTestCase {
 		$this->assertTrue( Events_Store::is_installed() );
 	}
 
+	public function test_is_installed_ignores_same_named_table_in_other_database() {
+		// Use real tables, since temporary tables don't show up in information_schema.
+		remove_filter( 'query', array( $this, '_create_temporary_tables' ) );
+		remove_filter( 'query', array( $this, '_drop_temporary_tables' ) );
+
+		// Run the fixture DDL on its own connection: DDL implicitly commits, which would end the test's transaction.
+		$ddl = new \wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		$ddl->suppress_errors();
+
+		// Unique name, created without IF NOT EXISTS, so cleanup only drops a database this test made.
+		$other_db   = 'cron_control_tests_' . strtolower( wp_generate_password( 12, false ) );
+		$table_name = Utils::get_table_name();
+
+		if ( false === $ddl->query( $ddl->prepare( 'CREATE DATABASE %i', $other_db ) ) ) {
+			$ddl->close();
+			$this->markTestSkipped( 'The test DB user cannot create databases.' );
+		}
+
+		try {
+			$created_table = $ddl->query( $ddl->prepare( 'CREATE TABLE %i.%i (`ID` bigint(20) unsigned NOT NULL)', $other_db, $table_name ) );
+			$this->assertNotFalse( $created_table, 'The same-named table could not be created in the other database.' );
+
+			wp_cache_delete( 'is_installed', 'cron-control' );
+			$this->assertTrue( Events_Store::is_installed() );
+		} finally {
+			$ddl->query( $ddl->prepare( 'DROP DATABASE %i', $other_db ) );
+			$ddl->close();
+			wp_cache_delete( 'is_installed', 'cron-control' );
+		}
+	}
+
 	public function test_event_creation() {
 		$store = Events_Store::instance();
 
